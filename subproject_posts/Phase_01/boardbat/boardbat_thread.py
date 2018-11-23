@@ -18,6 +18,7 @@ from scrapy.xlib.pydispatch import dispatcher
 import re
 import unicodedata
 import utils
+import xpaths
 
 
 
@@ -40,10 +41,10 @@ class BoardBat(scrapy.Spider):
 
     def parse_nxt(self,response):
         sel = Selector(response)
-        thread_urls = sel.xpath('//td[@class="col_f_content "]//a[@class="topic_title"]//@href').extract()
+        thread_urls = sel.xpath(xpaths.THREADURLS).extract()
         for thread_url in thread_urls:
             yield Request(thread_url,callback=self.parse_thread)
-        for i in set(sel.xpath('//li[@class="next"]//a[@title="Next page"]//@href').extract()):
+        for i in set(sel.xpath(xpaths.INNERPAGENAVIGATION).extract()):
             if i:
                 yield Request(i,callback = self.parse_nxt)
 
@@ -62,27 +63,27 @@ class BoardBat(scrapy.Spider):
 
         sel = Selector(response)
         domain = "www.board.b-at-s.info"
-        category = ','.join(sel.xpath('//span[@itemprop="title"]//text()').extract()).split(',')[1]
+        category = ','.join(sel.xpath(xpaths.CATEGORY).extract()).split(',')[1]
         try:
-            sub_category = '["' + ', '.join(sel.xpath('//span[@itemprop="title"]//text()').extract()).split(',')[2] + '"]'
+            sub_category = '["' + ', '.join(sel.xpath(xpaths.SUBCATEGORY).extract()).split(',')[2] + '"]'
         except:pass
-        thread_title = ''.join(sel.xpath('//div[@class="ipsBox_withphoto"]//h1[@class="ipsType_pagetitle"]//text()').extract())
+        thread_title = ''.join(sel.xpath(xpaths.THREADTITLE).extract())
         post_title = ''
-        nodes = sel.xpath('//div[@class="post_wrap"]')
+        nodes = sel.xpath(xpaths.NODES)
         for node in nodes:
-            author = ''.join(node.xpath('.//span[@itemprop="creator name"]//text() | .//h3[@class="guest row2"]/text()').extract())
-            post_url = ''.join(node.xpath('.//span[@class="post_id right ipsType_small desc blend_links"]//a[@itemprop="replyToUrl"]//@href').extract())
+            author = ''.join(node.xpath(xpaths.AUTHOR).extract())
+            post_url = ''.join(node.xpath(xpaths.POST_URL).extract())
             post_id = post_url.split('#')[-1].replace('entry','')
-            publish_time = ''.join(node.xpath('.//p[@class="posted_info desc lighter ipsType_small"]//abbr[@class="published"]//@title').extract())
+            publish_time = ''.join(node.xpath(xpaths.PUBLISHTIME).extract())
             publish_time = ''.join(re.findall('\d+-\d+-\d+T\d+:\d+',publish_time))
             if not publish_time:
                 import pdb;pdb.set_trace()
             publishdate = datetime.datetime.strptime((publish_time),'%Y-%m-%dT%H:%M')
             publish_epoch = time.mktime(publishdate.timetuple())*1000
-            Text = '\n'.join(node.xpath('.//div[@class="post entry-content "]//text()  | .//div[@class="post entry-content "]//p[@class="citation"]//text() |.//blockquote[@class="ipsBlockquote"]/p/text() |.//blockquote[@class="ipsBlockquote"]/@class | .//div[@class="post entry-content "]//p[@style="text-align:center;"]//span[@rel="lightbox"]//img[@class="bbc_img"]//@alt | .//div[@class="post entry-content "]//span[@rel="lightbox"]//img[@class="bbc_img"]//@alt  | .//div[@class="post entry-content "]//img[@class="bbc_emoticon"]//@alt  | .//a//img//@alt |.//p[@class="edit"]//strong//text() | .//div[@itemprop="commentText"]//iframe[@class="EmbeddedVideo"]/@src | .//div[@itemprop="commentText"]//blockquote/@data-date | .//div[@itemprop="commentText"]//blockquote/@data-author | .//div[@itemprop="commentText"]//blockquote/@data-time ').extract())
-            t_author = node.xpath('.//div[@itemprop="commentText"]//blockquote/@data-author').extract()
-            t_date = node.xpath('.//div[@itemprop="commentText"]//blockquote/@data-date').extract()
-            t_a_date = node.xpath('.//div[@itemprop="commentText"]//blockquote/@data-time').extract()
+            Text = '\n'.join(node.xpath(xpaths.POST_TEXT).extract())
+            t_author = node.xpath(xpaths.TEXT_AUTHOR).extract()
+            t_date = node.xpath(xpaths.TEXT_DATE).extract()
+            t_a_date = node.xpath(xpaths.TEXT_DATE_AUTHOR).extract()
 
             if t_a_date and t_date:
                 for a,t,t1 in zip(set(t_author),t_a_date,t_date):
@@ -116,7 +117,7 @@ class BoardBat(scrapy.Spider):
                 Text = Text.replace('ipsBlockquote','Quote ')
 
             fetch_epoch = int(datetime.datetime.now().strftime("%s")) * 1000
-            Links = node.xpath('.//a[@class="bbc_url"]/@href | .//div[@class="post entry-content "]//a[@title="Download attachment"]/@href | .//div[@class="post entry-content "]//span[@rel="lightbox"]//img[@class="bbc_img" and not(contains(@src,"/style_emoticons/"))]//@src | .//p//span[@rel="lightbox"]//img[@class="bbc_img" and not(contains(@src,"/style_emoticons/"))]//@src  | .//div[@class="post entry-content "]//iframe[@class="EmbeddedVideo"]/@src').extract()
+            Links = node.xpath(xpaths.LINKS).extract()
             links = str(Links)
 
             query_posts = utils.generate_upsert_query_posts('bb_posts')

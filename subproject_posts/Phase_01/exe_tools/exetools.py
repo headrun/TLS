@@ -67,7 +67,7 @@ class Exetool(Spider):
                 yield Request(next_url, callback=self.parse_nextlevel)
 
     def parse_thread(self, response):
-        thread_url = response.url.split('&')[0]
+        thread_url = ''.join(re.sub('s=(.*?)&','',response.url)) #response.url.split('&')[0]
         domain = 'forum.exetools.com'
         if '&page=' in response.url:
             crawl_type = 'catch_up'

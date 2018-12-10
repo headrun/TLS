@@ -1,0 +1,16 @@
+#BOARDBAT POSTS XPATHS
+
+THREADURLS = '//td[@class="col_f_content "]//a[@class="topic_title"]//@href'
+INNERPAGENAVIGATION = '//li[@class="next"]//a[@title="Next page"]//@href'
+CATEGORY = '//span[@itemprop="title"]//text()'
+SUBCATEGORY = '//span[@itemprop="title"]//text()'
+THREADTITLE = '//div[@class="ipsBox_withphoto"]//h1[@class="ipsType_pagetitle"]//text()'
+NODES = '//div[@class="post_wrap"]'
+AUTHOR = './/span[@itemprop="creator name"]//text() | .//h3[@class="guest row2"]/text()'
+POST_URL = './/span[@class="post_id right ipsType_small desc blend_links"]//a[@itemprop="replyToUrl"]//@href    '
+PUBLISHTIME = './/p[@class="posted_info desc lighter ipsType_small"]//abbr[@class="published"]//@title'
+POST_TEXT = './/div[@class="post entry-content "]//text()  | .//div[@class="post entry-content "]//p[@class="citation"]//text() |.//blockquote[@class="ipsBlockquote"]/p/text() |.//blockquote[@class="ipsBlockquote"]/@class | .//div[@class="post entry-content "]//p[@style="text-align:center;"]//span[@rel="lightbox"]//img[@class="bbc_img"]//@alt | .//div[@class="post entry-content "]//span[@rel="lightbox"]//img[@class="bbc_img"]//@alt  | .//div[@class="post entry-content "]//img[@class="bbc_emoticon"]//@alt  | .//a//img//@alt |.//p[@class="edit"]//strong//text() | .//div[@itemprop="commentText"]//iframe[@class="EmbeddedVideo"]/@src | .//div[@itemprop="commentText"]//blockquote/@data-date | .//div[@itemprop="commentText"]//blockquote/@data-author | .//div[@itemprop="commentText"]//blockquote/@data-time '
+TEXT_AUTHOR = './/div[@itemprop="commentText"]//blockquote/@data-author'
+TEXT_DATE = './/div[@itemprop="commentText"]//blockquote/@data-date'
+TEXT_DATE_AUTHOR = './/div[@itemprop="commentText"]//blockquote/@data-time'
+LINKS = './/a[@class="bbc_url"]/@href | .//div[@class="post entry-content "]//a[@title="Download attachment"]/@href | .//div[@class="post entry-content "]//span[@rel="lightbox"]//img[@class="bbc_img" and not(contains(@src,"/style_emoticons/"))]//@src | .//p//span[@rel="lightbox"]//img[@class="bbc_img" and not(contains(@src,"/style_emoticons/"))]//@src  | .//div[@class="post entry-content "]//iframe[@class="EmbeddedVideo"]/@src'

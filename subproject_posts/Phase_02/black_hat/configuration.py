@@ -26,8 +26,12 @@ tables = {
         'authors': 'mb_authors',
         'crawl': 'mb_crawl'
     },
-    'posts_boardbat': {
-        'posts': 'boardbat_posts'
+    'board_bats': {
+        'posts': 'bb_posts'
+    },
+    'posts_blackhat':{
+        'posts' : 'blackhat_posts',
+        'crawl' : 'blackhat_crawl',
+        'authors': 'blackhat_authors'
     }
-
 }

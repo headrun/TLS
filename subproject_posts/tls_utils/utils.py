@@ -1,6 +1,7 @@
-import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
+
+import calendar
+import time
+
 import datetime
 import re
 import unicodedata
@@ -11,6 +12,7 @@ import configuration
 # ToDo: get this column names dynamically
 def generate_upsert_query_authors(crawler):
     table_name = configuration.tables[crawler]['authors']
+
     upsert_query = """ INSERT INTO {0} (user_name, domain, crawl_type, author_signature, join_date, last_active, \
                     total_posts, fetch_time, groups, reputation, credits, awards, rank, active_time, contact_info,\
                     reference_url) VALUES ( %(user_name)s, %(domain)s, %(crawl_type)s, %(author_signature)s, \
@@ -27,38 +29,21 @@ def generate_upsert_query_authors(crawler):
 
 def generate_upsert_query_posts(crawler):
     table_name = configuration.tables[crawler]['posts']
+
     upsert_query = """INSERT INTO {0} (domain, crawl_type, category, sub_category, thread_title, thread_url, post_id,\
-                    post_url, post_title, publish_epoch, fetch_epoch, author, author_url, post_text, all_links, reference_url)\
+                    post_title, post_url, publish_epoch, fetch_epoch, author, author_url, post_text, all_links, reference_url)\
                     VALUES( %(domain)s, %(crawl_type)s, %(category)s, %(sub_category)s, %(thread_title)s, %(thread_url)s,\
-                    %(post_id)s, %(post_url)s, %(post_title)s, %(publish_epoch)s, %(fetch_epoch)s, %(author)s, %(author_url)s,\
+                    %(post_id)s, %(post_title)s, %(post_url)s, %(publish_epoch)s, %(fetch_epoch)s, %(author)s, %(author_url)s,\
                     %(post_text)s, %(all_links)s, %(reference_url)s) ON DUPLICATE KEY UPDATE crawl_type=%(crawl_type)s,\
                     category=%(category)s, sub_category=%(sub_category)s, thread_title=%(thread_title)s, \
-                    thread_url=%(thread_url)s, post_url=%(post_url)s, post_title=%(post_title)s, publish_epoch=%(publish_epoch)s,\
+                    thread_url=%(thread_url)s, post_title=%(post_title)s, post_url=%(post_url)s, publish_epoch=%(publish_epoch)s,\
                     fetch_epoch=%(fetch_epoch)s, author=%(author)s, author_url=%(author_url)s, post_text=%(post_text)s,\
                     all_links=%(all_links)s, reference_url=%(reference_url)s """.format(table_name)
 
     return upsert_query
 
-def generate_upsert_posts(crawler):
-    #table_name = configuration.tables[crawler]['posts']
-    upsert_query = '''INSERT INTO {table_name} (domain, crawl_type, category, sub_category, thread_title, thread_url, post_id,\
-                    post_url, post_title, publish_epoch, fetch_epoch, author, author_url, post_text, all_links, reference_url)\
-                    VALUES( '{domain}', '{crawl_type}', '{category}', '{sub_category}', '{thread_title}', '{thread_url}',\
-                    '{post_id}', '{post_url}', '{post_title}', '{publish_epoch}', '{fetch_epoch}', '{author}', '{author_url}',\
-                    "%s", '{all_links}', '{reference_url}') ON DUPLICATE KEY UPDATE crawl_type='{crawl_type}',\
-                    category='{category}', sub_category='{sub_category}', thread_title='{thread_title}', \
-                    thread_url='{thread_url}', post_url='{post_url}', post_title='{post_title}', publish_epoch='{publish_epoch}',\
-                    fetch_epoch='{fetch_epoch}', author='{author}', author_url='{author_url}', post_text="%s",\
-                    all_links='{all_links}', reference_url='{reference_url}' '''.format(**crawler)
-    return upsert_query
-
-
-
-
-
 
 def generate_upsert_query_crawl(crawler):
-    import pdb;pdb.set_trace()
     table_name = configuration.tables[crawler]['crawl']
 
     upsert_query = """INSERT INTO {0} (post_id, auth_meta, links) VALUES(%(post_id)s, %(auth_meta)s, %(links)s) \
@@ -74,12 +59,12 @@ def prepare_links(links_in_post):
     """
     aggregated_links = []
     for link in links_in_post:
-        aggregated_links.append(str(link))
+        aggregated_links.append(link)
     if not aggregated_links:
         all_links = '[]'
     else:
         all_links = list(set(aggregated_links))
-        all_links = '['+ ",".join(all_links) +']'
+        all_links = str(all_links)
     return all_links
 
 
@@ -130,15 +115,16 @@ def get_epoch(dt=datetime.datetime.utcnow()):
 
 
 def clean_text(input_text):
-   '''
-   Cleans up special chars in input text.
-   input = "Hi!\r\n\t\t\t\r\n\t\t\t\r\n\t\t\t\r\n\t\t\r\n\r\n\t\t\r\n\t\t\r\n\t\t\t\r\n\t\t\tHi, besides my account"
-   output = "Hi!\nHi, besides my account"
-   '''
-   text = re.compile(r'([\n,\t,\r]*\t)').sub('\n', input_text)
-   text = re.sub(r'(\n\s*)', '\n', text)
-   text = re.sub('\s\s+', ' ', text)
-   return text
+    '''
+    Cleans up special chars in input text.
+    input = "Hi!\r\n\t\t\t\r\n\t\t\t\r\n\t\t\t\r\n\t\t\r\n\r\n\t\t\r\n\t\t\r\n\t\t\t\r\n\t\t\tHi, besides my account"
+    output = "Hi!\nHi, besides my account"
+    '''
+    text = re.compile(r'([\n,\t,\r]*\t)').sub('\n', input_text)
+    text = re.sub(r'(\n\s*)', '\n', text)
+    text = re.sub('\s\s+', ' ', text)
+    return text
+
 
 def get_aggregated_links(links):
     if not links:
@@ -148,6 +134,10 @@ def get_aggregated_links(links):
 
     return aggregated_links
 
+def decode_cloudflareEmail(cfString):
+    rand = int(cfString[:2],16)
+    email_id = ''.join([chr(int(cfString[i:i+2], 16) ^ rand) for i in range(2, len(cfString), 2)])
+    return email_id
 
 
 

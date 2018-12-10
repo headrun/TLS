@@ -25,9 +25,7 @@ tables = {
         'posts': 'mb_posts',
         'authors': 'mb_authors',
         'crawl': 'mb_crawl'
-    },
-    'posts_boardbat': {
-        'posts': 'boardbat_posts'
     }
+
 
 }

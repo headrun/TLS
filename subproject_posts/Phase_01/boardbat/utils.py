@@ -130,15 +130,15 @@ def get_epoch(dt=datetime.datetime.utcnow()):
 
 
 def clean_text(input_text):
-    '''
-    Cleans up special chars in input text.
-    input = "Hi!\r\n\t\t\t\r\n\t\t\t\r\n\t\t\t\r\n\t\t\r\n\r\n\t\t\r\n\t\t\r\n\t\t\t\r\n\t\t\tHi, besides my account"
-    output = "Hi!\nHi, besides my account"
-    '''
-    text = re.compile(r'([\n,\t,\r]*\t)').sub('\n', input_text)
-    text = re.sub(r'(\n\s*)', '\n', text)
-    return text
-
+   '''
+   Cleans up special chars in input text.
+   input = "Hi!\r\n\t\t\t\r\n\t\t\t\r\n\t\t\t\r\n\t\t\r\n\r\n\t\t\r\n\t\t\r\n\t\t\t\r\n\t\t\tHi, besides my account"
+   output = "Hi!\nHi, besides my account"
+   '''
+   text = re.compile(r'([\n,\t,\r]*\t)').sub('\n', input_text)
+   text = re.sub(r'(\n\s*)', '\n', text)
+   text = re.sub('\s\s+', ' ', text)
+   return text
 
 def get_aggregated_links(links):
     if not links:

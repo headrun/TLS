@@ -32,13 +32,12 @@ class WilderssecuritySpider(scrapy.Spider):
     start_urls = ['http://wilderssecurity.com/']
     handle_httpstatus_list=[403]
 
-    def __init__(self, *args, **kwargs):
-        super(WilderssecuritySpider, self).__init__(*args, **kwargs)
+    def __init__(self):
         self.query = utils.generate_upsert_query_posts('wilder_security')
         self.conn = MySQLdb.connect(db="POSTS_WILDER",
                                     host="localhost",
                                     user="root",
-                                    passwd = "root",
+                                    passwd = "",
                                     use_unicode=True,
                                     charset="utf8mb4")
         self.cursor = self.conn.cursor()
@@ -49,23 +48,12 @@ class WilderssecuritySpider(scrapy.Spider):
         self.conn.commit()
         self.conn.close()
 
-
-    def parse(self, response):
-        urls = response.xpath(URLS).extract()
-        for url in urls:
-            if "http" not in url: url = site_domain + url
-            yield Request(url, callback = self.parse_next)
-
-    def parse_next(self, response):
-        thread_urls = response.xpath('//h3[@class="title"]//a//@href').extract() or response.xpath('//h3[@class="nodeTitle"]//a//@href').extract()
-        for thread_url in thread_urls:
-            if "http:" not in thread_url: thread_url = site_domain +thread_url
-            yield Request(thread_url, callback = self.parse_meta)
-
-        navigation = ''.join(response.xpath(NAVIGATION).extract())
-        if navigation:
-            if "http" not in navigation: page_nation = site_domain + navigation
-            yield Request(page_nation, callback = self.parse_next)
+    def start_requests(self):
+        url_que = "select distinct(links) from wilder_status where crawl_status = 0 "
+        self.cursor.execute(url_que)
+        data = self.cursor.fetchall()
+        for url in data:
+            yield Request(url[0], callback = self.parse_meta)
 
 
     def parse_meta(self, response):
@@ -86,6 +74,10 @@ class WilderssecuritySpider(scrapy.Spider):
                             'thread_title' : thread_title
         })
         nodes = response.xpath(NODES)
+        up_que = 'update wilder_status set crawl_status = 1 where links = %(url)s'
+        if nodes:
+            val = {'url':response.url}
+            self.cursor.execute(up_que,val)
         text = ""
         for node in nodes:
             text = ''.join(node.xpath(TEXT).extract())

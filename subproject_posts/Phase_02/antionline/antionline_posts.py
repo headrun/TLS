@@ -1,6 +1,3 @@
-'''
-Antionline_posts
-'''
 import datetime
 import time
 import sys
@@ -10,30 +7,30 @@ import scrapy
 from scrapy.selector import Selector
 from scrapy.spiders import BaseSpider
 from scrapy.http import Request
-from scrapy.http import HtmlResponse
 from scrapy import signals
 from scrapy.xlib.pydispatch import dispatcher
 reload(sys)
-#sys.setdefaultencoding('UTF8')
+sys.setdefaultencoding('UTF8')
 import MySQLdb
 import unicodedata
 from antionline_xpaths import *
 import utils
-import antionline_csv
+from scrapy.conf import settings
+
 query_posts = utils.generate_upsert_query_posts('antionline')
 auth_que = utils.generate_upsert_query_crawl('antionline')
 
 class formus(BaseSpider):
     name = 'antionline_posts'
-    #allowed_domain = ["http://www.antionline.com/"]
     start_urls = ["http://www.antionline.com/forum.php"]
     handle_httpstatus_list = [403]
-
+    settings.overrides['CONCURRENT_REQUESTS_PER_DOMAIN'] = 1
+    settings.overrides['CONCURRENT_REQUESTS_PER_IP'] = 1
+    settings.overrides['DOWNLOAD_DELAY'] = 16
+    settings.overrides['CONCURRENT_REQUESTS'] = 1
+    
     def __init__(self, *args, **kwargs):
-        '''
-          Mysql connections 
-        '''
-        self.conn = MySQLdb.connect(host="localhost", user="root", passwd="hdrn59!", db="antionline", charset="utf8", use_unicode=True)
+        self.conn = MySQLdb.connect(host="localhost", user="root", passwd="", db="antionline", charset="utf8", use_unicode=True)
         self.cursor = self.conn.cursor()
         dispatcher.connect(self.close_conn, signals.spider_closed)
 
@@ -42,72 +39,52 @@ class formus(BaseSpider):
         self.conn.close()
 
     def add_http(self, url):
-        '''
-          Adding http
-        '''
         if 'http' not in url:
             url = 'http://www.antionline.com/%s'%url
         return url
 
+    def start_requests(self):
+        url_que = "select distinct(post_url) from antionline_status where crawl_status = 0 "
+        self.cursor.execute(url_que)
+        data = self.cursor.fetchall()
+        for url in data:
+            yield Request(url[0], callback = self.parse_all_pages_links)
 
-    def parse(self, response):
-        sel = Selector(response)
-        start_page_urls = sel.xpath(MAIN_URLS).extract()
-        for main_urls in start_page_urls:
-            main_urls = self.add_http(main_urls)
-        yield Request(main_urls, callback=self.parse_nextpage)
-
-    def parse_nextpage(self, response):
-        sel = Selector(response)
-        '''
-         Next page all_ithread_links
-        '''
-        thread_links = sel.xpath(THREAD_URLS).extract()
-        for thread_urls in thread_links:
-            thread_urls = self.add_http(thread_urls)
-            yield Request(thread_urls, callback=self.parse_all_pages_links)
-        navigation_click = sel.xpath(NAVIGATION).extract()
-        for click in navigation_click:
-             if click:
-                 if 'http' not in click: click = self.add_http(click)
-                 yield Request(click, callback=self.parse_nextpage)
-
-    def clean_url(self, response):
-        '''
-         Removes the trailing '/?' or '/' in a given url scheme.
-        '''
-        cleaned_url = re.sub(r'(\/\?|\/)$', '', response)
-        return cleaned_url
 
     def parse_all_pages_links(self, response):
-        '''
-         posts_terminal
-        '''
         if 'page' in response.url:
-            #crawl_type = "catchup"
+            crawl_type = "catchup"
             test = re.findall(r'page\d+', response.url)
             thread_url = response.url.replace(''.join(test), "")#.replace('&do=findComment','')
-            thread_url = self.clean_url(thread_url)
+            thread_url = utils.clean_url(thread_url)
         else:
-            #crawl_type = "keepup"
+            crawl_type = "keepup"
             thread_url = response.url
-            thread_url = self.clean_url(thread_url)
+            thread_url = utils.clean_url(thread_url)
 
         sel = Selector(response)
-        domain = 'http://www.antionline.com/forums.php'
-        category = sel.xpath('//li[@class="navbit"]//a//text()').extract()[1]
-        subcategory = '["' + sel.xpath('//li[@class="navbit"]//a//text()').extract()[2] + '"]'
+        #thread_url = response.url
+        domain = 'www.antionline.com'
+        try:category = sel.xpath('//li[@class="navbit"]//a//text()').extract()[1]
+        except:pass
+        try:subcategory = '["' + sel.xpath('//li[@class="navbit"]//a//text()').extract()[2] + '"]'
+        except:pass
         thread_title = ''.join(sel.xpath(THREAD_TITLE).extract())
         crawl_type = ''
-
         nodes = sel.xpath(NODES)
+        if nodes:
+            query = 'update antionline_status set crawl_status = 1 where post_url = %(url)s'
+            json_data={'url':response.url}
+            self.cursor.execute(query,json_data)
+
         for node in nodes:
             author_name = ''.join(node.xpath(AUTHOR_NAME).extract())
             author_link = ''.join(node.xpath(AUTHOR_LINK).extract())
             if author_link:
-                author_link = self.add_http(author_link)
+                author_link = "http://www.antionline.com/" + author_link
             post_urls = ''.join(node.xpath(POST_URL).extract())
-            post_url = self.add_http(post_urls)
+            post_url = "http://www.antionline.com/" + post_urls
+            #postid  = post_url.split('=1#post')[-1] ## try in re without indexing
             postid = ''.join(re.findall(r'#post\d+', post_url)).replace('#post', '')
 
             post_title = ''.join(node.xpath(POST_TITLE).extract()).replace('\n', '').replace('\t', '').replace('\r', '')
@@ -155,11 +132,13 @@ class formus(BaseSpider):
             })
 
             self.cursor.execute(query_posts, json_posts)
-	    meta = json.dumps({'time' : publish_time})
+
+            meta = json.dumps({'time' : publish_time})
             json_author = {}
             json_author.update({
                 'post_id' : postid,
                 'auth_meta' : meta,
+                'crawl_status':0,
                 'links' : author_link,
                 })
             self.cursor.execute(auth_que, json_author)

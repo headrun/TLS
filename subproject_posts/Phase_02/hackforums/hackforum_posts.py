@@ -14,11 +14,11 @@ from scrapy import signals
 from scrapy.xlib.pydispatch import dispatcher
 import utils
 import xpaths
+import logging
 
 class Hackforums(scrapy.Spider):
     name ="hackforums_posts"
     handle_httpstatus_list = [403]
-
     def __init__(self, *args, **kwargs):
         super(Hackforums, self).__init__(*args, **kwargs)
         self.conn = MySQLdb.connect(db="posts_hackforums", host="localhost", user="root", passwd="", use_unicode=True, charset='utf8')
@@ -62,35 +62,16 @@ class Hackforums(scrapy.Spider):
         yield FormRequest(url_form, callback=self.parse_next, formdata=data, meta={'proxy':'http://74.70.67.218:59112'},dont_filter=True)
 
     def parse_next(self, response):
-        sel = Selector(response)
-        links = sel.xpath(xpaths.LINKS).extract()
-        links.append('forumdisplay.php?fid=259')
-        for link in links:
-            link = 'https://hackforums.net/' + link
-            yield Request(link, callback=self.parse_urls, meta={'proxy':'http://74.70.67.218:59112'} , dont_filter=True)
-
-    def parse_urls(self, response):
-        sel = Selector(response)
-        link = sel.xpath(xpaths.INNERLINKS).extract()
-        for forum_link in link:
-            forum_link = 'https://hackforums.net/' + forum_link
-            yield Request(forum_link, callback=self.parse_nxt, meta={'proxy':'http://74.70.67.218:59112'},dont_filter=True)
-
-    def parse_nxt(self, response):
-        sel = Selector(response)
-        thread_urls = sel.xpath(xpaths.THREADURLS).extract()
-        for thread_url in thread_urls:
-            if 'https://hackforums.net/' not in thread_urls:
-                thread_url = 'https://hackforums.net/' + thread_url
-            else:
-                thread_url
-            yield Request(thread_url, callback=self.parse_thread, meta={'proxy':'http://74.70.67.218:59112'})
-        for page_nav in set(sel.xpath(xpaths.PAGENAVIGATION).extract()):
-            if page_nav:
-                page_nav = "https://hackforums.net/" + page_nav
-                yield Request(page_nav, callback=self.parse_nxt)
+        url_que = "select distinct(post_url) from hackforum_status where crawl_status = 0 "
+        self.cursor.execute(url_que)
+        data = self.cursor.fetchall()
+        for url in data:
+            yield Request(url[0], callback = self.parse_thread)
 
     def parse_thread(self, response):
+        logger=logging.getLogger()
+        logger.setLevel(logging.WARNING)
+        logger.setLevel(logging.ERROR)
         sel = Selector(response)
         if '&page=' in response.url:
             test = re.findall('&page=\d+',response.url)
@@ -105,10 +86,15 @@ class Hackforums(scrapy.Spider):
         thread_title = ''.join(sel.xpath(xpaths.THREADTITLE).extract()).replace('Quick Reply','')
         post_title = ''
         try:category = sel.xpath(xpaths.CATEGORY).extract()[1]
-        except:pass
+        except:logger.warning("out of the index")
         try:sub_category = '["' + sel.xpath(xpaths.SUBCATEGORY).extract()[2] + '"]'
-        except:pass
+        except:logger.warning("out of the index")
         nodes = sel.xpath(xpaths.NODES)
+        if nodes:
+            query = 'update hackforum_status set crawl_status = 1 where post_url = %(url)s'
+            json_data={'url':response.url}
+            self.cursor.execute(query,json_data)
+
         for node in nodes:
             post_url = ''.join(node.xpath(xpaths.POSTURL).extract())
             post_id = ''.join(node.xpath(xpaths.POSTID).extract()).replace('post_url_','')
@@ -125,7 +111,7 @@ class Hackforums(scrapy.Spider):
                         try:
                             publis = ''.join(publish.replace('{1}',datetime.datetime.now().strftime('%m-%d-%Y')))
                             publishdate = datetime.datetime.strptime(publis, '%m-%d-%Y, %I:%M %p')
-                        except:pass
+                        except:logger.error("value error")
 
             publish_epoch = time.mktime(publishdate.timetuple())*1000
             fetch_epoch = int(datetime.datetime.now().strftime("%s")) * 1000
@@ -175,6 +161,7 @@ class Hackforums(scrapy.Spider):
                 json_crawl = {
                     'post_id': post_id,
                     'auth_meta': json.dumps(meta),
+                    'crawl_status':0,
                     'links': author_url
                 }
             crawl_query = utils.generate_upsert_query_crawl('posts_hackforums')

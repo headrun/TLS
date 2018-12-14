@@ -35,6 +35,7 @@ tables = {
         'authors': 'blackhat_authors'
     },
     'posts_hackforums':{
+        'post_crawl':'hackforum_status',
         'posts' : 'hackforum_posts',
         'crawl' : 'hackforum_crawl',
         'authors' : 'hackforum_authors'

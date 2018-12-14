@@ -86,6 +86,11 @@ class Hackforums(scrapy.Spider):
          json_data = {}
          domain = 'www.hackforums.net'
          username = ''.join(sel.xpath(xpaths.USERNAME).extract())
+         if username:
+             query = 'update blackhat_status set crawl_status = 1 where reference_url = %(url)s'
+             json_data = {'url':reference_url}
+             self.cursor.execute(quey,json_data)
+
          author_signature = '  '.join(sel.xpath(xpaths.AUTHOR_SIGNATURE).extract())
          if 'mycode_quote' in author_signature:
              author_signature = author_signature.replace('mycode_quote', 'Quote ')
@@ -114,20 +119,21 @@ class Hackforums(scrapy.Spider):
                          last_active = datetime.datetime.strptime(lastactive_yes, '%m-%d-%Y, %I:%M %p')
                          lastactive =  time.mktime(last_active.timetuple())*1000
                      except:pass
-         total_post = ''.join(sel.xpath(xpaths.TOTALPOSTS).extract()).split('(')[0]
-         total_posts =  re.sub('\s\s+', ' ', totalposts)
+         total_post = ''.join(sel.xpath(xpaths.TOTALPOSTS).extract()).split('(')[0].replace('\t',"")
+         total_posts = re.sub('\s\s+', '',total_post)
          fetch_time = int(datetime.datetime.now().strftime("%s")) * 1000
          awards = ''.join(sel.xpath(xpaths.AWARDS).extract()).replace('Awards:','')
          try:
              ranks = ''.join(sel.xpath(xpaths.GROUPS).extract()[0])
-             rank =  re.sub('\s\s+', ' ', ranks)
+             rank = re.sub('\s\s+', '',ranks)
          except: pass
          activetimes_ =  response.meta.get('publish_epoch')
          activetimes = []
          for activetime in activetimes_:
              try:
                  dt = time.gmtime(int(activetime)/1000)
-                 count = ''.join(sel.xpath(xpaths.TOTALPOSTS).extract()).split('(')[0]
+                 counts = ''.join(sel.xpath(xpaths.TOTALPOSTS).extract()).split('(')[0].replace('\t',"")
+                 count = re.sub('\s\s+', '',counts)
                  activetime ="""[ { "year": "%s","month": "%s", "dayofweek": "%s", "hour": "%s", "count": "%s" }]"""%(str(dt.tm_year),str(dt.tm_mon),str(dt.tm_wday),str(dt.tm_hour),count)
                  activetimes.append(activetime)
              except:

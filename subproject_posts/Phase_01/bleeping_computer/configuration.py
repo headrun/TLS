@@ -4,7 +4,8 @@ tables = {
     'bleeping_computer': {
         'posts': 'bleeping_posts',
         'authors': 'bleeping_authors',
-        'crawl': 'bleeping_crawl'
+        'crawl': 'bleeping_authors_crawl',
+        'post_crawl':'bleeping_threads_crawl'
     },
     'exe_tools': {
         'posts': 'exe_posts',

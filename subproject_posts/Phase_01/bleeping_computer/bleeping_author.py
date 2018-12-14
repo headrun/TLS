@@ -1,22 +1,18 @@
-
 import datetime
 import json
 import MySQLdb
 import re
 import time
-import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
-
-from datetime import date, timedelta
-
+#import sys
+#reload(sys)
+#sys.setdefaultencoding('utf-8')
+from datetime import date
+from datetime import timedelta
 import scrapy
 from scrapy.spiders import Spider
 from scrapy.selector import Selector
 from scrapy.http import Request
 from scrapy.http import FormRequest
-
-import bleeping_confi
 import utils
 
 
@@ -27,7 +23,7 @@ class BleepingSpider(Spider):
         self.conn = MySQLdb.connect(db="posts",
                                     host="localhost",
                                     user="root",
-                                    passwd="",
+                                    passwd="123",
                                     use_unicode=True,
                                     charset="utf8")
 
@@ -38,16 +34,25 @@ class BleepingSpider(Spider):
         self.conn.close()
 
     def start_requests(self):
-        yield FormRequest('https://www.bleepingcomputer.com/forums/index.php', callback=self.parse_next, headers=bleeping_confi.headers_a1, formdata=bleeping_confi.data_a1)
+        data = {
+            'auth_key': '880ea6a14ea49e853634fbdc5015a024',
+            'referer': 'https://www.bleepingcomputer.com/forums/index.php',
+            'ips_username': 'inqspdr',
+            'ips_password': 'Inq2018.',
+            'rememberMe': '1',
+        }
+        url = 'https://www.bleepingcomputer.com/forums/index.php?app=core&module=global&section=login&do=process'
+        yield FormRequest(url, callback=self.parse_next, formdata=data)
 
     def parse_next(self,response):
-        start_query = 'select DISTINCT(links) from bleeping_crawl;'
+        start_query = 'select DISTINCT(links) from bleeping_authors_crawl'
         self.cursor.execute(start_query)
         data = self.cursor.fetchall()
         urls = [datum[0] for datum in data]
         for url in urls:
-            meta_query = 'select DISTINCT(auth_meta) from  bleeping_crawl where links = "%s"'%MySQLdb.escape_string(url.encode('utf8'))
-            self.cursor.execute(meta_query)
+            meta_query = 'select DISTINCT(auth_meta) from  bleeping_authors_crawl where links = %(url)s'
+            val = {'url':url}
+            self.cursor.execute(meta_query,val)
             meta_query = self.cursor.fetchall()
             publish_time = []
             thread_title = []
@@ -59,7 +64,7 @@ class BleepingSpider(Spider):
             thread_title = ', '.join(set(thread_title))
             author_meta = {'publish_time':publish_time,'thread_title':thread_title}
             if author_meta and url:
-                yield FormRequest(url, callback=self.parse_author, headers=bleeping_confi.headers_a3, cookies=bleeping_confi.cookies_a3, meta=author_meta)
+                yield FormRequest(url, callback=self.parse_author,meta = author_meta)
 
     def parse_author(self, response):
         json_data = {}
@@ -67,6 +72,10 @@ class BleepingSpider(Spider):
         sel = Selector(response)
         user_name = ''.join(sel.xpath('//h1//span[@class="fn nickname"]//text()').extract())
         domain = "www.bleepingcomputer.com"
+        if user_name:
+            up_que_1 = "update bleeping_authors_crawl set crawl_status = 1 where links = %(url)s"
+            up_que_val ={'url':response.url}
+            self.cursor.execute(up_que_1,up_que_val)
         json_data.update({'user_name': user_name,
                           'domain': domain,
                           'crawl_type': 'keep_up'})
@@ -132,17 +141,16 @@ class BleepingSpider(Spider):
                           'join_date': joindate,
                           'last_active': lastactive,
                           'total_posts': total_posts,
-                          'fetch_epoch': fetch_epoch,
+                          'fetch_time': fetch_epoch,
                           'groups': groups,
                           'reputation': "None",
                           'credits': "None",
                           'awards': "None",
                           'rank': "None",
-                          'active_time': (''.join(activetimes)),
+                          'active_time': ''.join(activetimes),
                           'contact_info': "None",
                           'reference_url': response.url
         })
         upsert_query_authors = utils.generate_upsert_query_authors('bleeping_computer')
-
         self.cursor.execute(upsert_query_authors, json_data)
 

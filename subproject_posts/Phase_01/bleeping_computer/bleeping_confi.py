@@ -3,26 +3,29 @@
 
 #start_requests
 headers_1 = {
-   'authority': 'www.bleepingcomputer.com',
-   'pragma': 'no-cache',
-   'cache-control': 'no-cache',
-   'origin': 'https://www.bleepingcomputer.com',
-   'upgrade-insecure-requests': '1',
-   'content-type': 'application/x-www-form-urlencoded',
-   'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36',
-   'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-   'referer': 'https://www.bleepingcomputer.com/forums/',
-   'accept-encoding': 'gzip, deflate, br',
-   'accept-language': 'en-US,en;q=0.9',
-   'cookie': '__cfduid=d6d13be7eac6a6deac4d04a4cf7be68671537360685; _ga=GA1.2.1372707640.1537360689; _gid=GA1.2.565837778.1537360689; switch-synchronised=1; _fsuid=06e21a82-4f6a-4f91-807c-a4a83ac96764; __ds=1; __wl=0; __lb=0; __cwl=1; _fsloc=?i=IN&c=QmVuZ2FsdXJ1; __SW=befncap24b5saoku8be0; __gads=ID=6406e059ea9c0b2b:T=1537360693:S=ALNI_MbF2OxQxXa_Kdn8X6JVRMHirWzs2Q; __qca=P0-1220576166-1537360693561; session_id=c4a3ce02bfc2833214d54a52ccf11933; _fssid=649c0c5a-0518-44fa-b46d-6f35a1dfb3e5; coppa=0; modtids=%2C; member_id=0; pass_hash=0; ipsconnect_d4dc7770bea1bfd6f98c2a1e9e3a93ea=0; _gat_UA-91740-1=1',
+'content-length': 165,
+':authority': 'www.bleepingcomputer.com',
+':method': 'POST',
+':path': '/forums/index.php?app=core&module=global&section=login&do=process',
+':scheme': 'https',
+'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+'accept-encoding': 'gzip, deflate, br',
+'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
+'cache-control': 'no-cache',
+'content-type': 'application/x-www-form-urlencoded',
+'origin': 'https://www.bleepingcomputer.com',
+'pragma': 'no-cache',
+'referer':'https://www.bleepingcomputer.com/forums/index.php?app=core&module=global&section=login',
+'upgrade-insecure-requests': 1,
+'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36',
 }
 
 data_1 = {
- 'auth_key': '880ea6a14ea49e853634fbdc5015a024',
- 'referer': 'https://www.bleepingcomputer.com/forums/',
- 'ips_username': 'inqspdr',
- 'ips_password': 'Inq2018.',
- 'rememberMe': '1'
+     'auth_key': '880ea6a14ea49e853634fbdc5015a024',
+     'referer': 'https://www.bleepingcomputer.com/forums/index.php',
+     'ips_username': 'inqspdr',
+     'ips_password': 'Inq2018.',
+     'rememberMe': '1'
 }
 
 

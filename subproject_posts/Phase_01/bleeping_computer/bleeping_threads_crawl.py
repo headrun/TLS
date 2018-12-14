@@ -1,28 +1,27 @@
-import MySQLdb
-import utils
-import xpaths
-from scrapy.xlib.pydispatch import dispatcher
-from scrapy import signals
-from scrapy.http import FormRequest
-from scrapy.http import Request
-from scrapy.selector import Selector
-from scrapy.spiders import Spider
-import scrapy
-import unicodedata
-import time
 import datetime
 import json
 import re
 import sys
 reload(sys)
 sys.setdefaultencoding('UTF8')
-crawl_query = utils.generate_upsert_query_crawl('bleeping_computer')
-upsert_query_posts = utils.generate_upsert_query_posts('bleeping_computer')
+import time
+import unicodedata
+import scrapy
+from scrapy.spiders import Spider
+from scrapy.selector import Selector
+from scrapy.http import Request
+from scrapy.http import FormRequest
+from scrapy import signals
+from scrapy.xlib.pydispatch import dispatcher
+import xpaths
+import bleeping_confi
+import utils
+import MySQLdb 
 
+post_url_que = utils.generate_upsert_query_posts_crawl('bleeping_computer')
 
 class BleepingSpider(scrapy.Spider):
-    name = 'bleeping_threads'
-
+    name = 'bleeping_threads_crawl'
     def __init__(self):
         self.conn = MySQLdb.connect(db="posts",
                                     host="localhost",
@@ -37,12 +36,13 @@ class BleepingSpider(scrapy.Spider):
         self.conn.commit()
         self.conn.close()
 
+
     def clean_spchar_in_text(self, text):
         text = unicodedata.normalize('NFKD', text.decode('utf8'))
         text = re.compile(r'([\n,\t,\r]*\t)').sub('\n', text)
         text = re.sub(r'(\n\s*)', '\n', text)
         return text
-
+    
     def start_requests(self):
         data = {
             'auth_key': '880ea6a14ea49e853634fbdc5015a024',
@@ -55,11 +55,28 @@ class BleepingSpider(scrapy.Spider):
         yield FormRequest(url, callback=self.parse_1st, formdata=data)
 
     def parse_1st(self, response):
-        que = 'select distinct(post_url) from bleeping_threads_crawl where crawl_status = 0'
-        self.cursor.execute(que)
-        data = self.cursor.fetchall()
-        for url in data:
-            yield Request(url[0], callback=self.parse_threads)
+        sel = Selector(response)
+        urls = sel.xpath(xpaths.URLS).extract()
+        for url in urls[0:5]:
+            if "https://www.bleepingcomputer.com/" in url:
+                yield FormRequest(url, callback=self.parse_next)
+
+    def parse_next(self, response):
+        sel = Selector(response)
+        thread_urls = response.xpath(xpaths.THREAD_URLS).extract()
+        for url in thread_urls:
+            if "bleepingcomputer" in url:
+                val= {
+                        'sk': url.split('/')[-3],
+                        'post_url':url,
+                        'crawl_status':0,
+                        'reference_url':response.url
+                    }
+                self.cursor.execute(post_url_que, val)
+        navigation = ''.join(response.xpath(
+            xpaths.NAVIGATIONS_LINKS).extract())
+        if navigation:
+            yield Request(navigation, callback=self.parse_next)
 
     def parse_threads(self, response):
         json_data = {}
@@ -78,6 +95,7 @@ class BleepingSpider(scrapy.Spider):
         thread_title = ''.join(
             sel.xpath(xpaths.THREAD_TITLE).extract()).replace('\\', '').strip()
         post_title = ""
+
         json_data.update({
             "domain": domain,
             "crawl_type": crawl_type,
@@ -89,10 +107,6 @@ class BleepingSpider(scrapy.Spider):
         })
 
         post_nodes = sel.xpath(xpaths.POST_NODES)
-        if post_nodes:
-            up_que_1 = "update bleeping_threads_crawl set crawl_status = 1 where post_url = %(url)s"
-            up_val = {'url': response.url}
-            self.cursor.execute(up_que_1, up_val)
 
         for node in post_nodes:
 
@@ -123,7 +137,7 @@ class BleepingSpider(scrapy.Spider):
             fetch_epoch = round(time.time() * 1000)
 
             links = node.xpath(xpaths.LINKS).extract()
-            all_links = prepare_links(links)
+            all_links = utils.prepare_links(links)
 
             author = ''.join(set(node.xpath(xpaths.AUTHOR).extract())).strip()
             author_links = "".join(node.xpath(
@@ -293,13 +307,16 @@ class BleepingSpider(scrapy.Spider):
                 "publish_epoch": int(publish_time),
                 "fetch_epoch": int(fetch_epoch),
                 "author": author,
+                # "post_text": utils.clean_text(text).encode('utf-8').decode('iso-8859-1'),#.decode('iso-8859-1'),
                 "post_text": utils.clean_text(text),
                 "all_links": all_links,
                 "reference_url": response.url,
                 "author_url": author_links
             })
-            self.cursor.execute(upsert_query_posts, json_data)
-
+            upsert_query_posts = utils.generate_upsert_query_posts(
+                'bleeping_computer')
+            #self.cursor.execute(upsert_query_posts, json_data)
+            # self.conn.commit()
             auth_meta = str({
                 'publish_time': publish_time,
                 'thread_title': thread_title
@@ -309,21 +326,13 @@ class BleepingSpider(scrapy.Spider):
                 "auth_meta": auth_meta,
                 "post_id": int(post_id)
             }
-            self.cursor.execute(crawl_query, json_data_crawl)
+            crawl_query = utils.generate_upsert_query_crawl(
+                'bleeping_computer')
+
+            #self.cursor.execute(crawl_query, json_data_crawl)
+            # self.conn.commit()
 
         next_page_link = ''.join(sel.xpath(
             '//link[@rel="stylesheet"]//following-sibling::link[@rel="next"]/@href').extract())
         if next_page_link:
-            yield Request(next_page_link, callback=self.parse_threads)
-
-
-def prepare_links(links_in_post):
-    aggregated_links = []
-    for link in links_in_post:
-        aggregated_links.append(link)
-    if not aggregated_links:
-        all_links = '[]'
-    else:
-        all_links = list(set(aggregated_links))
-        all_links = str(all_links)
-    return all_links
+            yield Request(next_page_link, callback=self.parse_threads, cookies=bleeping_confi.cookies_, headers=bleeping_confi.headers_)

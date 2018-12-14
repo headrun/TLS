@@ -5,17 +5,18 @@ from scrapy.http import Request
 from scrapy import signals
 from scrapy.xlib.pydispatch import dispatcher
 from scrapy.selector import Selector
-import my_utils
+import utils
+import MySQLdb
 
-QUE = my_utils.generate_upsert_query_posts_crawl('hellbound')
+QUE = utils.generate_upsert_query_posts_crawl('hellbound')
 
 class Hellbound(Spider):
     name="hellbound_thread_crawl"
     start_urls = ["https://www.hellboundhackers.org/forum/index.php"]
 
     def __init__(self):
-        self.conn,self.cursor = my_utils.mysql_conn("hellbound","")
-        dispatcher.connect(self.mysql_conn_close, signals.spider_closed)
+        self.conn = MySQLdb.connect(db="hellbound",host="localhost",user="root",passwd="" , use_unicode = True , charset = 'utf8')
+        self.cursor = self.conn.cursor()
 
     def mysql_conn_close(self, spider):
         self.conn.commit()
@@ -24,20 +25,18 @@ class Hellbound(Spider):
     def parse(self,response):
         forums = response.xpath('//h2[@class="hlink"]//a//@href').extract()
         for forum in forums:
-            yield Request("https://www.hellboundhackers.org/forum/"+forum, callback = self.parse_forum, meta = {'crawl_type':'keep up',})
+            yield Request("https://www.hellboundhackers.org/forum/"+forum, callback = self.parse_forum)
 
 
     def parse_forum(self,response):
         threads = response.xpath('//h2[@class="hlink"]//a//@href').extract()
-        crawl_type = response.meta.get('crawl_type','')
         for thread in threads:
             json_val = {}
             thread_url = "https://www.hellboundhackers.org/forum/"+thread
             json_val = {
                     'sk': thread.replace('.html',''),
-                    'thread_url': thread_url,
-                    'status_code': 0,
-                    'crawl_type': crawl_type,
+                    'post_url': thread_url,
+                    'crawl_status': 0,
                     'reference_url': response.url,
                     }
             self.cursor.execute(QUE,json_val)

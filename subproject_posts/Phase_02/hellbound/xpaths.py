@@ -54,6 +54,8 @@ JOINED_DATE ='//td[contains(text(),"Date Joined:")]/../td[@colspan="3"]//text()'
 LAST_ACTIVE = '//td[contains(text(),"Last Visit:")]/../td[@colspan="3"]//text()'
 TOTAL_POSTS = '//td[contains(text(),"Forum Posts:")]/following-sibling::td//text()'
 GROUP = '//td[contains(text(),"Member Status:")]/following-sibling::td//text()'
+REPUTATION = '//td[contains(text(),"Community Points")]/following-sibling::td//text()'
+RANK = '//td[contains(text(),"Rank:")]/following-sibling::td//text()'
 
 ICQ = '//td[contains(text(),"ICQ#:")]/following-sibling::td//text()'
 MSN = '//td[contains(text(),"MSN ID:")]/following-sibling::td//text()'

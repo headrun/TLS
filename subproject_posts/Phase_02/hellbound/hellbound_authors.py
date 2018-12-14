@@ -1,4 +1,4 @@
-import my_utils
+import utils
 import scrapy
 from scrapy.spider import Spider
 from scrapy.selector import Selector
@@ -8,13 +8,16 @@ from scrapy.xlib.pydispatch import dispatcher
 from scrapy.selector import Selector
 import json
 import xpaths
+import MySQLdb
 
-A_QUE = my_utils.generate_upsert_query_authors("hellbound")
+
+A_QUE = utils.generate_upsert_query_authors("hellbound")
 
 class Hellbound(Spider):
     name = "hellbound_authors"
     def __init__(self):
-        self.conn,self.cursor = my_utils.mysql_conn("hellbound","")
+        self.conn = MySQLdb.connect(db= "hellbound", host = "localhost", user="root", passwd = "", use_unicode=True, charset="utf8")
+        self.cursor = self.conn.cursor()
         dispatcher.connect(self.mysql_conn_close, signals.spider_closed)
 
     def mysql_conn_close(self, spider):
@@ -22,16 +25,11 @@ class Hellbound(Spider):
         self.conn.close()
 
     def start_requests(self):
-        select_que = "select distinct(links) from hellbound_authors_crawl where status_code = 0"
+        select_que = "select distinct(links) from hellbound_authors_crawl where crawl_status = 0"
         self.cursor.execute(select_que)
         data = self.cursor.fetchall()
         for url in data:
             url = url[0]
-            UP_QUE_TO_9 = 'update hellbound_authors_crawl set status_code = 9 where links = "%s"'%url
-            self.cursor.execute(UP_QUE_TO_9)
-        for url in data:
-            url = url[0]
-            #url = 'https://www.hellboundhackers.org/user/ariadon.html'
             meta_query = 'select DISTINCT(auth_meta) from hellbound_authors_crawl where links = "%s"'%url
             self.cursor.execute(meta_query)
             meta_query = self.cursor.fetchall()
@@ -46,22 +44,23 @@ class Hellbound(Spider):
         json_val = {}
         publish_epoch = response.meta.get('publish_epoch','')
         author_name = ''.join(response.xpath('//title/text()').extract()).replace("'s Profile | Hellbound Hackers",'')
+        reputation = ''.join(response.xpath(xpaths.REPUTATION).extract())
         json_val.update({
                         'crawl_type':"keep up",
-                        'reputation':' ',
+                        'reputation':reputation,
                         'domain':"www.hellboundhackers.org",
                         'user_name':author_name,
                         })
-        author_signature = my_utils.clean_text(' '.join(response.xpath(xpaths.AUTHOR_SIGNATURA).extract()))
+        author_signature = utils.clean_text(' '.join(response.xpath(xpaths.AUTHOR_SIGNATURA).extract()))
         join_date = ''.join(response.xpath(xpaths.JOINED_DATE).extract())
-        join_date = my_utils.time_to_epoch(join_date, "%B %d %Y - %H:%M:%S") or 0
+        join_date = utils.time_to_epoch(join_date, "%B %d %Y - %H:%M:%S") or 0
         last_active = ''.join(response.xpath(xpaths.LAST_ACTIVE).extract())
-        last_active = my_utils.time_to_epoch(last_active, "%B %d %Y - %H:%M:%S") or 0
+        last_active = utils.time_to_epoch(last_active, "%B %d %Y - %H:%M:%S") or 0
         total_posts = ''.join(response.xpath(xpaths.TOTAL_POSTS).extract())
-        active_time = my_utils.activetime_str(publish_epoch,total_posts)
-        fetch_time = my_utils.fetch_time()
+        active_time = utils.activetime_str(publish_epoch,total_posts)
+        fetch_time = utils.fetch_time()
         groups = ''.join(response.xpath(xpaths.GROUP).extract())
-        rank = ''.join(response.xpath('//td[contains(text(),"Rank:")]/following-sibling::td//text()').extract())
+        rank = ''.join(response.xpath(xpaths.RANK).extract())
         json_val.update({
                     'author_signature': author_signature,
                     'join_date':join_date,
@@ -101,5 +100,5 @@ class Hellbound(Spider):
                     })
         self.cursor.execute(A_QUE,json_val)
         if author_name or response.url == "https://www.hellboundhackers.org/user/.html":
-            UP_QUE_TO_1 = 'update hellbound_authors_crawl set status_code = 1 where links = "%s"'%response.url
+            UP_QUE_TO_1 = 'update hellbound_authors_crawl set crawl_status = 1 where links = "%s"'%response.url
             self.cursor.execute(UP_QUE_TO_1)

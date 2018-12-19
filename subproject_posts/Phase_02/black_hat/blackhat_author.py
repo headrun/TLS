@@ -7,6 +7,7 @@ from scrapy.selector import Selector
 from scrapy.http import Request
 import datetime,csv
 import time
+import re
 import MySQLdb
 import json
 import utils
@@ -16,13 +17,14 @@ import selenium
 from selenium.webdriver.support.wait import WebDriverWait
 from scrapy.xlib.pydispatch import dispatcher
 from scrapy import signals
+import logging
 
 class BlackHat(scrapy.Spider):
    name="blackhat_author"
    start_urls=["https://www.blackhatworld.com/forums/"]
    handle_httpstatus_list = [403,503]
    def __init__(self,*args,**kwargs):
-       self.conn = MySQLdb.connect(db="posts_blackhat",host="localhost",user="root",passwd="",use_unicode=True,charset="utf8")
+       self.conn = MySQLdb.connect(db="posts_blackhat",host="localhost",user="root",passwd="1216",use_unicode=True,charset="utf8")
        self.cursor = self.conn.cursor()
        select_query = 'select DISTINCT(links) from blackhat_crawl;'
        self.cursor.execute(select_query)
@@ -59,10 +61,13 @@ class BlackHat(scrapy.Spider):
                yield Request(url, callback=self.parse_author,meta = meta)
 
    def parse_author(self, response):
+       logger=logging.getLogger()
+       logger.setLevel(logging.ERROR)
+
        if "[email" in response.body and "protected]" in response.body:
            self.driver.get(response.url)
            time.sleep(1)
-           WebDriverWait(self.driver, 10)
+           WebDriverWait(self.driver, 20)
            reference_url = response.url
            sel = Selector(text = self.driver.page_source)
        else:
@@ -72,29 +77,28 @@ class BlackHat(scrapy.Spider):
        username = ''.join(sel.xpath(xpaths.USERNAME).extract())
        if username == '':
            username = ''
+       if username:
+           query = 'update blackhat_status set crawl_status = 1 where reference_url = %(url)s'
+           json_data = {'url':reference_url}
+           self.cursor.execute(query,json_data)
        domain = "www.blackhatworld.com"
        activetime_ = response.meta.get("publish_epoch")
        author_signature = response.meta.get("author_signature")
        activetime = []
-       CONTENT_COUNT = ''.join(sel.xpath(xpaths.TOTALPOSTS).extract()).replace('Messages:','')
-       for activetime_i in activetime_:
-           try:
-               dt = time.gmtime(int(activetime_i)/1000)
-               activetime_i = """[ { "year": "%d","month": "%d", "dayofweek": "%d", "hour": "%d", "count": "%s" }]"""%\
-                      (dt.tm_year,dt.tm_mon,dt.tm_wday,dt.tm_hour,CONTENT_COUNT)
-               activetime.append(activetime_i)
-           except:
-               activetime.append('-')
-       total_posts =''.join( CONTENT_COUNT)
+       CONTENT_COUNTS = ''.join(sel.xpath(xpaths.TOTALPOSTS).extract()).replace('Messages:','')
+       CONTENT_COUNT = re.sub('\s\s+', '', CONTENT_COUNTS)
+       total_post =''.join( CONTENT_COUNT)
+       total_posts = re.sub('\s\s+', '', total_post)
        if total_posts == '':
            total_posts = ''
-
+       activetime = utils.activetime_str(activetime_,total_posts)
        joindate = ''.join(sel.xpath(xpaths.JOINDATE).extract()).replace('Joined:','').replace('\n','').replace('\t','')
 
        try:
            joindates = datetime.datetime.strptime(joindate,'%b %d, %Y')
            join_date = time.mktime(joindates.timetuple())*1000
        except:
+           logger.error("ValueError")
            join_date = '0'
 
        lastactives = ''.join(sel.xpath(xpaths.LASTACTIVE).extract())
@@ -102,9 +106,10 @@ class BlackHat(scrapy.Spider):
            lastactive = datetime.datetime.strptime(lastactives,'%b %d, %Y')
            last_active = time.mktime(lastactive.timetuple())*1000
        except:
+           logger.error("ValueError")
            last_active = '0'
 
-       fetch_time = int(datetime.datetime.now().strftime("%s")) * 1000
+       fetch_time = utils.fetch_time()
 
        groups = ''.join(sel.xpath(xpaths.GROUPS).extract())
        if groups == '':

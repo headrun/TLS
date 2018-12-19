@@ -21,7 +21,7 @@ class Hackforums(scrapy.Spider):
     handle_httpstatus_list = [403]
     def __init__(self, *args, **kwargs):
         super(Hackforums, self).__init__(*args, **kwargs)
-        self.conn = MySQLdb.connect(db="posts_hackforums", host="localhost", user="root", passwd="", use_unicode=True, charset='utf8')
+        self.conn = MySQLdb.connect(db="posts_hackforums", host="localhost", user="root", passwd="1216", use_unicode=True, charset='utf8')
         self.cursor = self.conn.cursor()
         dispatcher.connect(self.close_conn, signals.spider_closed)
 
@@ -33,6 +33,7 @@ class Hackforums(scrapy.Spider):
         url = "https://hackforums.net/"
         time.sleep(3)
         yield Request(url, callback=self.parse, meta={'proxy':'http://74.70.67.218:59112'})
+
 
     def parse(self, response):
         sel = Selector(response)
@@ -66,7 +67,7 @@ class Hackforums(scrapy.Spider):
         self.cursor.execute(url_que)
         data = self.cursor.fetchall()
         for url in data:
-            yield Request(url[0], callback = self.parse_thread)
+            yield Request(url[0], callback = self.parse_thread,meta={'proxy':'http://74.70.67.218:59112'})
 
     def parse_thread(self, response):
         logger=logging.getLogger()
@@ -113,8 +114,8 @@ class Hackforums(scrapy.Spider):
                             publishdate = datetime.datetime.strptime(publis, '%m-%d-%Y, %I:%M %p')
                         except:logger.error("value error")
 
-            publish_epoch = time.mktime(publishdate.timetuple())*1000
-            fetch_epoch = int(datetime.datetime.now().strftime("%s")) * 1000
+            publish_epoch = (int(time.mktime(time.strptime(str_of_time, str_of_patter))) - time.timezone) * 1000
+            fetch_epoch = utils.fetch_time()
             Text = '\n'.join(node.xpath(xpaths.POST_TEXT).extract())
             post_text = Text
             if 'mycode_quote' in Text:
@@ -164,7 +165,7 @@ class Hackforums(scrapy.Spider):
                     'crawl_status':0,
                     'links': author_url
                 }
-            crawl_query = utils.generate_upsert_query_crawl('posts_hackforums')
+            crawl_query = utils.generate_upsert_query_authors_crawl('posts_hackforums')
             self.cursor.execute(crawl_query, json_crawl)
 
 

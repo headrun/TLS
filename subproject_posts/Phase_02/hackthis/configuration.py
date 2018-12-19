@@ -34,10 +34,10 @@ tables = {
         'crawl' : 'blackhat_crawl',
         'authors': 'blackhat_authors'
     },
-    'posts_hackforums':{
-        'post_crawl':'hackforum_status',
-        'posts' : 'hackforum_posts',
-        'author_crawl' : 'hackforum_crawl',
-        'authors' : 'hackforum_authors'
+    'posts_hackthissite': {
+        'post_crawl':'hackthis_status',
+        'posts' : 'hackthis_posts',
+        'author_crawl' : 'hackthis_crawl',
+        'authors' : 'hackthis_authors'
     }
 }

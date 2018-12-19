@@ -1,10 +1,10 @@
 
-import calendar
-import time
 
-import datetime
+import calender
 import re
 import unicodedata
+import time
+import datetime
 
 import configuration
 
@@ -12,7 +12,6 @@ import configuration
 # ToDo: get this column names dynamically
 def generate_upsert_query_authors(crawler):
     table_name = configuration.tables[crawler]['authors']
-
     upsert_query = """ INSERT INTO {0} (user_name, domain, crawl_type, author_signature, join_date, last_active, \
                     total_posts, fetch_time, groups, reputation, credits, awards, rank, active_time, contact_info,\
                     reference_url) VALUES ( %(user_name)s, %(domain)s, %(crawl_type)s, %(author_signature)s, \
@@ -29,14 +28,13 @@ def generate_upsert_query_authors(crawler):
 
 def generate_upsert_query_posts(crawler):
     table_name = configuration.tables[crawler]['posts']
-
     upsert_query = """INSERT INTO {0} (domain, crawl_type, category, sub_category, thread_title, thread_url, post_id,\
-                    post_title, post_url, publish_epoch, fetch_epoch, author, author_url, post_text, all_links, reference_url)\
+                    post_url, post_title, publish_epoch, fetch_epoch, author, author_url, post_text, all_links, reference_url)\
                     VALUES( %(domain)s, %(crawl_type)s, %(category)s, %(sub_category)s, %(thread_title)s, %(thread_url)s,\
-                    %(post_id)s, %(post_title)s, %(post_url)s, %(publish_epoch)s, %(fetch_epoch)s, %(author)s, %(author_url)s,\
+                    %(post_id)s, %(post_url)s, %(post_title)s, %(publish_epoch)s, %(fetch_epoch)s, %(author)s, %(author_url)s,\
                     %(post_text)s, %(all_links)s, %(reference_url)s) ON DUPLICATE KEY UPDATE crawl_type=%(crawl_type)s,\
                     category=%(category)s, sub_category=%(sub_category)s, thread_title=%(thread_title)s, \
-                    thread_url=%(thread_url)s, post_title=%(post_title)s, post_url=%(post_url)s, publish_epoch=%(publish_epoch)s,\
+                    thread_url=%(thread_url)s, post_url=%(post_url)s, post_title=%(post_title)s, publish_epoch=%(publish_epoch)s,\
                     fetch_epoch=%(fetch_epoch)s, author=%(author)s, author_url=%(author_url)s, post_text=%(post_text)s,\
                     all_links=%(all_links)s, reference_url=%(reference_url)s """.format(table_name)
 
@@ -138,6 +136,7 @@ def decode_cloudflareEmail(cfString):
     rand = int(cfString[:2],16)
     email_id = ''.join([chr(int(cfString[i:i+2], 16) ^ rand) for i in range(2, len(cfString), 2)])
     return email_id
+
 
 
 

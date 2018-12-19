@@ -17,7 +17,7 @@ from scrapy import signals
 from scrapy.xlib.pydispatch import dispatcher
 import utils
 import xpaths
-
+import logging
 
 
 class BoardBat(scrapy.Spider):
@@ -25,7 +25,7 @@ class BoardBat(scrapy.Spider):
     start_urls = ["https://board.b-at-s.info/"]
 
     def __init__(self, *args, **kwargs):
-        self.conn = MySQLdb.connect(db="posts_boardbat",host="localhost",user="root",passwd="" , use_unicode = True , charset = 'utf8mb4')
+        self.conn = MySQLdb.connect(db="posts_boardbat",host="localhost",user="root",passwd="1216" , use_unicode = True , charset = 'utf8mb4')
         self.cursor = self.conn.cursor()
 
     def close_conn(self, spider):
@@ -48,6 +48,8 @@ class BoardBat(scrapy.Spider):
 
     def parse_thread(self, response):
         thread_url = response.url
+        logger=logging.getLogger()
+        logger.setLevel(logging.ERROR)
         if '&page=' in response.url:
             test = re.findall('&page=\d+',response.url)
             thread_url = response.url.replace(''.join(test),"")
@@ -64,7 +66,8 @@ class BoardBat(scrapy.Spider):
         category = ','.join(sel.xpath(xpaths.CATEGORY).extract()).split(',')[1]
         try:
             sub_category = '["' + ', '.join(sel.xpath(xpaths.SUBCATEGORY).extract()).split(',')[2] + '"]'
-        except:pass
+        except:
+            logger.exception("OUT THE INDEX")
         thread_title = ''.join(sel.xpath(xpaths.THREADTITLE).extract())
         post_title = ''
         nodes = sel.xpath(xpaths.NODES)
@@ -76,8 +79,7 @@ class BoardBat(scrapy.Spider):
             publish_time = ''.join(re.findall('\d+-\d+-\d+T\d+:\d+',publish_time))
             if not publish_time:
                 pass
-            publishdate = datetime.datetime.strptime((publish_time),'%Y-%m-%dT%H:%M')
-            publish_epoch = time.mktime(publishdate.timetuple())*1000
+            publish_epoch = utils.time_to_epoch(publish_time,'%Y-%m-%dT%H:%M')
             Text = '\n'.join(node.xpath(xpaths.POST_TEXT).extract())
 
             t_author = node.xpath(xpaths.TEXT_AUTHOR).extract()
@@ -116,7 +118,7 @@ class BoardBat(scrapy.Spider):
                 Text = Text.replace('ipsBlockquote','Quote Quote')
             for a in t_author:
                 Text = re.sub('Quote Quote\n'+a+',','Quote\n'+a+',',Text)
-            fetch_epoch = int(datetime.datetime.now().strftime("%s")) * 1000
+            fetch_epoch = utils.fetch_time()
             Links = node.xpath(xpaths.LINKS).extract()
             links = str(Links)
             query_posts = utils.generate_upsert_query_posts('posts_boardbat')

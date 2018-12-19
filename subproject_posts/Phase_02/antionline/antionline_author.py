@@ -1,4 +1,3 @@
-
 import scrapy
 from scrapy.spider import Spider
 from scrapy.selector import Selector
@@ -25,7 +24,7 @@ class formus(scrapy.Spider):
     handle_httpstatus_list = [403]
 
     def __init__(self, *args, **kwargs):
-        self.conn = MySQLdb.connect(db="antionline",host="localhost",user="root",passwd="1216",use_unicode=True,charset="utf8")
+        self.conn = MySQLdb.connect(db="antionline",host="localhost",user="root",passwd="",use_unicode=True,charset="utf8")
         self.cursor = self.conn.cursor()
         select_query = 'select DISTINCT(links) from antionline_crawl;'
         self.cursor.execute(select_query)

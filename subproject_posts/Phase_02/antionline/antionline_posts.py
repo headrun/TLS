@@ -18,7 +18,7 @@ import utils
 from scrapy.conf import settings
 
 query_posts = utils.generate_upsert_query_posts('antionline')
-auth_que = utils.generate_upsert_query_crawl('antionline')
+auth_que = utils.generate_upsert_query_authors_crawl('antionline')
 
 class formus(BaseSpider):
     name = 'antionline_posts'

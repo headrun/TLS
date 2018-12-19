@@ -14,6 +14,7 @@ sys.setdefaultencoding('UTF8')
 import MySQLdb
 import unicodedata
 from antionline_xpaths import *
+#from scrapy.conf import settings
 import utils
 
 class formus(BaseSpider):

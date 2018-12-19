@@ -17,6 +17,7 @@ from scrapy.xlib.pydispatch import dispatcher
 import utils
 import xpaths
 
+crawl_query = utils.generate_upsert_query_authors_crawl('posts_blackhat')
 
 class BlackHat(scrapy.Spider):
     name = "blackhat_thread"
@@ -25,7 +26,7 @@ class BlackHat(scrapy.Spider):
 
     def __init__(self, *args, **kwargs):
         super(BlackHat,  self).__init__(*args, **kwargs)
-        self.conn = MySQLdb.connect(db="posts_blackhat",host="localhost",user="root",passwd="" , use_unicode = True , charset = 'utf8')
+        self.conn = MySQLdb.connect(db="posts_blackhat",host="localhost",user="root",passwd="1216" , use_unicode = True , charset = 'utf8')
         self.cursor = self.conn.cursor()
         self.driver = open_driver()
         dispatcher.connect(self.close_conn, signals.spider_closed)
@@ -38,30 +39,18 @@ class BlackHat(scrapy.Spider):
         self.conn.commit()
         self.conn.close()
 
-    def parse(self,response):
-        sel = Selector(response)
-        forums = sel.xpath(xpaths.FORUMS).extract()
-        for forum in forums:
-            forum = "https://www.blackhatworld.com/" + forum
-            yield Request(forum,callback= self.parse_nxt)
-
-    def parse_nxt(self, response):
-        sel = Selector(response)
-        urls = sel.xpath(xpaths.THREADURLS).extract()
-        for url in urls:
-            url = "https://www.blackhatworld.com/" + url
-            yield Request(url, callback = self.parse_thread)
-        for page in set(sel.xpath(xpaths.INNERPAGENAVIGATION).extract()):
-            if page:
-                page = "https://www.blackhatworld.com/" + page
-                yield Request(page, callback = self.parse_nxt)
-
+    def start_requests(self):
+        url_que = "select distinct(post_url) from blackhat_status where crawl_status = 0 "
+        self.cursor.execute(url_que)
+        data = self.cursor.fetchall()
+        for url in data:
+            yield Request(url[0], callback = self.parse_thread)
 
     def parse_thread(self, response):
         if "[email" in response.body  and "protected]" in response.body:
             self.driver.get(response.url)
             time.sleep(1)
-            WebDriverWait(self.driver, 10)
+            WebDriverWait(self.driver, 20)
             reference_url = response.url
             sel = Selector(text = self.driver.page_source)
         else:
@@ -82,8 +71,12 @@ class BlackHat(scrapy.Spider):
         sub_category = '["' + ''.join(sel.xpath(xpaths.SUBCATEGORY).extract()[2]) + '"]'
         post_title = ' '
         nodes=sel.xpath(xpaths.NODES)
+        if nodes:
+            query = 'update blackhat_status set crawl_status = 1 where post_url = %(url)s'
+            json_data={'url':response.url}
+            self.cursor.execute(query,json_data)
         for node in nodes:
-            author = ''.join(node.xpath(xpaths.AUTHOR).extract()
+            author = ''.join(node.xpath(xpaths.AUTHOR).extract())
             authorurl =  ''.join(node.xpath(xpaths.AUTHORURL).extract())
             if authorurl == '':
                 author_url = authorurl
@@ -93,13 +86,12 @@ class BlackHat(scrapy.Spider):
             postid = ''.join(node.xpath(xpaths.POSTID).extract())
             post_id =  re.findall('\d+',postid)
             publishtimes = ''.join(node.xpath(xpaths.PUBLISHTIME).extract())
-            publishdate = datetime.datetime.strptime(publishtimes, '%b %d, %Y')
-            publish_epoch = time.mktime(publishdate.timetuple())*1000
+            publish_epoch = utils.time_to_epoch(publishtimes, '%b %d, %Y')
             post_text = '\n'.join(node.xpath(xpaths.POST_TEXT).extract())
             if 'quoteContainer' in post_text:
                 post_text = post_text.replace('quoteContainer' ,'Quote ')
-            fetch_epoch = int(datetime.datetime.now().strftime("%s")) * 1000
-            author_signature = ','.join(node.xpath(xpaths.AUTHOR_SIGNATURE).extract())
+            fetch_epoch = utils.fetch_time()
+            author_signature = '\n'.join(node.xpath(xpaths.AUTHOR_SIGNATURE).extract())
             Links = node.xpath(xpaths.LINKS).extract()
             links = []
             for Link in Links:
@@ -133,16 +125,16 @@ class BlackHat(scrapy.Spider):
                 'author_url': author_url,
                 'all_links': all_links
             })
-            if author_url:
-                # passing publish_time,thread_title,Topics using dict format
-                # Write data into forums_crawl table
-                meta = {'publish_epoch': publish_epoch, 'author_signature':author_signature.format(utils.clean_text(author_signature))}
-                json_crawl = {
+            # passing publish_time,thread_title,Topics using dict format
+            # Write data into forums_crawl table
+            meta = {'publish_epoch': publish_epoch, 'author_signature':utils.clean_text(author_signature)}
+            json_crawl = {}
+            json_crawl = {
                     'post_id': post_id,
                     'auth_meta': json.dumps(meta),
+                    'crawl_status':0,
                     'links': author_url
-                }
-            crawl_query = utils.generate_upsert_query_crawl('posts_blackhat')
+            }
             self.cursor.execute(crawl_query, json_crawl)
 
         pagenav = set(sel.xpath(xpaths.PAGENAV).extract())

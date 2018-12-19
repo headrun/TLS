@@ -30,8 +30,9 @@ tables = {
         'posts': 'bb_posts'
     },
     'posts_blackhat':{
+        'post_crawl': 'blackhat_status',
         'posts' : 'blackhat_posts',
-        'crawl' : 'blackhat_crawl',
+        'author_crawl' : 'blackhat_crawl',
         'authors': 'blackhat_authors'
     }
 }

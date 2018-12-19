@@ -20,7 +20,7 @@ class Hackforums(scrapy.Spider):
 
      def __init__(self, *args, **kwargs):
          super(Hackforums, self).__init__(*args, **kwargs)
-         self.conn = MySQLdb.connect(db="posts_hackforums", host="localhost", user="root", passwd="", use_unicode = True, charset = 'utf8')
+         self.conn = MySQLdb.connect(db="posts_hackforums", host="localhost", user="root", passwd="1216", use_unicode = True, charset = 'utf8')
          self.cursor = self.conn.cursor()
          dispatcher.connect(self.close_conn, signals.spider_closed)
 
@@ -87,8 +87,8 @@ class Hackforums(scrapy.Spider):
          domain = 'www.hackforums.net'
          username = ''.join(sel.xpath(xpaths.USERNAME).extract())
          if username:
-             query = 'update blackhat_status set crawl_status = 1 where reference_url = %(url)s'
-             json_data = {'url':reference_url}
+             query = 'update hackforum_status set crawl_status = 1 where response.url = %(url)s'
+             json_data = {'url':response.url}
              self.cursor.execute(quey,json_data)
 
          author_signature = '  '.join(sel.xpath(xpaths.AUTHOR_SIGNATURE).extract())
@@ -129,16 +129,7 @@ class Hackforums(scrapy.Spider):
          except: pass
          activetimes_ =  response.meta.get('publish_epoch')
          activetimes = []
-         for activetime in activetimes_:
-             try:
-                 dt = time.gmtime(int(activetime)/1000)
-                 counts = ''.join(sel.xpath(xpaths.TOTALPOSTS).extract()).split('(')[0].replace('\t',"")
-                 count = re.sub('\s\s+', '',counts)
-                 activetime ="""[ { "year": "%s","month": "%s", "dayofweek": "%s", "hour": "%s", "count": "%s" }]"""%(str(dt.tm_year),str(dt.tm_mon),str(dt.tm_wday),str(dt.tm_hour),count)
-                 activetimes.append(activetime)
-             except:
-                 activetime = ' '
-                 activetimes.append(activetime)
+         activetimes = utils.activetime_str(activetimes_,totalposts)
          json_data.update({'user_name': username,
                           'domain': domain,
                           'crawl_type': 'keep_up',
@@ -152,7 +143,7 @@ class Hackforums(scrapy.Spider):
                           'credits': '',
                           'awards': awards,
                           'rank': utils.clean_text(rank),
-                          'active_time': (''.join(activetimes)),
+                          'active_time': activetimes,
                           'contact_info': '',
                           'reference_url': response.url
          })

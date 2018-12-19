@@ -22,7 +22,7 @@ class Hackforums(scrapy.Spider):
 
     def __init__(self, *args, **kwargs):
         super(Hackforums, self).__init__(*args, **kwargs)
-        self.conn = MySQLdb.connect(db="posts_hackforums", host="localhost", user="root", passwd="", use_unicode=True, charset='utf8')
+        self.conn = MySQLdb.connect(db="posts_hackforums", host="localhost", user="root", passwd="1216", use_unicode=True, charset='utf8')
         self.cursor = self.conn.cursor()
         dispatcher.connect(self.close_conn, signals.spider_closed)
 

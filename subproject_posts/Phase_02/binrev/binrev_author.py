@@ -31,7 +31,7 @@ class formus(scrapy.Spider):
     handle_httpstatus_list = [403]
 
     def __init__(self, *args, **kwargs):
-        self.conn = MySQLdb.connect(db="binrev",host="localhost",user="root",passwd="hdrn59!",use_unicode=True,charset="utf8")
+        self.conn = MySQLdb.connect(db="binrev",host="localhost",user="root",passwd="",use_unicode=True,charset="utf8")
         self.cursor = self.conn.cursor()
         select_query = 'select DISTINCT(links) from binrev_crawl;'
         self.cursor.execute(select_query)
@@ -61,7 +61,12 @@ class formus(scrapy.Spider):
         sel = Selector(response)
         username = ''.join(sel.xpath(USER_NAME).extract()).strip().encode('ascii','ignore').replace('\t','').replace('\n','')
         if username == "":
-            pass
+            username = ''
+	if username:
+           query = 'update binrev_browse set crawl_status = 1 where reference_url = %(url)s'
+           json_data = {'url': response.url}
+           self.cursor.execute(query,json_data)
+	
 
         domain = "www.binrev.com"
         post_count = ''.join(sel.xpath(TOTAL_POST_COUNT).extract()).replace('\t', '').replace('\n', '')
@@ -121,3 +126,5 @@ class formus(scrapy.Spider):
             })
 
 	self.cursor.execute(query_authors, json_authors)
+
+

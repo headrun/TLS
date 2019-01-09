@@ -2,6 +2,7 @@
   Binrev_posts
 '''
 import time
+import datetime
 import sys
 import json
 import re
@@ -18,9 +19,10 @@ reload(sys)
 import MySQLdb
 from binrev_xpaths import *
 import utils
+import binrev_crawl
 import binrev_csv
 query_posts = utils.generate_upsert_query_posts('binrev')
-auth_que = utils.generate_upsert_query_crawl('binrev')
+auth_que = utils.generate_upsert_query_authors_crawl('binrev')
 
 class formus(BaseSpider):
     name = 'binrev_posts'
@@ -30,7 +32,7 @@ class formus(BaseSpider):
 
 
     def __init__(self, *args, **kwargs):
-        self.conn = MySQLdb.connect(host="localhost", user="root", passwd="hdrn59!", db="binrev", charset="utf8", use_unicode=True)
+        self.conn = MySQLdb.connect(host="localhost", user="root", passwd="", db="binrev", charset="utf8", use_unicode=True)
         self.cursor = self.conn.cursor()
         dispatcher.connect(self.close_conn, signals.spider_closed)
 
@@ -48,52 +50,23 @@ class formus(BaseSpider):
             url = 'http://www.binrev.com/%s'%url
         return url 
 
-
-    def parse(self, response):
-        '''
-          Main page urls
-        '''
-        sel = Selector(response)
-        start_page_urls = sel.xpath(MAIN_URLS).extract()
-	for main_urls in start_page_urls:
-	    main_urls = self.add_http(main_urls)
-	    yield Request(main_urls, callback=self.parse_nextpage)
-
-    def parse_nextpage(self, response):
-        '''
-          Navigation for next_pages links for posts
-        '''
-        sel = Selector(response)
-        thread_links = sel.xpath(THREAD_URLS).extract()
-        for thread_urls in thread_links:
-            yield Request(thread_urls, callback=self.parse_all_pages_links)
-        navigation_click = sel.xpath(NAVIGATION).extract()
-        for click in navigation_click:
-            if click:
-                if 'http' not in click: click = self.add_http(click)
-                yield Request(click, callback=self.parse_nextpage)
-
-    def clean_url(self, response):
-        '''
-         Removes the trailing '/?' or '/' in a given url scheme.
-        '''
-        cleaned_url = re.sub(r'(\/\?|\/)$', '', response)
-        return cleaned_url
-
+    def start_requests(self):
+        url_que = "select distinct(post_url) from binrev_browse where crawl_status = 0 "
+        self.cursor.execute(url_que)
+        data = self.cursor.fetchall()
+        for url in data:
+            yield Request(url[0], callback = self.parse_all_pages_links)
 
     def parse_all_pages_links(self, response):
-        '''
-         posts_terminal data which is required
-        '''
  	if '&page=' in response.url:
             #crawl_type = "catchup"
             test = re.findall(r'&page=\d+', response.url)
             thread_url = response.url.replace(''.join(test), "").replace('&do=findComment', '')
-            thread_url = self.clean_url(thread_url)
+            thread_url =  utils.clean_url(thread_url)
         else:
             #crawl_type = "keepup"
             thread_url = response.url
-            thread_url = self.clean_url(thread_url)
+            thread_url =  utils.clean_url(thread_url)
 
  	sel = Selector(response)
         #thread_url = response.url
@@ -106,6 +79,11 @@ class formus(BaseSpider):
 
 
         nodes = sel.xpath(NODES)
+	if nodes:
+            query = 'update binrev_browse set crawl_status = 1 where post_url = %(url)s'
+            json_data={'url':response.url}
+            self.cursor.execute(query,json_data)	
+
         for node in nodes:
             author_name = ''.join(node.xpath(AUTHOR_NAME).extract())
             author_link = ''.join(node.xpath(AUTHOR_LINK).extract())
@@ -143,19 +121,14 @@ class formus(BaseSpider):
             ext = ''.join(re.findall(r'\d+ \w+ ago, \w+ said:', text))
             ext1 = ''.join(re.findall(r'On \d+-\d+-\d+ at \d+:\d+ \wM, \w+ said:', text)) 
             ext2 = ''.join(re.findall(r'On \d+/\d+/\d+ at \d+:\d+ \wM, \w+ said:', text))
-            #On 7/2/2017 at 3:08 AM, Kulverstukas said:
             ext3 = ''.join(re.findall(r'On \d+/\d+/\d+ at \d+:\d+ \wM,  said:', text))
-            #On 7/2/2017 at 3:08 AM,  said:
             ext4 = ''.join(re.findall(r'On \w+ \d+, \d+ at \d+:\d+ \wM, \w+ said:', text))
-            #On July 15, 2016 at 10:39 AM, systems_glitch said:
 
             text = text.replace(ext, '').replace(ext1, '').replace(ext2, '').replace(ext3, '').replace(ext4, '')
-            #print text
             Links = node.xpath(LINK).extract()
             Link = []
             for link_ in Links:
                 if 'http' not in link_: link_ = 'https:'+ link_
-                #if not ('.gif.') or ('emoticons') in link_:
                 if not 'emoticons' in link_:
                     Link.append(link_)
             links = str(Link)
@@ -180,11 +153,12 @@ class formus(BaseSpider):
             })
 
 	    self.cursor.execute(query_posts, json_posts)
-	    meta = json.dumps({'time' : publish_time}) #,'threadtitle':thread_title})
+	    meta = json.dumps({'time' : publish_time}) 
 	    json_author = {}
 	    json_author.update({
 		'post_id' : postid,
 		'auth_meta' : meta,
+		'crawl_status':0,
 		'links' : author_link,
 		})
 	    self.cursor.execute(auth_que, json_author)

@@ -2,15 +2,10 @@
 tables = {
 
     'binrev':{
+	'post_crawl':'binrev_browse',
 	'posts': 'binrev_posts',
 	'authors': 'binrev_authors',
-	'crawl' : 'binrev_crawl'
-    },
-    
-    'antionline':{
-        'posts': 'antionline_posts',
-        'authors' : 'antionline_authors',
-        'crawl' : 'antionline_crawl'
+	'author_crawl' : 'binrev_crawl'
     }
-
+    
 }

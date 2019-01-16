@@ -116,7 +116,18 @@ class KernelPost(scrapy.Spider):
                            'thread_url': thread_url,
                            'thread_title': thread_title
         })
-
+        next_page = ''.join(set(extract_list_data(sel, xpaths.PAGE_NAVIGATION)))
+        if next_page:
+	     try:
+          	 last_post_id = extract_data(post_nodes[-1], xpaths.POST_ID)
+                 que_ = 'select * from kernel_posts where post_id = %(post_id)s'
+                 self.cursor.execute(que_,{'post_id':last_post_id})
+                 val_for_next = self.cursor.fetchall()
+                 if len(val_for_next) == 0:
+                     if 'http' not in next_page:
+                         next_page = self.add_http(next_page)
+                     yield Request(next_page, callback=self.parse_thread)
+	     except:pass
         for node in post_nodes:
 
             category = extract_data(node, xpaths.CATEGORY)
@@ -176,7 +187,7 @@ class KernelPost(scrapy.Spider):
 
             json_posts.update({
                 'author_url': author_link,
-                'all_links': utils.get_aggregated_links(Links)
+                'all_links': get_aggregated_links(Links)
             })
 
             if author_link:
@@ -188,7 +199,8 @@ class KernelPost(scrapy.Spider):
                     'auth_meta': json.dumps(meta),
                     'links': author_link
                 }
-                crawl_query = utils.generate_upsert_query_crawl('kernel_mode')
+		
+                crawl_query = utils.generate_upsert_query_authors_crawl('kernel_mode')
 
                 if 'wtopic.php?f=10&t' not in response.url:
 
@@ -198,13 +210,13 @@ class KernelPost(scrapy.Spider):
             if 'wtopic.php?f=10&t' not in response.url:
                 self.cursor.execute(self.query, json_posts)
                 self.conn.commit()
-
-        # page navigation
-        x = set(extract_list_data(sel, xpaths.PAGE_NAVIGATION))
-        for i in x:
-            if i:
-                if 'http' not in i:
-                    i = self.add_http(i)
-                yield Request(i, callback=self.parse_thread)
+	
 
 
+def get_aggregated_links(links):
+    if not links:
+        aggregated_links = str([])
+    else:
+        aggregated_links = str(list(set(links)))
+
+    return aggregated_links

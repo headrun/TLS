@@ -1,0 +1,77 @@
+2019-01-10 04:21:48 [scrapy] INFO: Scrapy 1.0.3 started (bot: nulled)
+2019-01-10 04:21:48 [scrapy] INFO: Optional features available: ssl, http11, boto
+2019-01-10 04:21:48 [scrapy] INFO: Overridden settings: {'NEWSPIDER_MODULE': 'nulled.spiders', 'ROBOTSTXT_OBEY': True, 'CONCURRENT_REQUESTS_PER_DOMAIN': 1, 'CONCURRENT_REQUESTS': 1, 'SPIDER_MODULES': ['nulled.spiders'], 'CONCURRENT_REQUESTS_PER_IP': 1, 'BOT_NAME': 'nulled', 'LOG_FILE': 'posts.log', 'DOWNLOAD_DELAY': 6}
+2019-01-10 04:21:48 [scrapy] INFO: Enabled extensions: CloseSpider, TelnetConsole, LogStats, CoreStats, SpiderState, AutoThrottle
+2019-01-10 04:21:48 [twisted] CRITICAL: Unhandled error in Deferred:
+2019-01-10 04:21:48 [twisted] CRITICAL: 
+2019-01-10 04:22:29 [scrapy] INFO: Scrapy 1.0.3 started (bot: nulled)
+2019-01-10 04:22:29 [scrapy] INFO: Optional features available: ssl, http11, boto
+2019-01-10 04:22:29 [scrapy] INFO: Overridden settings: {'NEWSPIDER_MODULE': 'nulled.spiders', 'ROBOTSTXT_OBEY': True, 'CONCURRENT_REQUESTS_PER_DOMAIN': 1, 'CONCURRENT_REQUESTS': 1, 'SPIDER_MODULES': ['nulled.spiders'], 'CONCURRENT_REQUESTS_PER_IP': 1, 'BOT_NAME': 'nulled', 'LOG_FILE': 'posts.log', 'DOWNLOAD_DELAY': 6}
+2019-01-10 04:22:29 [scrapy] INFO: Enabled extensions: CloseSpider, TelnetConsole, LogStats, CoreStats, SpiderState, AutoThrottle
+2019-01-10 04:22:29 [twisted] CRITICAL: Unhandled error in Deferred:
+2019-01-10 04:22:29 [twisted] CRITICAL: 
+2019-01-10 04:23:13 [scrapy] INFO: Scrapy 1.0.3 started (bot: nulled)
+2019-01-10 04:23:13 [scrapy] INFO: Optional features available: ssl, http11, boto
+2019-01-10 04:23:13 [scrapy] INFO: Overridden settings: {'NEWSPIDER_MODULE': 'nulled.spiders', 'ROBOTSTXT_OBEY': True, 'CONCURRENT_REQUESTS_PER_DOMAIN': 1, 'CONCURRENT_REQUESTS': 1, 'SPIDER_MODULES': ['nulled.spiders'], 'CONCURRENT_REQUESTS_PER_IP': 1, 'BOT_NAME': 'nulled', 'LOG_FILE': 'posts.log', 'DOWNLOAD_DELAY': 6}
+2019-01-10 04:23:13 [scrapy] INFO: Enabled extensions: CloseSpider, TelnetConsole, LogStats, CoreStats, SpiderState, AutoThrottle
+2019-01-10 04:23:13 [twisted] CRITICAL: Unhandled error in Deferred:
+2019-01-10 04:23:13 [twisted] CRITICAL: 
+2019-01-10 04:24:24 [scrapy] INFO: Scrapy 1.0.3 started (bot: nulled)
+2019-01-10 04:24:24 [scrapy] INFO: Optional features available: ssl, http11, boto
+2019-01-10 04:24:24 [scrapy] INFO: Overridden settings: {'NEWSPIDER_MODULE': 'nulled.spiders', 'ROBOTSTXT_OBEY': True, 'CONCURRENT_REQUESTS_PER_DOMAIN': 1, 'CONCURRENT_REQUESTS': 1, 'SPIDER_MODULES': ['nulled.spiders'], 'CONCURRENT_REQUESTS_PER_IP': 1, 'BOT_NAME': 'nulled', 'LOG_FILE': 'posts.log', 'DOWNLOAD_DELAY': 6}
+2019-01-10 04:24:24 [scrapy] INFO: Enabled extensions: CloseSpider, TelnetConsole, LogStats, CoreStats, SpiderState, AutoThrottle
+2019-01-10 04:24:24 [twisted] CRITICAL: Unhandled error in Deferred:
+2019-01-10 04:24:24 [twisted] CRITICAL: 
+2019-01-10 04:27:28 [scrapy] INFO: Scrapy 1.0.3 started (bot: nulled)
+2019-01-10 04:27:28 [scrapy] INFO: Optional features available: ssl, http11, boto
+2019-01-10 04:27:28 [scrapy] INFO: Overridden settings: {'NEWSPIDER_MODULE': 'nulled.spiders', 'ROBOTSTXT_OBEY': True, 'CONCURRENT_REQUESTS_PER_DOMAIN': 1, 'CONCURRENT_REQUESTS': 1, 'SPIDER_MODULES': ['nulled.spiders'], 'CONCURRENT_REQUESTS_PER_IP': 1, 'BOT_NAME': 'nulled', 'LOG_FILE': 'posts.log', 'DOWNLOAD_DELAY': 6}
+2019-01-10 04:27:28 [scrapy] INFO: Enabled extensions: CloseSpider, TelnetConsole, LogStats, CoreStats, SpiderState, AutoThrottle
+2019-01-10 04:27:28 [boto] DEBUG: Retrieving credentials from metadata server.
+2019-01-10 04:27:28 [boto] ERROR: Caught exception reading instance data
+Traceback (most recent call last):
+  File "/usr/lib/python2.7/dist-packages/boto/utils.py", line 210, in retry_url
+    r = opener.open(req, timeout=timeout)
+  File "/usr/lib/python2.7/urllib2.py", line 435, in open
+    response = meth(req, response)
+  File "/usr/lib/python2.7/urllib2.py", line 548, in http_response
+    'http', request, response, code, msg, hdrs)
+  File "/usr/lib/python2.7/urllib2.py", line 473, in error
+    return self._call_chain(*args)
+  File "/usr/lib/python2.7/urllib2.py", line 407, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python2.7/urllib2.py", line 556, in http_error_default
+    raise HTTPError(req.get_full_url(), code, msg, hdrs, fp)
+HTTPError: HTTP Error 404: Not Found
+2019-01-10 04:27:28 [boto] ERROR: Unable to read instance data, giving up
+2019-01-10 04:27:28 [scrapy] INFO: Enabled downloader middlewares: RobotsTxtMiddleware, HttpAuthMiddleware, DownloadTimeoutMiddleware, UserAgentMiddleware, RetryMiddleware, DefaultHeadersMiddleware, MetaRefreshMiddleware, HttpCompressionMiddleware, RedirectMiddleware, CookiesMiddleware, ChunkedTransferMiddleware, DownloaderStats
+2019-01-10 04:27:28 [scrapy] INFO: Enabled spider middlewares: HttpErrorMiddleware, OffsiteMiddleware, RefererMiddleware, UrlLengthMiddleware, DepthMiddleware
+2019-01-10 04:27:28 [scrapy] INFO: Enabled item pipelines: 
+2019-01-10 04:27:28 [scrapy] INFO: Spider opened
+2019-01-10 04:27:28 [scrapy] INFO: Crawled 0 pages (at 0 pages/min), scraped 0 items (at 0 items/min)
+2019-01-10 04:27:28 [scrapy] DEBUG: Telnet console listening on 127.0.0.1:6023
+2019-01-10 04:27:28 [requests.packages.urllib3.connectionpool] DEBUG: Starting new HTTPS connection (1): www.nulled.to:443
+2019-01-10 04:27:29 [requests.packages.urllib3.connectionpool] DEBUG: https://www.nulled.to:443 "GET /index.php?app=core&module=global&section=login HTTP/1.1" 503 None
+2019-01-10 04:27:37 [scrapy] ERROR: Error while obtaining start requests
+Traceback (most recent call last):
+  File "/usr/lib/python2.7/dist-packages/scrapy/core/engine.py", line 110, in _next_request
+    request = next(slot.start_requests)
+  File "/home/epictions/nulled/nulled/spiders/nulled_posts.py", line 37, in start_requests
+    r = scraper.get("https://www.nulled.to/index.php?app=core&module=global&section=login")
+  File "/usr/lib/python2.7/dist-packages/requests/sessions.py", line 492, in get
+    return self.request('GET', url, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/cfscrape/__init__.py", line 68, in request
+    resp = self.solve_cf_challenge(resp, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/cfscrape/__init__.py", line 97, in solve_cf_challenge
+    params["jschl_answer"] = self.solve_challenge(body, domain)
+  File "/usr/local/lib/python2.7/dist-packages/cfscrape/__init__.py", line 137, in solve_challenge
+    raise EnvironmentError("Missing Node.js runtime. Node is required and must be in the PATH (check with `node -v`). Your Node binary may be called `nodejs` rather than `node`, in which case you may need to run `apt-get install nodejs-legacy` on some Debian-based systems. (Please read the cfscrape"
+EnvironmentError: Missing Node.js runtime. Node is required and must be in the PATH (check with `node -v`). Your Node binary may be called `nodejs` rather than `node`, in which case you may need to run `apt-get install nodejs-legacy` on some Debian-based systems. (Please read the cfscrape README's Dependencies section: https://github.com/Anorov/cloudflare-scrape#dependencies.
+2019-01-10 04:27:37 [scrapy] INFO: Closing spider (finished)
+2019-01-10 04:27:37 [scrapy] INFO: Dumping Scrapy stats:
+{'finish_reason': 'finished',
+ 'finish_time': datetime.datetime(2019, 1, 10, 4, 27, 37, 64310),
+ 'log_count/DEBUG': 4,
+ 'log_count/ERROR': 3,
+ 'log_count/INFO': 7,
+ 'start_time': datetime.datetime(2019, 1, 10, 4, 27, 28, 923397)}
+2019-01-10 04:27:37 [scrapy] INFO: Spider closed (finished)

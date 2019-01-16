@@ -4,7 +4,6 @@ import datetime
 from datetime import timedelta
 import scrapy
 import time
-import numpy as np
 import re
 import json
 import MySQLdb
@@ -24,7 +23,7 @@ class nulled(scrapy.Spider):
     handle_httpstatus_list = [403,503]
 
     def __init__(self):
-        self.conn = MySQLdb.connect(db= "nulled", host = "127.0.0.1", user="root", passwd = "", charset="utf8")
+        self.conn = MySQLdb.connect(db= "nulled", host = "127.0.0.1", user="root", passwd = "123", charset="utf8")
         self.cursor = self.conn.cursor()
         dispatcher.connect(self.mysql_conn_close, signals.spider_closed)
 
@@ -33,6 +32,7 @@ class nulled(scrapy.Spider):
         self.conn.close()
 
     def urls_in_db(self):
+
         urls = []
         select_qry = 'select DISTINCT(links) from nulled_crawl '
         self.cursor.execute(select_qry)
@@ -57,6 +57,7 @@ class nulled(scrapy.Spider):
         sel = Selector(text=r.text)
         auth_key = ''.join(set(sel.xpath('//form//input[@name="auth_key"]/@value').extract()))
         google_captcha = ''.join(set(sel.xpath('//div[@class="g-recaptcha"]/@data-sitekey').extract()))
+        import pdb; pdb.set_trace()
         headers = {
             'origin': 'https://www.nulled.to',
             'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
@@ -102,11 +103,11 @@ class nulled(scrapy.Spider):
                 PublishTime  = set(PublishTime)
                 ThreadTitle= set(ThreadTitle)
                 author_meta = {'PublishTime':PublishTime, 'ThreadTitle':', '.join(ThreadTitle)}
-                time.sleep(np.random.normal(loc=11, scale=6))
                 yield Request(url.replace("'",''),callback = self.parse_author,headers=headers,meta = author_meta)
 
     def parse_author(self,response):
         reference_url = response.url
+        import pdb; pdb.set_trace()
         username = ''.join(response.xpath(nulled_xpath.username_xpath).extract()).encode('utf8')
         Threadtitle = response.meta.get('ThreadTitle','')
         activetime_ = response.meta.get('PublishTime','')
@@ -127,6 +128,7 @@ class nulled(scrapy.Spider):
             lastactive = datetime.datetime.strptime(lastactive, '%b %d %Y  %H:%M %p')
             lastactive = time.mktime(lastactive.timetuple())*1000
         except:lastactive= 0
+        #FetchTime
         groups = re.sub('UID:(.*)','', ' '.join(response.xpath('//div[@class="profile_usertitle"]//text() | //div[@class="profile_usertitle"]//@alt').extract()))
         reputation = ''.join(response.xpath(nulled_xpath.reputation_xpath).extract()).encode('utf8')
         credits = ''.join(response.xpath(nulled_xpath.credits_xpath).extract()).replace('\n','').replace(' ','').encode('utf8')

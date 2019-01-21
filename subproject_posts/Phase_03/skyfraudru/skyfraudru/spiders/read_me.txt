@@ -26,6 +26,8 @@ CREATE TABLE `skyfraud_posts` (
   `post_text` mediumtext COLLATE utf8mb4_bin,
   `all_links` mediumtext COLLATE utf8mb4_bin,
   `reference_url` mediumtext COLLATE utf8mb4_bin,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `modified_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`post_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin
 
@@ -55,6 +57,8 @@ CREATE TABLE `skyfraud_authors` (
   `active_time` text COLLATE utf8_unicode_ci,
   `contact_info` text COLLATE utf8_unicode_ci,
   `reference_url` text COLLATE utf8_unicode_ci,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `modified_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`user_name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci
 

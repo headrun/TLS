@@ -15,7 +15,7 @@ import xpaths
 from datetime import timedelta
 
 class skyfraudSpider(scrapy.Spider):
-    name = "skyfraud"
+    name = "skyfraud_posts"
     start_urls = ["https://sky-fraud.ru/"]
 
     def __init__(self):
@@ -31,7 +31,7 @@ class skyfraudSpider(scrapy.Spider):
         self.cursor.execute(url_que)
         data = self.cursor.fetchall()
         for url in data: 
-            yield Request(url[0], callback = self.parse_ann)
+            yield Request(url[0], callback = self.parse_ann,meta ={'crawl_type':'keep up'})
 
 
 
@@ -42,10 +42,30 @@ class skyfraudSpider(scrapy.Spider):
         try:
             category = ''.join(response.xpath(xpaths.CATEGORY).extract()[1])
         except:
-            import pdb;pdb.set_trace()
+            category = ''
         sub_category = '["' + ''.join(response.xpath(xpaths.SUBCATEGORY).extract()[2]) + '"]'
         thread_title = ''.join(re.findall('<title> (.*)</title>', response.body)).replace('- SKY-FRAUD.RU','')
         nodes = sel.xpath(xpaths.NODES)
+        pagenav = set(sel.xpath(xpaths.PAGENAV).extract())
+        for page in pagenav:
+            if "http" not in page:
+		try:
+		    test_case = ''.join(nodes[-1].xpath(xpaths.POSTURL).extract())
+		    test_case = ''.join(re.findall('\p=\d+',test_case)).replace('p=','').strip()
+		    page = "https://sky-fraud.ru/" + page
+		    que_ = 'select * from skyfraud_posts  where post_id = %(post_id)s'
+            	    self.cursor.execute(que_,{'post_id':test_case})
+            	    val_for_next = self.cursor.fetchall()
+            	    if len(val_for_next) == 0:
+                        yield Request(page, callback = self.parse_ann,meta = {'crawl_type':'catch_up'})
+		except:pass
+            if page:
+                pno = ''.join(re.findall('&page=\d+',page))
+                if crawl_type == 'keep_up':
+                    page = response.url + pno
+                else:
+                    page = re.sub('&page=\d+',pno,response.url)
+
         for node in nodes:
             authorurl = ''.join(node.xpath(xpaths.AUTHORURL).extract())
             if 'http'and 'https' not in authorurl:
@@ -60,7 +80,7 @@ class skyfraudSpider(scrapy.Spider):
 		publishdate = datetime.datetime.strptime(publish,'%d.%m.%Y, %H:%M')
             	PublishTime =time.mktime(publishdate.timetuple())*1000
 	    except:
-		import pdb;pdb.set_trace()
+		PublishTime = 0
             FetchTime = int(datetime.datetime.now().strftime("%s")) * 1000
             Author =  ''.join(node.xpath(xpaths.AUTHOR).extract())
             text = ' '.join(node.xpath(xpaths.TEXT).extract()).strip().replace(u'\u0426\u0438\u0442\u0430\u0442\u0430:',u'\u0426\u0438\u0442\u0430\u0442\u0430: %s'%'Quote')
@@ -115,14 +135,6 @@ class skyfraudSpider(scrapy.Spider):
                     'links': author_url
             }
             self.cursor.execute(crawl_query, json_crawl)
-        pagenav = sel.xpath(xpaths.PAGENAV).extract()
-        for page in pagenav:
-	    if "http" not in page:
-		page = "https://sky-fraud.ru/" + page
-		yield Request(page, callback = self.parse_ann,meta = {'crawl_type':'catch_up'})
-            if page:
-		pno = ''.join(re.findall('&page=\d+',page))
-                if crawl_type == 'keep_up':
-		    page = response.url + pno
-		else:
-		    page = re.sub('&page=\d+',pno,response.url)
+        if nodes and crawl_type == 'keepup':
+             up_que_to1 = 'update  skyfraud_status set crawl_status = 1 where post_url = %(url)s'
+             self.cursor.execute(up_que_to1,{'url':response.url})

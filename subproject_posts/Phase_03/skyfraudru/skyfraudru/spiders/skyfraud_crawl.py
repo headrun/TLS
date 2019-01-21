@@ -33,11 +33,11 @@ class Skyfraud(scrapy.Spider):
 	print response.url
         urls = sel.xpath(xpaths.URLS).extract()
         for url in urls:
-            post_url = "https://sky-fraud.ru/" + url
-            sk = re.findall('\d+',post_url)
+            url = "https://sky-fraud.ru/" + url
+            sk = re.findall('\d+',url)
             query_status = utils.generate_upsert_query_posts_crawl('posts_skyfraud')
             json_posts = {'sk':sk,
-                          'post_url':post_url,
+                          'post_url':url,
                           'crawl_status':0,
                           'reference_url':response.url
                         }

@@ -51,6 +51,17 @@ class PrlogicSpider(scrapy.Spider):
         sub_category = '["'+''.join(response.xpath(xpaths.SUBCATEGORY).extract())+'"]'
         thread_title = ''.join(response.xpath(xpaths.THREAD_TITLE).extract()).strip()
         nodes = response.xpath(xpaths.NODES)
+        navigation =''.join(set(response.xpath(xpaths.PAGENATION).extract()))
+        if navigation :          
+            try:
+                test_case = ''.join(nodes[-1].xpath(xpaths.POST_URL).extract())
+                test_case = ''.join(re.findall('#entry\d+',test_case)).replace('#entry','')
+                que_ = 'select * from prologic_posts  where post_id = %(post_id)s'
+                self.cursor.execute(que_,{'post_id':test_case})
+                val_for_next = self.cursor.fetchall()
+                if len(val_for_next) == 0:  
+                    yield Request(navigation, callback = self.parse_meta,meta = {'crawl_type':'catch_up'})
+            except:pass
         for node in nodes:
             author = ''.join(node.xpath(xpaths.AUTHOR).extract()).replace('\n','')
             post_url = ''.join(node.xpath(xpaths.POST_URL).extract())
@@ -88,9 +99,8 @@ class PrlogicSpider(scrapy.Spider):
                          'reference_url': reference_url
             })
             self.cursor.execute(query_posts,json_posts)
-        navigation = response.xpath(xpaths.PAGENATION).extract()
         if nodes and crawl_type == 'keepup':
             up_que_to1 = 'update  prologic_status set crawl_status = 1 where post_url = %(url)s'
             self.cursor.execute(up_que_to1,{'url':response.url})
-        for pagenation in navigation:
-            yield Request(pagenation, callback = self.parse_meta)
+
+

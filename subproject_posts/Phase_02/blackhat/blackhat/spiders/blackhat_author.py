@@ -12,9 +12,6 @@ import MySQLdb
 import json
 import utils
 import xpaths
-from selenium import webdriver
-import selenium
-from selenium.webdriver.support.wait import WebDriverWait
 from scrapy.xlib.pydispatch import dispatcher
 from scrapy import signals
 import logging
@@ -29,14 +26,9 @@ class BlackHat(scrapy.Spider):
        select_query = 'select DISTINCT(links) from blackhat_crawl;'
        self.cursor.execute(select_query)
        self.data = self.cursor.fetchall()
-       self.driver = open_driver()
        dispatcher.connect(self.close_conn, signals.spider_closed)
 
    def close_conn(self, spider):
-       try:
-           self.driver.quit()
-       except Exception as exe:
-           pass
        self.conn.commit()
        self.conn.close()
 
@@ -61,20 +53,16 @@ class BlackHat(scrapy.Spider):
                yield Request(url, callback=self.parse_author,meta = meta)
 
    def parse_author(self, response):
-       logger=logging.getLogger()
-       logger.setLevel(logging.ERROR)
-
-       if "[email" in response.body and "protected]" in response.body:
-           self.driver.get(response.url)
-           time.sleep(1)
-           WebDriverWait(self.driver, 20)
-           reference_url = response.url
-           sel = Selector(text = self.driver.page_source)
-       else:
-           sel = Selector(response)
-           reference_url = response.url
+       sel = Selector(response)
+       reference_url = response.url
        json_data = {}
        username = ''.join(sel.xpath(xpaths.USERNAME).extract())
+       username = utils.clean_text(username.replace(u'[email\xa0protected]', ''))
+       mails = response.xpath('//a[@class="__cf_email__"]//@data-cfemail').extract()
+       for mail in mails:
+           email = utils.decode_cloudflareEmail(mail)
+           username = username.replace(mail,email)
+
        if username == '':
            username = ''
        if username:
@@ -98,7 +86,6 @@ class BlackHat(scrapy.Spider):
            joindates = datetime.datetime.strptime(joindate,'%b %d, %Y')
            join_date = time.mktime(joindates.timetuple())*1000
        except:
-           logger.error("ValueError")
            join_date = '0'
 
        lastactives = ''.join(sel.xpath(xpaths.LASTACTIVE).extract())
@@ -106,7 +93,6 @@ class BlackHat(scrapy.Spider):
            lastactive = datetime.datetime.strptime(lastactives,'%b %d, %Y')
            last_active = time.mktime(lastactive.timetuple())*1000
        except:
-           logger.error("ValueError")
            last_active = '0'
 
        fetch_time = utils.fetch_time()
@@ -162,14 +148,6 @@ class BlackHat(scrapy.Spider):
        upsert_query_authors = utils.generate_upsert_query_authors('posts_blackhat')
        self.cursor.execute(upsert_query_authors, json_data)
 
-def open_driver():
-    options = webdriver.ChromeOptions()
-    options.add_argument("--incognito")
-    options.add_argument('--no-sandbox')
-    options.add_argument("--disable-extensions")
-    options.add_argument('--headless')
-    driver = webdriver.Chrome(chrome_options=options)
-    return  driver
 
 
 

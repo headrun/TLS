@@ -7,8 +7,6 @@ import time
 import json
 import re
 import MySQLdb
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium import webdriver
 import scrapy
 from scrapy.selector import Selector
 from scrapy.http import Request
@@ -28,14 +26,9 @@ class BlackHat(scrapy.Spider):
         super(BlackHat,  self).__init__(*args, **kwargs)
         self.conn = MySQLdb.connect(db="posts_blackhat",host="localhost",user="root",passwd="1216" , use_unicode = True , charset = 'utf8')
         self.cursor = self.conn.cursor()
-        self.driver = open_driver()
         dispatcher.connect(self.close_conn, signals.spider_closed)
 
     def close_conn(self, spider):
-        try:
-            self.driver.quit()
-        except Exception as exe:
-            pass
         self.conn.commit()
         self.conn.close()
 
@@ -47,15 +40,8 @@ class BlackHat(scrapy.Spider):
             yield Request(url[0], callback = self.parse_thread)
 
     def parse_thread(self, response):
-        if "[email" in response.body  and "protected]" in response.body:
-            self.driver.get(response.url)
-            time.sleep(1)
-            WebDriverWait(self.driver, 20)
-            reference_url = response.url
-            sel = Selector(text = self.driver.page_source)
-        else:
-            sel = Selector(response)
-            reference_url = response.url
+        sel = Selector(response)
+        reference_url = response.url
         domain = "www.blackhatworld.com"
         if '/page-' not in reference_url:
             crawl_type = 'keepup'
@@ -75,6 +61,20 @@ class BlackHat(scrapy.Spider):
             query = 'update blackhat_status set crawl_status = 1 where post_url = %(url)s'
             json_data={'url':response.url}
             self.cursor.execute(query,json_data)
+
+        page_nav = ''.join(set(sel.xpath(xpaths.PAGENAV).extract()))
+        if page_nav:
+            que_ = 'select * from blackhat_posts  where post_id = %(post_id)s'
+            try:
+                text_case = ''.join(nodes[-1].xpath(xpaths.POSTID).extract()).replace('post_url_','')
+                self.cursor.execute(que_,{'post_id':text_case})
+                val_for_next = self.cursor.fetchall()
+                if len(val_for_next) == 0:
+                    meta = {'Crawl_type':'catch up'}
+                    page = "https://www.blackhatworld.com/" + page_nav
+                    yield Request(page,callback = self.parse_thread, headers = response.request.headers, meta=meta)
+            except:pass
+
         for node in nodes:
             author = ''.join(node.xpath(xpaths.AUTHOR).extract())
             authorurl =  ''.join(node.xpath(xpaths.AUTHORURL).extract())
@@ -87,7 +87,12 @@ class BlackHat(scrapy.Spider):
             post_id =  re.findall('\d+',postid)
             publishtimes = ''.join(node.xpath(xpaths.PUBLISHTIME).extract())
             publish_epoch = utils.time_to_epoch(publishtimes, '%b %d, %Y')
-            post_text = '\n'.join(node.xpath(xpaths.POST_TEXT).extract())
+            post_texts = '\n'.join(node.xpath(xpaths.POST_TEXT).extract())
+            post_text = utils.clean_text(post_texts.replace(u'[email\xa0protected]', ''))
+            mails = node.xpath('//a[@class="__cf_email__"]/@data-cfemail').extract()
+            for mail in mails:
+                email = utils.decode_cloudflareEmail(mail)
+                post_text = post_texts.replace(mail,email)
             if 'quoteContainer' in post_text:
                 post_text = post_text.replace('quoteContainer' ,'Quote ')
             fetch_epoch = utils.fetch_time()
@@ -143,14 +148,6 @@ class BlackHat(scrapy.Spider):
                 page = "https://www.blackhatworld.com/" + page
                 yield Request(page, callback = self.parse_thread)
 
-def open_driver():
-    options = webdriver.ChromeOptions()
-    options.add_argument("--incognito")
-    options.add_argument('--no-sandbox')
-    options.add_argument("--disable-extensions")
-    options.add_argument('--headless')
-    driver = webdriver.Chrome(chrome_options=options)
-    return  driver
 
 
 

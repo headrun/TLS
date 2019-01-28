@@ -186,8 +186,14 @@ class Exetool(Spider):
                           'all_links': all_links,
                           'reference_url': response.url
             }
+	    try:
+                self.cursor.execute(query_posts, json_posts)
+	    except OperationalError as e:
+                if 'MySQL server has gone away' in str(e):
+                    self.conn,self.cursor = self.mysql_conn()
+                    self.cursor.execute(query_posts, json_posts)
+                else:raise e()
 
-            self.cursor.execute(query_posts, json_posts)
 
             json_authors = {
                 'user_name': author,
@@ -207,8 +213,14 @@ class Exetool(Spider):
                 'contact_info': '',
                 'reference_url': reference_url
             }
+	    try:
+                self.cursor.execute(query_authors, json_authors)
+	    except OperationalError as e:
+                if 'MySQL server has gone away' in str(e):
+                    self.conn,self.cursor = self.mysql_conn()
+                    self.cursor.execute(query_authors, json_authors)
+                else:raise e()
 
-            self.cursor.execute(query_authors, json_authors)
 
         next_page = set(response.xpath(xpaths.NEXT_PAGE).extract())
         if next_page:

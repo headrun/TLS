@@ -37,14 +37,18 @@ class KernelPost(scrapy.Spider):
     def __init__(self, *args, **kwargs):
         super(KernelPost, self).__init__(*args, **kwargs)
         self.query = utils.generate_upsert_query_posts('kernel_mode')
-        self.conn = MySQLdb.connect(db="posts",
+	self.conn, self.cursor = self.mysql_conn()
+	dispatcher.connect(self.close_conn, signals.spider_closed)
+
+    def mysql_conn(self):
+        conn = MySQLdb.connect(db="posts",
                                     host="localhost",
                                     user="root",
                                     passwd="",
                                     use_unicode=True,
                                     charset='utf8')
-        self.cursor = self.conn.cursor()
-        dispatcher.connect(self.close_conn, signals.spider_closed)
+        cursor = conn.cursor()
+	return conn,cursor
 
     def close_conn(self, spider):
         self.conn.commit()
@@ -203,15 +207,25 @@ class KernelPost(scrapy.Spider):
                 crawl_query = utils.generate_upsert_query_authors_crawl('kernel_mode')
 
                 if 'wtopic.php?f=10&t' not in response.url:
-
-                    self.cursor.execute(crawl_query, json_crawl)
-                    self.conn.commit()
+                    try:
+			self.cursor.execute(crawl_query, json_crawl)
+		    except OperationalError as e:
+			if 'MySQL server has gone away' in str(e):
+			    self.conn,self.cursor = self.mysql_conn()
+	                    self.mysql_dump(query_posts, json_posts)
+			    self.cursor.execute(crawl_query, json_crawl)
+                else:
+                    raise e()
 
             if 'wtopic.php?f=10&t' not in response.url:
-                self.cursor.execute(self.query, json_posts)
-                self.conn.commit()
-	
-
+                try:
+		    self.cursor.execute(self.query, json_posts)
+                except OperationalError as e:
+                    if 'MySQL server has gone away' in str(e):
+                        self.conn,self.cursor = self.mysql_conn()
+                        self.mysql_dump(query_posts, json_posts)
+                        self.cursor.execute(self.query, json_posts)
+		    else:raise e()
 
 def get_aggregated_links(links):
     if not links:

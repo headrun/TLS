@@ -34,8 +34,7 @@ class KernelPost(scrapy.Spider):
     start_urls = ["http://www.kernelmode.info/forum/index.php?sid=777ae8de248e8e96e3757106011c889d"]
     handle_httpstatus_list=[404]
 
-    def __init__(self, *args, **kwargs):
-        super(KernelPost, self).__init__(*args, **kwargs)
+    def __init__(self):
         self.query = utils.generate_upsert_query_posts('kernel_mode')
 	self.conn, self.cursor = self.mysql_conn()
 	dispatcher.connect(self.close_conn, signals.spider_closed)
@@ -212,10 +211,9 @@ class KernelPost(scrapy.Spider):
 		    except OperationalError as e:
 			if 'MySQL server has gone away' in str(e):
 			    self.conn,self.cursor = self.mysql_conn()
-	                    self.mysql_dump(query_posts, json_posts)
 			    self.cursor.execute(crawl_query, json_crawl)
-                else:
-                    raise e()
+                	else:
+                    	    raise e()
 
             if 'wtopic.php?f=10&t' not in response.url:
                 try:
@@ -223,7 +221,6 @@ class KernelPost(scrapy.Spider):
                 except OperationalError as e:
                     if 'MySQL server has gone away' in str(e):
                         self.conn,self.cursor = self.mysql_conn()
-                        self.mysql_dump(query_posts, json_posts)
                         self.cursor.execute(self.query, json_posts)
 		    else:raise e()
 

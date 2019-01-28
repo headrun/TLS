@@ -160,8 +160,7 @@ class KernelPost(scrapy.Spider):
         except OperationalError as e:
             if 'MySQL server has gone away' in str(e):
                 self.conn,self.cursor = self.mysql_conn()
-                self.mysql_dump(query_posts, json_posts)
-                self.cursor.execute(crawl_query, json_crawl)
+                self.cursor.execute(query_author, json_author)
             else:raise e()	    
 
 

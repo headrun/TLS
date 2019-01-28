@@ -1,14 +1,10 @@
 #encoding: utf- 8
-import datetime
-import calendar
 import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
 import json
 import MySQLdb
-import time
 import re
-import unicodedata
 import scrapy
 from scrapy.spider import Spider
 from scrapy.selector import Selector
@@ -17,7 +13,6 @@ from scrapy import signals
 from scrapy.xlib.pydispatch import dispatcher
 import utils
 import xpaths
-import logging
 
 
 class BoardBat(scrapy.Spider):
@@ -25,8 +20,13 @@ class BoardBat(scrapy.Spider):
     start_urls = ["https://board.b-at-s.info/"]
 
     def __init__(self, *args, **kwargs):
-        self.conn = MySQLdb.connect(db="posts_boardbat",host="localhost",user="root",passwd="" , use_unicode = True , charset = 'utf8mb4')
-        self.cursor = self.conn.cursor()
+	self.conn, self.cursor = self.mysql_conn()
+	dispatcher.connect(self.close_conn, signals.spider_closed)
+
+    def mysql_conn(self):
+	conn = MySQLdb.connect(db="posts_boardbat",host="localhost",user="root",passwd="" , use_unicode = True , charset = 'utf8mb4')
+        cursor = conn.cursor()
+	return conn, cursor
 
     def close_conn(self, spider):
         self.conn.commit()
@@ -48,8 +48,6 @@ class BoardBat(scrapy.Spider):
 
     def parse_thread(self, response):
         thread_url = response.url
-        logger=logging.getLogger()
-        logger.setLevel(logging.ERROR)
         if '&page=' in response.url:
             test = re.findall('&page=\d+',response.url)
             thread_url = response.url.replace(''.join(test),"")
@@ -139,8 +137,13 @@ class BoardBat(scrapy.Spider):
                           'all_links': links,
                           'reference_url': response.url
             }
-            self.cursor.execute(query_posts, json_posts)
-
+            try:
+		self.cursor.execute(query_posts, json_posts)
+            except OperationalError as e:
+                if 'MySQL server has gone away' in str(e):
+                    self.conn,self.cursor = self.mysql_conn()
+                    self.cursor.execute(query_posts, json_posts)
+                else:raise e()
 
         x = set(sel.xpath('//li[@class="next"]//a//@href').extract())
         for i in x:

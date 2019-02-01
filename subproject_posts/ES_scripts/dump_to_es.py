@@ -52,7 +52,8 @@ class Data():
 	global TOTAL_RECS_POSTS
         TOTAL_RECS_POSTS = int(posts.get('count(*)'))
         self.push_posts_data(es, cursor)
-        self.push_authors_data(es, cursor)
+	if TABLE_NAME_AUTHORS:
+            self.push_authors_data(es, cursor)
         conn.close()
 
     def push_posts_data(self, es, cursor):
@@ -71,23 +72,22 @@ class Data():
 	            post_record['links'] = eval(post_record.get('links'))
                 except:pass
                 if not post_record.get('publish_time'): post_record['publish_time'] = 0
-		if 'hellbound' in 
-	        res = es.index(index="forum_posts", doc_type='post', id=hashlib.md5(post_record.get().hexdigest(), body=post_record)
+	        res = es.index(index="forum_posts", doc_type='post', id=hashlib.md5(post_record.get('post_url')).hexdigest(), body=post_record)
 		#pprint(post_record)
-        print("posts push is done")
+        print "posts push is done"
 
     def push_authors_data(self, es, cursor):
-        print("Populating authors")
+        print "Populating authors" 
         # Note: CLAUSE not appllicable for AUTHORS
         que = 'SELECT {0} from {1} '.format(AUTHOR_COLUMNS,TABLE_NAME_AUTHORS)
         cursor.execute(que)
         row1 = cursor.fetchall()
 	print que
         for author_record in row1:
-            #res = es.index(index="forum_author", doc_type='post', id=hashlib.md5(username).hexdigest(), body=post_record)
+            res = es.index(index="forum_author", doc_type='post', id=hashlib.md5(author_record.get('username')).hexdigest(), body=post_record)
 	    #pprint(author_record)
 	    pass
-        print("authors push is done")
+        print "authors push is done"
 
 
 if __name__ == "__main__":   

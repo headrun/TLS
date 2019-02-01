@@ -1,6 +1,7 @@
 
 crawlers=[
 	{
+	'DB_SCHEMA':'posts',
         'TABLE_NAME_AUTHORS': 'bleeping_authors',
         'TABLE_NAME_POSTS': 'bleeping_posts',
         'DB_CHARSET': 'utf8mb4',

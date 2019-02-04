@@ -4,7 +4,7 @@ crawl()
 {
 export PATH='$PATH:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin';
 cd /home/epictions/Phase_02/blackhat/blackhat/spiders;
-scrapy crawl blackhat_crawl --logfile /home/epictions/Phase_03/log_files/blackhat_crawl.log ;
+scrapy crawl blackhat_crawl --logfile /home/epictions/Phase_02/log_files/blackhat_crawl.log ;
 }
 
 
@@ -12,7 +12,7 @@ posts()
 {
 export PATH='$PATH:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin';
 cd /home/epictions/Phase_02/blackhat/blackhat/spiders;
-scrapy crawl blackhat_thread --logfile /home/epictions/Phase_03/log_files/blackhat_posts.log ;
+scrapy crawl blackhat_thread --logfile /home/epictions/Phase_02/log_files/blackhat_posts.log ;
 }
 
 
@@ -20,7 +20,7 @@ author()
 {
 export PATH='$PATH:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin';
 cd /home/epictions/Phase_02/blackhat/blackhat/spiders;
-scrapy crawl blackhat_author --logfile /home/epictions/Phase_03/log_files/blackhat_authors.log ;
+scrapy crawl blackhat_author --logfile /home/epictions/Phase_02/log_files/blackhat_authors.log ;
 }
 
 crawl

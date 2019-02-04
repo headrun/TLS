@@ -20,7 +20,6 @@ crawl_query = utils.generate_upsert_query_authors_crawl('posts_blackhat')
 class BlackHat(scrapy.Spider):
     name = "blackhat_thread"
     start_urls = ["https://www.blackhatworld.com/forums/"]
-    handle_httpstatus_list = [503]
 
     def __init__(self, *args, **kwargs):
         super(BlackHat,  self).__init__(*args, **kwargs)
@@ -33,7 +32,7 @@ class BlackHat(scrapy.Spider):
         self.conn.close()
 
     def start_requests(self):
-        url_que = "select distinct(post_url) from blackhat_status where crawl_status = 0 "
+        url_que = "select distinct(post_url) from blackhat_status where crawl_status = 0 limit 25000"
         self.cursor.execute(url_que)
         data = self.cursor.fetchall()
         for url in data:
@@ -53,12 +52,20 @@ class BlackHat(scrapy.Spider):
         else:
             thread_url = reference_url
         thread_title = ''.join(sel.xpath(xpaths.THREADTITLE).extract())
-        category = ''.join(sel.xpath(xpaths.CATEGORY).extract()[1])
-        sub_category = '["' + ''.join(sel.xpath(xpaths.SUBCATEGORY).extract()[2]) + '"]'
+        try:
+	    category = ''.join(sel.xpath(xpaths.CATEGORY).extract()[1])
+	except: pass
+        try:
+	    sub_category = '["' + ''.join(sel.xpath(xpaths.SUBCATEGORY).extract()[2]) + '"]'
+	except: pass
         post_title = ' '
         nodes=sel.xpath(xpaths.NODES)
         if nodes:
             query = 'update blackhat_status set crawl_status = 1 where post_url = %(url)s'
+            json_data={'url':response.url}
+            self.cursor.execute(query,json_data)
+	if response.status not in (200,301):
+	    query = 'update blackhat_status set crawl_status = 9 where post_url = %(url)s'
             json_data={'url':response.url}
             self.cursor.execute(query,json_data)
 

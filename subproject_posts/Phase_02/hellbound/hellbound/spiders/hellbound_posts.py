@@ -20,7 +20,7 @@ AUTHOR_CRAWL_QUERY = utils.generate_upsert_query_authors_crawl('hellbound')
 class Hellbound(Spider):
     name = "hellbound_posts"
     def __init__(self):
-        self.conn = MySQLdb.connect(db= "hellbound", host = "localhost", use_unicode=True,charset="utf8mb4")
+        self.conn = MySQLdb.connect(db= "hellbound", host = "localhost", user = 'tls',passwd='123',use_unicode=True,charset="utf8mb4")
         self.cursor = self.conn.cursor()
         dispatcher.connect(self.mysql_conn_close, signals.spider_closed)
 

@@ -14,7 +14,7 @@ class Hellbound(Spider):
     start_urls = ["https://www.hellboundhackers.org/forum/index.php"]
 
     def __init__(self):
-        self.conn = MySQLdb.connect(db= "hellbound", host = "localhost", use_unicode=True,charset="utf8")
+        self.conn = MySQLdb.connect(db= "hellbound", host = "localhost",user = 'tls',passwd='123', use_unicode=True,charset="utf8")
 	self.cursor = self.conn.cursor()
 	dispatcher.connect(self.mysql_conn_close, signals.spider_closed)
 

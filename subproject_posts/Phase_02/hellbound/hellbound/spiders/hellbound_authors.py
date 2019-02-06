@@ -15,7 +15,7 @@ A_QUE = utils.generate_upsert_query_authors("hellbound")
 class Hellbound(Spider):
     name = "hellbound_authors"
     def __init__(self):
-        self.conn = MySQLdb.connect(db= "hellbound", host = "localhost",use_unicode=True,charset="utf8")
+        self.conn = MySQLdb.connect(db= "hellbound", host = "localhost",use_unicode=True,charset="utf8",user = 'tls',passwd='123')
 	self.cursor = self.conn.cursor()
         dispatcher.connect(self.mysql_conn_close, signals.spider_closed)
 

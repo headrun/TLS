@@ -43,6 +43,7 @@ class nulled(scrapy.Spider):
         sel = Selector(text=r.text)
         auth_key = ''.join(set(sel.xpath('//form//input[@name="auth_key"]/@value').extract()))
         google_captcha = ''.join(set(sel.xpath('//div[@class="g-recaptcha"]/@data-sitekey').extract()))
+	import pdb;pdb.set_trace()
         g_captcha = get_googlecaptcha('https://www.nulled.to/index.php?app=core&module=global&section=login',google_captcha)
         data = {
           'auth_key': auth_key,
@@ -72,7 +73,7 @@ class nulled(scrapy.Spider):
     	    sel =  Selector(text=r2.text)
     	    user_login = ''.join(sel.xpath('//a[@id="user_link"]/@href').extract())
             if user_login:
-                select_que = "select distinct(post_url) from nulled_threads_crawl where crawl_status = 0 limit 4000"
+                select_que = "select distinct(post_url) from nulled_threads_crawl where crawl_status = 0"
                 self.cursor.execute(select_que)
                 data = self.cursor.fetchall()
                 meta = {'Crawl_type':'keep up','headers':headers}

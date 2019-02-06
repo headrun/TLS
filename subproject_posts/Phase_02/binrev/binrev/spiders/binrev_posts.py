@@ -22,6 +22,7 @@ import MySQLdb
 from binrev_xpaths import *
 import utils
 import binrev_crawl
+import binrev_csv
 query_posts = utils.generate_upsert_query_posts('binrev')
 auth_que = utils.generate_upsert_query_authors_crawl('binrev')
 
@@ -52,29 +53,10 @@ class formus(BaseSpider):
         return url 
 
     def start_requests(self):
-        scraper = cfscrape.create_scraper()
-        r1 = scraper.get('http://www.binrev.com/forums/index.php?/login/')
-        headers = {
-    'Connection': 'keep-alive',
-    'Pragma': 'no-cache',
-    'Cache-Control': 'no-cache',
-    'Origin': 'http://www.binrev.com',
-    'Upgrade-Insecure-Requests': '1',
-    'Content-Type': 'application/x-www-form-urlencoded',
-    'User-Agent': r1.request.headers.get('User-Agent', ''),
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-    'Referer': 'http://www.binrev.com/forums/index.php',
-    'Accept-Encoding': 'gzip, deflate',
-    'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8',
-}
-        cookies = { 'ips4_ipsTimezone': 'Asia/Calcutta',
-    'ips4_hasJS': 'true',}
-        request_cookies = r1.request._cookies.get_dict()
-        response_cookies = r1.cookies.get_dict()
-        cookies.update(request_cookies)
-        cookies.update(response_cookies)
-        sel = Selector(text = r1.text)
-        csrfKey = ''.join(sel.xpath('//input[@name="csrfKey"]/@value').extract())
+        yield Request('http://www.binrev.com/forums/index.php?/login/',callback =self.login_page1)
+
+    def login_page1(self,response):
+        csrfKey = ''.join(response.xpath('//input[@name="csrfKey"]/@value').extract())
         data = {
                 'login__standard_submitted': '1',
 'csrfKey': csrfKey,
@@ -84,21 +66,17 @@ class formus(BaseSpider):
 'remember_me_checkbox': '1',
 'signin_anonymous': '0',
 }
-
-	yield FormRequest('http://www.binrev.com/forums/index.php?/login/', callback = self.login_page, headers = headers,cookies = cookies,formdata = data)
+	yield FormRequest('http://www.binrev.com/forums/index.php?/login/', callback = self.login_page,formdata = data)
 
     def login_page(self, response):
-	headers = {}
 	headers.update(response.request.headers)
         url_que = "select distinct(post_url) from binrev_browse where crawl_status = 0 "
         self.cursor.execute(url_que)
         data = self.cursor.fetchall()
         for url in data:
-            yield Request(url[0], callback = self.parse_all_pages_links,headers = headers)
+            yield Request(url[0], callback = self.parse_all_pages_links)
 
     def parse_all_pages_links(self, response):
-        headers = {}
-        headers.update(response.request.headers)
  	if '&page=' in response.url:
             #crawl_type = "catchup"
             test = re.findall(r'&page=\d+', response.url)
@@ -117,8 +95,6 @@ class formus(BaseSpider):
         thread_title = ''.join(sel.xpath(THREAD_TITLE).extract())
 	crawl_type = ''
         post_title = ''
-
-
         nodes = sel.xpath(NODES)
 	if nodes:
             query = 'update binrev_browse set crawl_status = 1 where post_url = %(url)s'
@@ -133,9 +109,9 @@ class formus(BaseSpider):
 		val = {'postid_':postid_}
 	        self.cursor.execute(test_que,val)
         	test_case = self.cursor.fetchall()
-		if text_case:
+		if len(text_case)==0:
 		    post_nav_click = self.add_http(nav_click)
-                    yield Request(post_nav_click, callback=self.parse_all_pages_links,headers = headers)
+                    yield Request(post_nav_click, callback=self.parse_all_pages_links)
 	    except:pass
 
         for node in nodes:

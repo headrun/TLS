@@ -34,7 +34,7 @@ class nulled(scrapy.Spider):
     def urls_in_db(self):
 
         urls = []
-        select_qry = 'select DISTINCT(links) from nulled_crawl '
+        select_qry = 'select DISTINCT(links) from nulled_author_crawl '
         self.cursor.execute(select_qry)
         data = self.cursor.fetchall()
         for da in data:

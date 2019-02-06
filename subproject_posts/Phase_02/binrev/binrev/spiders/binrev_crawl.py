@@ -16,9 +16,13 @@ reload(sys)
 import MySQLdb
 from binrev_xpaths import *
 import utils
+import binrev_csv
 import random
-import cfscrape
+import scrapy 
+
+
 class formus(BaseSpider):
+
     name = 'binrev_browse'
 
     def __init__(self, *args, **kwargs):
@@ -39,31 +43,11 @@ class formus(BaseSpider):
             url = 'http://www.binrev.com/%s'%url
         return url
 
-
     def start_requests(self):
-        scraper = cfscrape.create_scraper()
-        r1 = scraper.get('http://www.binrev.com/forums/index.php?/login/')
-        headers = {
-    'Connection': 'keep-alive',
-    'Pragma': 'no-cache',
-    'Cache-Control': 'no-cache',
-    'Origin': 'http://www.binrev.com',
-    'Upgrade-Insecure-Requests': '1',
-    'Content-Type': 'application/x-www-form-urlencoded',
-    'User-Agent': r1.request.headers.get('User-Agent', ''),
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-    'Referer': 'http://www.binrev.com/forums/index.php',
-    'Accept-Encoding': 'gzip, deflate',
-    'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8',
-}
-        cookies = { 'ips4_ipsTimezone': 'Asia/Calcutta',
-    'ips4_hasJS': 'true',}
-        request_cookies = r1.request._cookies.get_dict()
-        response_cookies = r1.cookies.get_dict()
-        cookies.update(request_cookies)
-        cookies.update(response_cookies)
-        sel = Selector(text = r1.text)
-        csrfKey = ''.join(sel.xpath('//input[@name="csrfKey"]/@value').extract())
+        yield Request('http://www.binrev.com/forums/',callback =self.login_page1)
+
+    def login_page1(self,response):
+        csrfKey = ''.join(response.xpath('//input[@name="csrfKey"]/@value').extract())
         data = {
                 'login__standard_submitted': '1',
 'csrfKey': csrfKey,
@@ -73,9 +57,9 @@ class formus(BaseSpider):
 'remember_me_checkbox': '1',
 'signin_anonymous': '0',
 }
-        yield FormRequest('http://www.binrev.com/forums/index.php?/login/', callback = self.parse, headers = headers,cookies = cookies,formdata = data)
+        yield scrapy.FormRequest.from_response(response, callback = self.login_page,formdata = data)
 
-    def parse(self, response):
+    def login_page(self, response):
         sel = Selector(response)
         start_page_urls = sel.xpath(MAIN_URLS).extract()
         for main_urls in start_page_urls:

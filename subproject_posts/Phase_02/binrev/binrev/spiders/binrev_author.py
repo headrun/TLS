@@ -1,5 +1,5 @@
-'''
-Binrev_Authors
+#'''
+#Binrev_Authors
 '''
 import scrapy
 from scrapy.spider import Spider
@@ -19,6 +19,7 @@ from scrapy import signals
 from scrapy.xlib.pydispatch import dispatcher
 from binrev_xpaths import *
 import utils
+import binrev_csv
 query_authors = utils.generate_upsert_query_authors('binrev')
 
 
@@ -120,4 +121,4 @@ class formus(scrapy.Spider):
 
 	self.cursor.execute(query_authors, json_authors)
 
-
+'''

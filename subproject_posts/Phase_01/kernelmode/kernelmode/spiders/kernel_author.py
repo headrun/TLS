@@ -155,7 +155,12 @@ class KernelPost(scrapy.Spider):
 
         query_author = utils.generate_upsert_query_authors('kernel_mode')
 
-        self.cursor.execute(query_author, json_author)
-        self.conn.commit()
+	try:
+	    self.cursor.execute(query_author, json_author)
+        except OperationalError as e:
+            if 'MySQL server has gone away' in str(e):
+                self.conn,self.cursor = self.mysql_conn()
+                self.cursor.execute(query_author, json_author)
+            else:raise e()	    
 
 

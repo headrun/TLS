@@ -9,15 +9,15 @@ import re
 import xpaths
 
 class Monopoly(scrapy.Spider):
-    name = "monopoly_posts"
+    name = "monopoly_crawl"
+    start_urls = ["https://monopoly.ms/"]
 
-    def __init__(self, *args, **kwargs):
-        super(Monopoly,  self).__init__(*args, **kwargs)
+    def __init__(self):
         self.conn = MySQLdb.connect(db="posts_monopoly",host="localhost",user="root",passwd="qwerty123" , use_unicode = True , charset = 'utf8')
         self.cursor = self.conn.cursor()
 
 
-    def start_requests(self):
+    def parse(self,response):
         headers = {
             'Connection': 'keep-alive',
             'Pragma': 'no-cache',
@@ -31,10 +31,12 @@ class Monopoly(scrapy.Spider):
             'Accept-Encoding': 'gzip, deflate, br',
             'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8',
         }
+        
+        s_value = ''.join(response.xpath('//inpu[@name="s"]/@value').extract())
         data = {
             'vb_login_username': 'inqspdr',
             'vb_login_password': '',
-            's': '',
+            's': s_value,
             'securitytoken': 'guest',
             'do': 'login',
             'vb_login_md5password': 'c823b3822a485d448a68ee415f5eea59',

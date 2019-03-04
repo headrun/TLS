@@ -9,23 +9,25 @@ from scrapy.spiders import BaseSpider
 from scrapy.http import Request
 from scrapy import signals
 from scrapy.xlib.pydispatch import dispatcher
-reload(sys)
-sys.setdefaultencoding('UTF8')
 import MySQLdb
-import unicodedata
 from antionline_xpaths import *
-#from scrapy.conf import settings
-import utils
+from scrapy import signals
+sys.path.append('/home/epictions/tls_scripts/tls_utils')
+import tls_utils as utils
+
 
 class formus(BaseSpider):
     name = 'antionline_crawl'
     start_urls = ["http://www.antionline.com/forum.php"]
-    handle_httpstatus_list = [403]
 
-    def __init__(self, *args, **kwargs):
-        self.conn = MySQLdb.connect(host="localhost", user="root", passwd="", db="antionline", charset="utf8", use_unicode=True)
-        self.cursor = self.conn.cursor()
-        dispatcher.connect(self.close_conn, signals.spider_closed)
+    def __init__(self):
+        self.conn,self.cursor = self.mysql_conn()
+	dispatcher.connect(self.close_conn, signals.spider_closed)
+
+    def mysql_conn(self):
+	conn = MySQLdb.connect(host="localhost", user="root", passwd="", db="tls_phase_2", charset="utf8", use_unicode=True)
+	cursor = conn.cursor()
+	return conn,cursor
 
     def close_conn(self, spider):
         self.conn.commit()
@@ -56,7 +58,7 @@ class formus(BaseSpider):
                           'reference_url':response.url
             }
             self.cursor.execute(query_status, json_posts)
-
+	    self.conn.commit()
         navigation_click = sel.xpath(NAVIGATION).extract()
         for click in navigation_click:
              if click:

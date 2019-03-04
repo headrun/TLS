@@ -9,30 +9,32 @@ from scrapy.spiders import BaseSpider
 from scrapy.http import Request
 from scrapy import signals
 from scrapy.xlib.pydispatch import dispatcher
-reload(sys)
-sys.setdefaultencoding('UTF8')
 import MySQLdb
 import unicodedata
 from antionline_xpaths import *
-import utils
-from scrapy.conf import settings
-
+import sys
+from datetime import timedelta
+sys.path.append('/home/epictions/tls_scripts/tls_utils')
+import tls_utils as utils
+from elasticsearch import Elasticsearch
+import hashlib
 query_posts = utils.generate_upsert_query_posts('antionline')
 auth_que = utils.generate_upsert_query_authors_crawl('antionline')
 
-class formus(BaseSpider):
+
+class Formus(BaseSpider):
     name = 'antionline_posts'
-    start_urls = ["http://www.antionline.com/forum.php"]
     handle_httpstatus_list = [403]
-    settings.overrides['CONCURRENT_REQUESTS_PER_DOMAIN'] = 1
-    settings.overrides['CONCURRENT_REQUESTS_PER_IP'] = 1
-    settings.overrides['DOWNLOAD_DELAY'] = 16
-    settings.overrides['CONCURRENT_REQUESTS'] = 1
     
-    def __init__(self, *args, **kwargs):
-        self.conn = MySQLdb.connect(host="localhost", user="root", passwd="", db="antionline", charset="utf8", use_unicode=True)
-        self.cursor = self.conn.cursor()
-        dispatcher.connect(self.close_conn, signals.spider_closed)
+    def __init__(self):
+        self.conn ,self.cursor = self.mysql_conn()
+        self.es = Elasticsearch(['10.2.0.90:9342'])
+	dispatcher.connect(self.close_conn, signals.spider_closed)
+
+    def mysql_conn(self):
+	conn = MySQLdb.connect(host="localhost", user="root", passwd="", db="tls_phase_2", charset="utf8mb4", use_unicode=True)
+	cursor = conn.cursor()
+	return conn,cursor
 
     def close_conn(self, spider):
         self.conn.commit()
@@ -49,7 +51,6 @@ class formus(BaseSpider):
         data = self.cursor.fetchall()
         for url in data:
             yield Request(url[0], callback = self.parse_all_pages_links)
-
 
     def parse_all_pages_links(self, response):
         if 'page' in response.url:
@@ -76,6 +77,18 @@ class formus(BaseSpider):
             query = 'update antionline_status set crawl_status = 1 where post_url = %(url)s'
             json_data={'url':response.url}
             self.cursor.execute(query,json_data)
+        nav_click = set(sel.xpath('//span//a[@rel="next"]//@href').extract())
+        for post_nav_click in nav_click:
+            if post_nav_click:
+		try:
+		    post_url_ = ''.join(nodes[-1].xpath(POST_URL).extract())
+                    test_id = hashlib.md5(str(post_url_)).hexdigest()
+		    query = {'query_string': {'use_dis_max': 'true', 'query': '_id:{0}'.format(test_id)}}
+		    res = es.search(index="forum_posts", body={"query": query})
+		    if res['hits']['hits']==[]:
+			post_nav_click = self.add_http(post_nav_click)
+                	yield Request(post_nav_click, callback=self.parse_all_pages_links)
+		except:pass
 
         for node in nodes:
             author_name = ''.join(node.xpath(AUTHOR_NAME).extract())
@@ -90,7 +103,7 @@ class formus(BaseSpider):
             post_title = ''.join(node.xpath(POST_TITLE).extract()).replace('\n', '').replace('\t', '').replace('\r', '')
 
             publish_time = ' '.join(node.xpath(PUBLISH_TIME).extract()).encode('ascii', 'ignore')
-            publish_time = re.sub(r'\w+ \d+\w+,', ''.join(re.findall(r'\w+ \d+', publish_time)), publish_time)
+            publish_time = re.sub(r'\w+ \d+\w+,', ''.join(re.findall(r'\w+ \d+', publish_time)), publish_time).replace('Yesterday,',(datetime.datetime.now() - timedelta(days=1)).strftime('%d %B %Y -')).replace('Today,',datetime.datetime.now().strftime('%d %B %Y -'))
             publish_time = datetime.datetime.strptime((publish_time), '%B %d %Y, %H:%M %p')
             publish_time = time.mktime(publish_time.timetuple())*1000
 
@@ -113,8 +126,7 @@ class formus(BaseSpider):
             if "[]" in links: links = ""
 
 	    json_posts = {}
-            json_posts.update({'domain' : domain,
-                        'crawl_type' : crawl_type,
+	    json_posts.update({'domain' : domain,
                         'category' : category,
                         'sub_category' : subcategory,
                         'thread_title' : thread_title,
@@ -122,18 +134,15 @@ class formus(BaseSpider):
                         'thread_url' : thread_url,
                         'post_id' : postid,
                         'post_url' : post_url,
-                        'publish_epoch' : publish_time,
-                        'fetch_epoch' : fetch_time,
+                        'publish_time' : publish_time,
+                        'fetch_time' : fetch_time,
                         'author' : author_name,
                         'author_url' : author_link,
-                        'post_text' : "{0}".format(utils.clean_text(text)),
-                        'all_links' : links,
-                        'reference_url' : response.url
+                        'text' : utils.clean_text(text),
+                        'links' : links,
             })
-
-            self.cursor.execute(query_posts, json_posts)
-
-            meta = json.dumps({'time' : publish_time})
+            self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts)
+	    meta = json.dumps({'time' : publish_time})
             json_author = {}
             json_author.update({
                 'post_id' : postid,
@@ -142,18 +151,6 @@ class formus(BaseSpider):
                 'links' : author_link,
                 })
             self.cursor.execute(auth_que, json_author)
-
-
-	nav_click = set(sel.xpath('//span//a[@rel="next"]//@href').extract())
-        for post_nav_click in nav_click:
-            if post_nav_click:
-                post_nav_click = self.add_http(post_nav_click)
-                yield Request(post_nav_click, callback=self.parse_all_pages_links)
-
-
-
-
-
-
+	    self.conn.commit()
 
 

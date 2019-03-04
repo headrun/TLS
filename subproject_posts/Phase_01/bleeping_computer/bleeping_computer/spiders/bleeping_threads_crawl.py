@@ -2,8 +2,8 @@ import datetime
 import json
 import re
 import sys
-reload(sys)
-sys.setdefaultencoding('UTF8')
+sys.path.append('/home/epictions/tls_scripts/tls_utils')
+import tls_utils as utils
 import time
 import unicodedata
 import scrapy
@@ -14,8 +14,6 @@ from scrapy.http import FormRequest
 from scrapy import signals
 from scrapy.xlib.pydispatch import dispatcher
 import xpaths
-import bleeping_confi
-import utils
 import MySQLdb 
 
 post_url_que = utils.generate_upsert_query_posts_crawl('bleeping_computer')
@@ -36,19 +34,16 @@ class BleepingSpider(scrapy.Spider):
         self.conn.commit()
         self.conn.close()
 
-
-    def clean_spchar_in_text(self, text):
-        text = unicodedata.normalize('NFKD', text.decode('utf8'))
-        text = re.compile(r'([\n,\t,\r]*\t)').sub('\n', text)
-        text = re.sub(r'(\n\s*)', '\n', text)
-        return text
-    
     def start_requests(self):
+	try:
+            key = ''.join(re.findall("secure_hash\'](.*)= '(.*)",x)[0][1].split(';'))[:-1]
+        except:
+             key = '880ea6a14ea49e853634fbdc5015a024'
         data = {
-            'auth_key': '880ea6a14ea49e853634fbdc5015a024',
+            'auth_key': key,
             'referer': 'https://www.bleepingcomputer.com/forums/index.php',
-            'ips_username': 'inqspdr',
-            'ips_password': 'Inq2018.',
+            'ips_username': 'inqspdr2',
+            'ips_password': 'lolw4@123~',
             'rememberMe': '1',
         }
         url = 'https://www.bleepingcomputer.com/forums/index.php?app=core&module=global&section=login&do=process'
@@ -57,7 +52,7 @@ class BleepingSpider(scrapy.Spider):
     def parse_1st(self, response):
         sel = Selector(response)
         urls = sel.xpath(xpaths.URLS).extract()
-        for url in urls[0:5]:
+        for url in urls:#[0:5]:
             if "https://www.bleepingcomputer.com/" in url:
                 yield FormRequest(url, callback=self.parse_next)
 

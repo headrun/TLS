@@ -3,9 +3,6 @@ import json
 import MySQLdb
 import re
 import time
-#import sys
-#reload(sys)
-#sys.setdefaultencoding('utf-8')
 from datetime import date
 from datetime import timedelta
 import scrapy
@@ -13,46 +10,67 @@ from scrapy.spiders import Spider
 from scrapy.selector import Selector
 from scrapy.http import Request
 from scrapy.http import FormRequest
-import utils
-
+import sys
+sys.path.append('/home/epictions/tls_scripts/tls_utils')
+import tls_utils as utils
+import json
+from scrapy import signals
+import random
+from scrapy.xlib.pydispatch import dispatcher
+from elasticsearch import Elasticsearch
+import hashlib
 
 class BleepingSpider(Spider):
     name = 'bleeping_author'
+    start_urls = ['https://www.bleepingcomputer.com/forums/']
 
     def __init__(self):
-        self.conn = MySQLdb.connect(db="posts",
+	self.es = Elasticsearch(['10.2.0.90:9342'])
+	self.conn,self.cursor = self.mysql_conn()
+	self.upsert_query_authors = utils.generate_upsert_query_authors('bleeping_computer')
+	dispatcher.connect(self.close_conn, signals.spider_closed)
+
+    def mysql_conn(self):	
+        conn = MySQLdb.connect(db="posts",
                                     host="localhost",
                                     user="root",
                                     passwd="",
                                     use_unicode=True,
                                     charset="utf8")
-
-        self.cursor=self.conn.cursor()
+        cursor = conn.cursor()
+	return conn, cursor
 
     def close_conn(self, spider):
         self.conn.commit()
         self.conn.close()
 
-    def start_requests(self):
+
+    def parse(self,response):
+	try:
+	    key = ''.join(re.findall("secure_hash\'](.*)= '(.*)",x)[0][1].split(';'))[:-1]
+	except:
+	     key = '880ea6a14ea49e853634fbdc5015a024'
         data = {
-            'auth_key': '880ea6a14ea49e853634fbdc5015a024',
+            'auth_key': key,
             'referer': 'https://www.bleepingcomputer.com/forums/index.php',
-            'ips_username': 'inqspdr',
-            'ips_password': 'Inq2018.',
+            'ips_username': 'inqspdr2',
+            'ips_password': 'lolw4@123~',
             'rememberMe': '1',
         }
         url = 'https://www.bleepingcomputer.com/forums/index.php?app=core&module=global&section=login&do=process'
         yield FormRequest(url, callback=self.parse_next, formdata=data)
 
     def parse_next(self,response):
-        start_query = 'select DISTINCT(links) from bleeping_authors_crawl'
+        start_query = 'select DISTINCT(links) from bleeping_authors_crawl limit 5'
         self.cursor.execute(start_query)
+	self.conn.commit()
         data = self.cursor.fetchall()
         urls = [datum[0] for datum in data]
         for url in urls:
             meta_query = 'select DISTINCT(auth_meta) from  bleeping_authors_crawl where links = %(url)s'
             val = {'url':url}
             self.cursor.execute(meta_query,val)
+	    self.conn.commit()
             meta_query = self.cursor.fetchall()
             publish_time = []
             thread_title = []
@@ -64,7 +82,7 @@ class BleepingSpider(Spider):
             thread_title = ', '.join(set(thread_title))
             author_meta = {'publish_time':publish_time,'thread_title':thread_title}
             if author_meta and url:
-                yield FormRequest(url, callback=self.parse_author,meta = author_meta)
+                yield Request(url, callback=self.parse_author,meta = author_meta)
 
     def parse_author(self, response):
         json_data = {}
@@ -76,16 +94,16 @@ class BleepingSpider(Spider):
             up_que_1 = "update bleeping_authors_crawl set crawl_status = 1 where links = %(url)s"
             up_que_val ={'url':response.url}
             self.cursor.execute(up_que_1,up_que_val)
-        json_data.update({'user_name': user_name,
+	    self.conn.commit()
+        json_data.update({'username': user_name,
                           'domain': domain,
                           'crawl_type': 'keep_up'})
         activetimes_ = response.meta.get('publish_time')
         activetimes = []
         try:
-            total_posts = int(''.join(response.xpath('//li[@class="clear clearfix"]//span[contains(text(),"Active Posts")]/../span[@class="row_data"]/text()').extract()).replace(',',''))
+            total_posts = int(''.join(response.xpath(xpaths.TOTALPOSTS).extract()).replace(',',''))
         except:
             total_posts = 0
-            print 'vdnsjjj'
         for activetime in activetimes_:
             try:
                 dt = time.gmtime(activetime/1000)
@@ -93,9 +111,9 @@ class BleepingSpider(Spider):
             except:
                 activetime = '-'
             activetimes.append(activetime)
-        joindate = ''.join(response.xpath('//div[@id="user_info_cell"]/text()').extract())
+        joindate = ''.join(response.xpath(xpaths.JOINDATE).extract())
         joindate = ''.join(re.findall('\w+, \d\d:\d\d \wM',joindate)) or ''.join(re.findall('\d\d \w+ \d\d\d\d',joindate))
-        lastactive = ''.join(response.xpath('//span[contains(text(),"Last Active")]//text()').extract()).replace("Last Active ",'')
+        lastactive = ''.join(response.xpath(xpaths.LAST_ACTIVE).extract()).replace("Last Active ",'')
         try:
             joindate = datetime.datetime.strptime(joindate,'%d %b %Y')
             joindate = time.mktime(joindate.timetuple())*1000
@@ -130,27 +148,24 @@ class BleepingSpider(Spider):
                 lastactive =  time.mktime(lastactive.timetuple())*1000
             else:
                 lastactive = 00
-        author_signature = ''.join(sel.xpath('//div[@class="signature"]/a//strong//text() | //div[@class="signature"]/a//following-sibling::text() | //div[@class="signature"]//span//text() | //div[@class="signature"]//text() | //div[@class="signature"]//p//img//@src | //div[@class="signature"]//img//@src | //div[@class="signature"]//a/@href').extract()).replace('#','')
+        author_signature = ''.join(sel.xpath(xpaths.AUTHOR_SIGN).extract()).replace('#','')
         if not "smile.png" in author_signature:
-            author_signature = ''.join(sel.xpath('//div[@class="signature"]/a//strong//text() | //div[@class="signature"]/a//following-sibling::text() | //div[@class="signature"]//span//text() | //div[@class="signature"]//text() | //div[@class="signature"]//p//img//@src | //div[@class="signature"]//a/@href').extract()).encode('utf-8').replace('#','')
+            author_signature = ''.join(sel.xpath(xpaths.AUTHOR_SIGN_).extract()).encode('utf-8').replace('#','')
 
-        groups = ''.join(response.xpath('//li[@class="clear clearfix"]//span[contains(text(),"Group")]/..//span[@class="row_data"]//text()').extract())
+        groups = ''.join(response.xpath(xpaths.GROUPS).extract())
         fetch_epoch = int(datetime.datetime.now().strftime("%s")) * 1000
 
-        json_data.update({'author_signature': author_signature,
+        json_data.update({'auth_sign': author_signature,
                           'join_date': joindate,
-                          'last_active': lastactive,
-                          'total_posts': total_posts,
+                          'lastactive': lastactive,
+                          'totalposts': total_posts,
                           'fetch_time': fetch_epoch,
                           'groups': groups,
-                          'reputation': "None",
-                          'credits': "None",
-                          'awards': "None",
-                          'rank': "None",
-                          'active_time': ''.join(activetimes),
-                          'contact_info': "None",
-                          'reference_url': response.url
+                          'reputation': "",
+                          'credits': "",
+                          'awards': "",
+                          'rank': "",
+                          'activetimes': ''.join(activetimes),
+                          'contactinfo': ''
         })
-        upsert_query_authors = utils.generate_upsert_query_authors('bleeping_computer')
-        self.cursor.execute(upsert_query_authors, json_data)
-
+	self.es.index(index="forum_author", doc_type='post', id=hashlib.md5(user_name,).hexdigest(), body=json_data)

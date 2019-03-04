@@ -53,6 +53,7 @@ class BoardBat(scrapy.Spider):
             pass#logger.exception("OUT THE INDEX")
         thread_title = ''.join(sel.xpath(xpaths.THREADTITLE).extract())
         post_title = ''
+
         nodes = sel.xpath(xpaths.NODES)
         for node in nodes:
             author = ''.join(node.xpath(xpaths.AUTHOR).extract())

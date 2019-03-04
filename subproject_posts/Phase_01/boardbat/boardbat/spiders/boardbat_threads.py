@@ -1,7 +1,6 @@
 #encoding: utf- 8
 import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
+sys.path.append('/home/epictions/tls_scripts/tls_utils')
 import json
 import MySQLdb
 import re
@@ -11,40 +10,26 @@ from scrapy.selector import Selector
 from scrapy.http import Request
 from scrapy import signals
 from scrapy.xlib.pydispatch import dispatcher
-import utils
+import tls_utils as utils
 import xpaths
-
+import hashlib
+from elasticsearch import Elasticsearch
 
 class BoardBat(scrapy.Spider):
     name = "boardbat_thread"
-    start_urls = ["https://board.b-at-s.info/"]
+    start_urls = ['https://board.b-at-s.info/index.php?showforum=2']
 
-    def __init__(self, *args, **kwargs):
-	self.conn, self.cursor = self.mysql_conn()
-	dispatcher.connect(self.close_conn, signals.spider_closed)
-
-    def mysql_conn(self):
-	conn = MySQLdb.connect(db="posts_boardbat",host="localhost",user="root",passwd="" , use_unicode = True , charset = 'utf8mb4')
-        cursor = conn.cursor()
-	return conn, cursor
-
-    def close_conn(self, spider):
-        self.conn.commit()
-        self.conn.close()
+    def __init__(self):
+	self.es = Elasticsearch(['10.2.0.90:9342'])
 
     def parse(self,response):
         sel = Selector(response)
-        forum = 'https://board.b-at-s.info/index.php?showforum=2'
-        yield Request(forum,callback=self.parse_nxt)
-
-    def parse_nxt(self,response):
-        sel = Selector(response)
         thread_urls = sel.xpath(xpaths.THREADURLS).extract()
         for thread_url in thread_urls:
-            yield Request(thread_url,callback=self.parse_thread)
+	    yield Request(thread_url,callback=self.parse_thread)
         for i in set(sel.xpath(xpaths.INNERPAGENAVIGATION).extract()):
             if i:
-                yield Request(i,callback = self.parse_nxt)
+                yield Request(i,callback = self.parse)
 
     def parse_thread(self, response):
         thread_url = response.url
@@ -65,7 +50,7 @@ class BoardBat(scrapy.Spider):
         try:
             sub_category = '["' + ', '.join(sel.xpath(xpaths.SUBCATEGORY).extract()).split(',')[2] + '"]'
         except:
-            logger.exception("OUT THE INDEX")
+            pass#logger.exception("OUT THE INDEX")
         thread_title = ''.join(sel.xpath(xpaths.THREADTITLE).extract())
         post_title = ''
         nodes = sel.xpath(xpaths.NODES)
@@ -119,9 +104,7 @@ class BoardBat(scrapy.Spider):
             fetch_epoch = utils.fetch_time()
             Links = node.xpath(xpaths.LINKS).extract()
             links = str(Links)
-            query_posts = utils.generate_upsert_query_posts('posts_boardbat')
             json_posts = {'domain': domain,
-                          'crawl_type': crawl_type,
                           'category': category,
                           'sub_category': sub_category,
                           'thread_title': thread_title,
@@ -129,22 +112,14 @@ class BoardBat(scrapy.Spider):
                           'thread_url': thread_url,
                           'post_id': post_id,
                           'post_url': post_url,
-                          'publish_epoch': publish_epoch,
-                          'fetch_epoch': fetch_epoch,
+                          'publish_time': publish_epoch,
+                          'fetch_time': fetch_epoch,
                           'author': author,
                           'author_url': '',
-                          'post_text': "{0}".format(utils.clean_text(Text)),
-                          'all_links': links,
-                          'reference_url': response.url
+                          'text': utils.clean_text(Text),
+                          'links': links
             }
-            try:
-		self.cursor.execute(query_posts, json_posts)
-            except OperationalError as e:
-                if 'MySQL server has gone away' in str(e):
-                    self.conn,self.cursor = self.mysql_conn()
-                    self.cursor.execute(query_posts, json_posts)
-                else:raise e()
-
+	    self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts)
         x = set(sel.xpath('//li[@class="next"]//a//@href').extract())
         for i in x:
             if i:

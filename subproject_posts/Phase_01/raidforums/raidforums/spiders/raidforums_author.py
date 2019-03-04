@@ -1,19 +1,12 @@
 from scrapy.http import Request
-import csv
 import datetime
-import calendar
 import scrapy
 import time
 import re
 import MySQLdb
-import datetime
 import json
 from scrapy import signals
 from scrapy.xlib.pydispatch import dispatcher
-import logging
-from pyvirtualdisplay import Display
-from selenium import webdriver
-import unicodedata
 from ast import literal_eval
 import utils
 
@@ -25,27 +18,17 @@ HEADERS = {'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;
 
 
 class Raidforums(scrapy.Spider):
-    name = 'raidforums_author_old'
-    log_file_name = 'raidforums_%s.log' % str(
-        datetime.datetime.now()).replace(' ', '')
-    logging.basicConfig(filename=log_file_name, level=logging.DEBUG)
-    # no need start urls
+    name = 'raidforums_author'
 
-    def __init__(self, limit='50', *args, **kwargs):
+    def __init__(self):
         self.conn = MySQLdb.connect(db="posts_raidforums", host="localhost",
                                     user="root", passwd="", use_unicode=True, charset="utf8")
         self.cursor = self.conn.cursor()
-        self.urls = []
-        self.limit = limit
-        super(scrapy.Spider, self).__init__(*args, **kwargs)
         dispatcher.connect(self.close_conn, signals.spider_closed)
-        select_qry = 'select DISTINCT(links) from raidforums_crawl ;'
+        select_qry = 'select DISTINCT(links) from raidforums_author_crawl ;'
         self.cursor.execute(select_qry)
         self.data = self.cursor.fetchall()
-        for da in self.data:
-            self.urls.append(da[0])
 
-    # closing DB connection
     def close_conn(self, spider):
         self.conn.commit()
         self.conn.close()
@@ -100,9 +83,9 @@ class Raidforums(scrapy.Spider):
         # fetch urls from DB using __init__ method
     def parse_user(self, response):
         cookies = response.meta.get('cook', {})
-        for url in self.urls:
-            meta_query = 'select DISTINCT(auth_meta) from raidforums_crawl where links = "%s" ' % url.encode(
-                'utf8')
+        for url in self.data:
+	    url = ''.join(url)
+            meta_query = 'select DISTINCT(auth_meta) from raidforums_author_crawl where links = "%s" ' % url.encode('utf8')
             self.cursor.execute(meta_query)
             meta_query = self.cursor.fetchall()
             commant_date = []
@@ -126,15 +109,11 @@ class Raidforums(scrapy.Spider):
         user = ''.join(response.xpath(
             '//div[contains(@class, "user-name")]//span/text()').extract())
         if response.status != 200 or 302:
-            status_code_update = 'update raidforums_crawl set status_code = 1 where links = "%s"' % MySQLdb.escape_string(
-                response.url)
+            status_code_update = 'update raidforums_author_crawl set crawl_status = 1 where links = "%(url)s"' %({'url':response.url})
             self.cursor.execute(status_code_update)
         else:
-            status_code_update = 'update raidforums_crawl set status_code = 9 where links = "%s"' % MySQLdb.escape_string(
-                response.url)
+            status_code_update = 'update raidforums_author_crawl set crawl_status = 9 where links = "%s"' %({'url':response.url})
 
-        logging.info("url:%s", response.url)
-        logging.info("status_code:%s", response.status)
         group = ''.join(response.xpath(
             '//span[@class="largetext protitlemain"]//span//@id | //span[@class="largetext protitlemain"]/strong/text()').extract())
         group = group.replace('[', '').replace(']', '')
@@ -205,8 +184,8 @@ class Raidforums(scrapy.Spider):
                         except:
                             date_ =  datetime.datetime.strptime(last_active, '%m-%d-%Y')
                         last_active = time.mktime(date_.timetuple()) * 1000
-                    else:
-                        last_active = 0
+                else:
+                    last_active = 0
         total_posts_xpath = '//div[@id="3-content"]//td[contains(@class,"trow")]/strong[contains(text(),"Total Posts:")]//../..//preceding-sibling::td/text()'
         total_posts = ''.join(response.xpath(total_posts_xpath).extract())
         credits = ''.join(response.xpath(
@@ -220,14 +199,14 @@ class Raidforums(scrapy.Spider):
         if "protected]" in gmail:
             mail_2 = response.xpath('//div[@id="2-content"]//td[contains(@class,"trow")]/strong[contains(text(),"Skype ID:")]/../..//preceding-sibling::td//span/@data-cfemail').extract()
             email_1 = [utils.decode_cloudflareEmail(id_) for id_ in mail_2]
-            gmail_id = gmail.split('[email\xc2\xa0protected]')[0] + email_1[0]
+            gmail_id = gmail.split(u'[email\xc2\xa0protected]')[0] + email_1[0]
         skype_id = ''.join(response.xpath(
             '//div[@id="2-content"]//td[contains(@class,"trow")]/strong[contains(text(),"Skype ID:")]/../..//preceding-sibling::td/a/text()').extract())
         skype = ''.join(response.xpath('//div[@id="2-content"]//td[contains(@class,"trow")]/strong[contains(text(),"Google Hangouts ID:")]/../..//preceding-sibling::td/a//text()').extract())
         if "protected]" in skype:
             mails_1 = response.xpath('//div[@id="2-content"]//td[contains(@class,"trow")]/strong[contains(text(),"Google Hangouts ID:")]/../..//preceding-sibling::td/a/@data-cfemail').extract()
             email = [utils.decode_cloudflareEmail(id_) for id_ in mails_1]
-            skype_id = skype.split('[email\xc2\xa0protected]')[0] + email[0]
+            skype_id = skype.split(u'[email\xc2\xa0protected]')[0] + email[0]
         social = response.xpath(
             '//table[@class="tborder"]//a[@target="_blank"]/@href').extract()
         others_social = []
@@ -266,91 +245,91 @@ class Raidforums(scrapy.Spider):
                 others_social.append(i)
         try:
             if not facebook:
-                facebook = 'none'
+                facebook = ''
         except:
-            facebook = 'none'
+            facebook = ''
         try:
             if not google:
-                google = 'none'
+                google = ''
         except:
-            google = 'none'
+            google = ''
         try:
             if not keybase:
-                keybase = 'none'
+                keybase = ''
         except:
-            keybase = 'none'
+            keybase = ''
         try:
             if not soundcloud:
-                soundcloud = 'none'
+                soundcloud = ''
         except:
-            soundcloud = 'none'
+            soundcloud = ''
         try:
             if not steamcommunity:
-                steamcommunity = 'none'
+                steamcommunity = ''
         except:
-            steamcommunity = 'none'
+            steamcommunity = ''
         try:
             if not twitter:
-                twitter = 'none'
+                twitter = ''
         except:
-            twitter = 'none'
+            twitter = ''
         try:
             if not youtube:
-                youtube = 'none'
+                youtube = ''
         except:
-            youtube = 'none'
+            youtube = ''
         try:
             if not flickr:
-                flickr = 'none'
+                flickr = ''
         except:
-            flickr = 'none'
+            flickr = ''
         try:
             if not instagram:
-                instagram = 'none'
+                instagram = ''
         except:
-            instagram = 'none'
+            instagram = ''
         try:
             if not last:
-                last = 'none'
+                last = ''
         except:
-            last = 'none'
+            last = ''
         try:
             if not linkedin:
-                linkedin = 'none'
+                linkedin = ''
         except:
-            linkedin = 'none'
+            linkedin = ''
         try:
             if not myspace:
-                myspace = 'none'
+                myspace = ''
         except:
-            myspace = 'none'
+            myspace = ''
         try:
             if not playstatio:
-                playstatio = 'none'
+                playstatio = ''
         except:
-            playstatio = 'none'
+            playstatio = ''
         try:
             if not skype_id:
-                skype_id = "none"
+                skype_id = ""
         except:
-            skype_id = "none"
+            skype_id = ""
         try:
             if not gmail_id:
-                gmail_id = "none"
+                gmail_id = ""
         except:
-            gmail_id = "none"
+            gmail_id = ""
 
         try:
             if not xbox:
-                xbox = 'none'
+                xbox = ''
         except:
-            xbox = 'none'
+            xbox = ''
         others_social = ', '.join(others_social)
         try:
             if not others_social:
-                others_social= "none"
+                others_social= ""
         except:
-            others_social = "none"
+            others_social = ""
         contact_info = '''[{"channel":"Skype ID:","user_id":"%s"}, {"channel":"Google Hangouts ID:", "user_id": "%s"},{"channel":"facebook", "user_id":"%s"},{"channel":"plus.google", "user_id":"%s"},{"channel":"keybase", "user_id":"%s"},{"channel":"soundcloud", "user_id":"%s"}{"channel":"steamcommunity", "user_id":"%s"},{"channel":"twitter", "user_id":"%s"},{"channel":"youtube", "user_id":"%s"}, {"channel":"flickr", "user_id":"%s"},{"channel":"instagram", "user_id":"%s"},{"channel":"last", "user_id":"%s"},{"channel":"linkedin", "user_id":"%s"},{"channel":"myspace", "user_id":"%s"},{"channel":"playstation", "user_id":"%s"}{"channel":"xbox", "user_id":"%s"}{"channel":"Other social networking links", "user_id":"%s"}]''' % (
             skype_id, gmail_id, facebook, google, keybase, soundcloud, steamcommunity, twitter, youtube, flickr, instagram, last, linkedin, myspace, playstatio, xbox, others_social)
         topic = response.meta.get('thread_type', '')
@@ -372,7 +351,7 @@ class Raidforums(scrapy.Spider):
                     str(dt.tm_year), str(dt.tm_mon), str(dt.tm_wday), str(dt.tm_hour), active_count)
                 activetimes.append(activetime)
             except:
-                activetime = 'none'
+                activetime = ''
         # writing data to DB
         Fetch_Time = int(round(time.time() * 1000))
         author_signature = ""
@@ -381,13 +360,13 @@ class Raidforums(scrapy.Spider):
             mails  = response.xpath('//td/strong[contains(text(), "Signature")]/../../following-sibling::tr//td//@data-cfemail').extract()
             email_id=[utils.decode_cloudflareEmail(id_) for id_ in mails]
             if len(mails) > 1:
-                author_signature =  author_signature.split('[email\xc2\xa0protected]')[0] + email_id[0] + ' ' + author_signature.split('[email\xc2\xa0protected]')[1] + ' ' + email_id[1] + ' ' + author_signature.split('[email\xc2\xa0protected]')[2]
+                author_signature =  author_signature.split(u'[email\xc2\xa0protected]')[0] + email_id[0] + ' ' + author_signature.split(u'[email\xc2\xa0protected]')[1] + ' ' + email_id[1] + ' ' + author_signature.split(u'[email\xc2\xa0protected]')[2]
             else:
-                autho_signature = author_signature.split('[email\xc2\xa0protected]')
+                autho_signature = author_signature.split(u'[email\xc2\xa0protected]')
                 if len(autho_signature) >1:
-                    author_signature =  author_signature.split('[email\xc2\xa0protected]')[0] + email_id[0]  + " " + author_signature.split('[email\xc2\xa0protected]')[1]
+                    author_signature =  author_signature.split(u'[email\xc2\xa0protected]')[0] + email_id[0]  + " " + author_signature.split(u'[email\xc2\xa0protected]')[1]
                 else:
-                    author_signature =   author_signature.split('[email\xc2\xa0protected]')[0] + email_id[0] + ' '
+                    author_signature =   author_signature.split(u'[email\xc2\xa0protected]')[0] + email_id[0] + ' '
 
         awards = ', '.join([e.replace('>>', '').replace('\n', '').strip() for e in response.xpath(
             '//strong[contains(text(), "awards")]/..//../../tr//td[contains(@class, "trow")]//following-sibling::span/../text()').extract() if e.replace('>>', '').replace('\n', '').strip()])
@@ -408,6 +387,6 @@ class Raidforums(scrapy.Spider):
                 'contact_info':contact_info,
                 'reference_url': response.url
         })
-        upsert_query_authors = utils.generate_upsert_query_authors('posts_raidforums')
+        upsert_query_authors = utils.generate_upsert_query_authors('raidforums')
         self.cursor.execute(upsert_query_authors, json_data)
 

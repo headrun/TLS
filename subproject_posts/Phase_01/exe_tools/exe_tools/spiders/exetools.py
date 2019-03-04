@@ -6,16 +6,17 @@ import re
 import MySQLdb
 import time
 import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
-
+sys.path.append('/home/epictions/tls_scripts/tls_utils')
+import tls_utils as utils
 from scrapy.http import Request
 from scrapy.selector import Selector
 from scrapy.spiders import Spider
-
-from exe_tools.spiders import xpaths
-import utils
-
+import xpaths
+import json
+from scrapy import signals
+from scrapy.xlib.pydispatch import dispatcher
+from elasticsearch import Elasticsearch
+import hashlib
 
 def clean_text(input_text):
     '''
@@ -28,25 +29,15 @@ def clean_text(input_text):
     return text
 
 
-query_posts = utils.generate_upsert_query_posts('exe_tools')
-query_authors = utils.generate_upsert_query_authors('exe_tools')
-
-
 class Exetool(Spider):
     name = "exetool"
     start_urls = ['https://forum.exetools.com/index.php']
 
     def __init__(self):
-        self.conn = MySQLdb.connect(db="posts",
-                                    host="localhost",
-                                    user="root",
-                                    use_unicode=True,
-                                    charset="utf8mb4")
-        self.cursor = self.conn.cursor()
+	self.es = Elasticsearch(['10.2.0.90:9342'])
 
     def parse(self, response):
         sel = Selector(response)
-        # first page 5 links
         start_page_links = sel.xpath(
             '//tbody//tr//td[@class="alt1Active"]//div//a//@href').extract()  # encode('ascii','ignore')
         for start_page_link in start_page_links:
@@ -75,7 +66,10 @@ class Exetool(Spider):
             crawl_type = 'keep_up'
         thread_title = ''.join(response.xpath(xpaths.THREAD_TITLE).extract()).strip()
         thread_topic = ''.join(response.xpath(xpaths.THREAD_TOPIC).extract()).strip()
-        category = ''.join(thread_topic.split('> ')[1])
+        try:
+	    category = ''.join(thread_topic.split('> ')[1])
+	except:
+	    pass
         sub_category = '["' + ''.join(thread_topic.split('> ')[2:]) + '"]'
         all_posts = response.xpath(xpaths.ALL_POSTS).extract()
         for post in all_posts:
@@ -119,7 +113,6 @@ class Exetool(Spider):
 
             comment_id = 'td_post_%s' % post_id
             post_xpath = xpaths.COMMENTS % (comment_id, comment_id)
-            #text_1 = '\n'.join(sel.xpath('//tr//td[contains(@id, "td_post")]//text() | //img//@title | //tr//td[contains(@id, "td_post")]//div[@class="smallfont"]//@alt | //a[@rel="nofollow"]//img[@class="inlineimg"]/@alt').extract()).strip().encode('utf8')
             text_1 = '\n'.join(sel.xpath('//tr//td[contains(@id, "td_post")]//text() | //img//@title | //tr//td[contains(@id, "td_post")]//div[@class="smallfont"]//@alt | //a[@rel="nofollow"]//img[@class="inlineimg"]/@alt').extract()).strip()
             author_signature = '\n'.join(sel.xpath(xpaths.AUTHOR_SIGNATURE).extract()).strip()
             junk = '\n'.join(sel.xpath('//tr//td[contains(@id, "td_post_")]//div[contains(@id, "post_message_")]/following-sibling::div//em//text()').extract()).strip()
@@ -170,7 +163,6 @@ class Exetool(Spider):
             fetch_time = int(datetime.datetime.now().strftime("%s")) * 1000
 
             json_posts = {'domain': domain,
-                          'crawl_type': crawl_type,
                           'category': category,
                           'sub_category': sub_category,
                           'thread_title': thread_title,
@@ -178,49 +170,33 @@ class Exetool(Spider):
                           'post_id': post_id,
                           'post_title': '',
                           'post_url': post_url,
-                          'publish_epoch': publish_epoch,
-                          #'fetch_epoch': fetch_time,
-                          'author': author,
+                          'publish_time': publish_epoch,
+                          'fetch_time':fetch_time,
+			  'author': author,
                           'author_url': author_url,
-                          'post_text': post_text,
-                          'all_links': all_links,
-                          'reference_url': response.url
+                          'text': post_text,
+                          'links': all_links
             }
-	    try:
-                self.cursor.execute(query_posts, json_posts)
-	    except OperationalError as e:
-                if 'MySQL server has gone away' in str(e):
-                    self.conn,self.cursor = self.mysql_conn()
-                    self.cursor.execute(query_posts, json_posts)
-                else:raise e()
-
+	    self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts)
 
             json_authors = {
-                'user_name': author,
+                'username': author,
                 'domain':  domain,
                 'crawl_type': crawl_type,
-                'author_signature': author_signature,
+                'auth_sign': author_signature,
                 'join_date':  join_date,
-                'last_active': lastactive,
-                'total_posts':  totalposts,
-                #'fetch_epoch': fetch_time,
+                'lastactive': lastactive,
+                'totalposts':  totalposts,
                 'groups': group_obt,
                 'reputation': repo,
+                'fetch_time':fetch_time,
                 'credits': '',
                 'awards': '',
                 'rank': '',
-                'active_time': activetime,
-                'contact_info': '',
-                'reference_url': reference_url
+                'activetimes': activetime,
+                'contactinfo': '',
             }
-	    try:
-                self.cursor.execute(query_authors, json_authors)
-	    except OperationalError as e:
-                if 'MySQL server has gone away' in str(e):
-                    self.conn,self.cursor = self.mysql_conn()
-                    self.cursor.execute(query_authors, json_authors)
-                else:raise e()
-
+	    self.es.index(index="forum_author", doc_type='post', id=hashlib.md5(author).hexdigest(), body=json_authors)
 
         next_page = set(response.xpath(xpaths.NEXT_PAGE).extract())
         if next_page:

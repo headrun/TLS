@@ -6,17 +6,17 @@ import time
 import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
+sys.path.append('/home/epictions/tls_scripts/tls_utils')
 import scrapy
 from scrapy import signals
 from scrapy.http import FormRequest
 from scrapy.http import Request
 from scrapy.selector import Selector
 from scrapy.xlib.pydispatch import dispatcher
-
+import tls_utils as utils
 import xpaths
-import utils
-
-
+from elasticsearch import Elasticsearch
+import hashlib
 def extract_data(sel, xpath_, delim=''):
     return delim.join(sel.xpath(xpath_).extract()).strip()
 
@@ -31,11 +31,12 @@ def extract_list_data(sel, xpath_):
 
 class KernelPost(scrapy.Spider):
     name = "kernel_thread"
-    start_urls = ["http://www.kernelmode.info/forum/index.php?sid=777ae8de248e8e96e3757106011c889d"]
+    start_urls = ["http://www.kernelmode.info/forum/index.php"]
     handle_httpstatus_list=[404]
 
     def __init__(self):
-        self.query = utils.generate_upsert_query_posts('kernel_mode')
+	self.es = Elasticsearch(['10.2.0.90:9342'])
+	self.posts_val = utils.que_filename('kernel_posts')
 	self.conn, self.cursor = self.mysql_conn()
 	dispatcher.connect(self.close_conn, signals.spider_closed)
 
@@ -47,11 +48,15 @@ class KernelPost(scrapy.Spider):
                                     use_unicode=True,
                                     charset='utf8')
         cursor = conn.cursor()
-	return conn,cursor
+	return conn, cursor
 
     def close_conn(self, spider):
-        self.conn.commit()
-        self.conn.close()
+	query_posts = utils.generate_upsert_query_posts('kernel_mode')
+        posts_file = self.posts_val.name.split('/')[-1]
+	conn,cursor = self.mysql_conn()
+        utils.quefile_to_mysql(posts_file,query_posts,conn,cursor)
+        cursor.close()
+        conn.close()
 
     def add_http(self, url):
         if 'http' not in url:
@@ -115,7 +120,7 @@ class KernelPost(scrapy.Spider):
         author_links = extract_list_data(sel, xpaths.AUTHOR_LINKS)
         post_nodes = get_nodes(sel, xpaths.NODES)
         json_posts.update({'domain': domain,
-                           'crawl_type': crawl_type,
+                           #'crawl_type': crawl_type,
                            'thread_url': thread_url,
                            'thread_title': thread_title
         })
@@ -123,16 +128,14 @@ class KernelPost(scrapy.Spider):
         if next_page:
 	     try:
           	 last_post_id = extract_data(post_nodes[-1], xpaths.POST_ID)
-                 que_ = 'select * from kernel_posts where post_id = %(post_id)s'
-                 self.cursor.execute(que_,{'post_id':last_post_id})
-                 val_for_next = self.cursor.fetchall()
-                 if len(val_for_next) == 0:
-                     if 'http' not in next_page:
-                         next_page = self.add_http(next_page)
+		 post_url_ = response.url+last_post_id
+		 test_id = hashlib.md5(str(post_url_)).hexdigest()
+		 query = {'query_string': {'use_dis_max': 'true', 'query': '_id:{0}'.format(test_id)}}
+		 res = self.es.search(index="forum_posts", body={"query": query})
+		 if res['hits']['hits']==[]:
                      yield Request(next_page, callback=self.parse_thread)
 	     except:pass
         for node in post_nodes:
-
             category = extract_data(node, xpaths.CATEGORY)
             sub_category = '["' + ''.join(node.xpath('//span[@class="crumb"][3]//span[@itemprop="title"]/text()').extract()).encode('utf8') + '"]'
             post_title = extract_data(node, xpaths.POST_TITLE)
@@ -150,32 +153,29 @@ class KernelPost(scrapy.Spider):
                 if 'download/file.php' in i:
                     i = self.add_http(i)
                 post_text.append(i)
-            post_text = '\n'.join(post_text)
+            post_text = ' '.join(post_text)
             #post_text = post_text.replace('\\n', '\n')
-            post_text = re.sub('(<cite>.*?</cite>)', 'Quote\n', post_text)
+            post_text = re.sub('(<cite>.*?</cite>)', 'Quote', post_text)
             post_text = re.compile(r'([\n,\t,\r]*\t)').sub('\n', post_text)
             post_text = re.sub(r'(\n\s*)', '\n', post_text)
             post_text = re.sub('\s\s+', ' ', post_text)
             #post_text = re.sub('(<cite>.*?</cite>)', 'Quote\n', post_text)
-            post_text = re.sub('(<blockquote[@class="uncited"]>.*?</blockquote>)', 'Quote\n', post_text)
+            post_text = re.sub('(<blockquote[@class="uncited"]>.*?</blockquote>)', 'Quote', post_text)
             arrow = ', '.join(node.xpath('.//blockquote/div/cite/a[2]/@href').extract())
-
             if arrow:
                 arrow = self.add_http(arrow)
             else:
                 arrow = ''
-
             json_posts.update({
                 'category': category,
                 'sub_category': sub_category,
-                'post_title': post_title if post_title else None,
+                'post_title': post_title if post_title else '',
                 'post_id': post_id,
                 'post_url': post_url,
-                'publish_epoch': publish_time,
-                'fetch_epoch': fetch_time,
+                'publish_time': publish_time,
+                'fetch_time': fetch_time,
                 'author': author,
-                'post_text': post_text,
-                'reference_url': response.url
+                'text': post_text,
             })
 
             Link = []
@@ -190,10 +190,10 @@ class KernelPost(scrapy.Spider):
 
             json_posts.update({
                 'author_url': author_link,
-                'all_links': get_aggregated_links(Links)
+                'links': get_aggregated_links(Links)
             })
-
-            if author_link:
+            self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts)
+	    if author_link:
                 # passing publish_time,thread_title,Topics using dict format
                 # Write data into forums_crawl table
                 meta = {'publish_time': publish_time, 'thread_title': thread_title}
@@ -202,9 +202,7 @@ class KernelPost(scrapy.Spider):
                     'auth_meta': json.dumps(meta),
                     'links': author_link
                 }
-		
                 crawl_query = utils.generate_upsert_query_authors_crawl('kernel_mode')
-
                 if 'wtopic.php?f=10&t' not in response.url:
                     try:
 			self.cursor.execute(crawl_query, json_crawl)
@@ -214,15 +212,8 @@ class KernelPost(scrapy.Spider):
 			    self.cursor.execute(crawl_query, json_crawl)
                 	else:
                     	    raise e()
-
             if 'wtopic.php?f=10&t' not in response.url:
-                try:
-		    self.cursor.execute(self.query, json_posts)
-                except OperationalError as e:
-                    if 'MySQL server has gone away' in str(e):
-                        self.conn,self.cursor = self.mysql_conn()
-                        self.cursor.execute(self.query, json_posts)
-		    else:raise e()
+		self.posts_val.write(json.dumps(json_posts)+'\n')
 
 def get_aggregated_links(links):
     if not links:

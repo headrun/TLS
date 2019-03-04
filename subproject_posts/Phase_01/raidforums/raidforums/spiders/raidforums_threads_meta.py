@@ -1,44 +1,22 @@
-import logging
 from scrapy.http import Request
-import csv
+import time
 import datetime
 import scrapy
-import time
 import re
 import MySQLdb
 import datetime
 import json
 from scrapy import signals
 from scrapy.xlib.pydispatch import dispatcher
-from pyvirtualdisplay import Display
-# from selenium import webdriver
 import utils
-import unicodedata
-
-
-
-def clean_spchar_in_text(self, thread_text):
-    ''' 
-    Cleans up special chars in input text.
-    input = "Hi!\r\n\t\t\t\r\n\t\t\t\r\n\t\t\t\r\n\t\t\r\n\r\n\t\t\r\n\t\t\r\n\t\t\t\r\n\t\t\tHi, besides my account"
-    output = "Hi!\nHi, besides my account"
-    '''
-    thread_text = re.compile(r'([\n,\t,\r]*\t)').sub('\n', thread_text)
-    thread_text = re.sub(r'(\n\s*)', '\n', thread_text)
-    return thread_text
-
-
+d_que = utils.generate_upsert_query_posts('raidforums')
+a_que = utils.generate_upsert_query_authors_crawl('raidforums')
 
 
 class Raidforums(scrapy.Spider):
-    name = 'raidforums_Threads_meta'
-    log_file_name = 'raidforums_Threads_meta_%s.log'%str(datetime.datetime.now()).replace(' ','')
-    logging.basicConfig(filename = log_file_name,level=logging.DEBUG)
+    name = 'raidforums_threads_meta'
 
-    def __init__(self, limit= '50', *args, **kwargs):
-
-        super(Raidforums, self).__init__(*args, **kwargs)
-        self.query = utils.generate_upsert_query_posts('posts_raidforums')
+    def __init__(self):
         self.conn = MySQLdb.connect(db="posts_raidforums",
                                    host="localhost",
                                    user="root",
@@ -46,51 +24,34 @@ class Raidforums(scrapy.Spider):
                                    use_unicode=True,
                                    charset="utf8")
         self.cursor = self.conn.cursor()
-        self.limit = limit
         dispatcher.connect(self.close_conn, signals.spider_closed)
     
     def close_conn(self, spider):
         self.conn.commit()
         self.conn.close()
 
+    def clean_spchar_in_text(self, thread_text):
+        thread_text = re.compile(r'([\n,\t,\r]*\t)').sub('\n', thread_text)
+        thread_text = re.sub(r'(\n\s*)', '\n', thread_text)
+        return thread_text 
 
     def start_requests(self):
-        que = "select distinct(url) from raidforums_status where status_code = 0 limit %s"%self.limit
+        que = "select distinct(post_url) from raidforums_threads_crawl where crawl_status = 0 "
         self.cursor.execute(que)
         data = self.cursor.fetchall()
         for url in data:
-            up_que = 'update raidforums_status set status_code = 9 where url = "%s"'%MySQLdb.escape_string(''.join(url))
-            self.cursor.execute(up_que)
-            
-        for url in data:
-            yield Request(''.join(url),callback = self.parse_comm)
+            yield Request(''.join(url),callback = self.parse_comm,meta = {'crawl_type':'keepup'})
 
     def parse_comm(self,response):
-        logging.info("url:%s",response.url)
         domain = "www.raidforums.com"
-        if '?page=' not in response.url:
-            crawl_type = 'keepup'
-        else: crawl_type = 'catchup'
- 
-        logging.info("status_code:%s",response.status)
-        if response.status != 200 or 302:
-            status_code_update = 'update raidforums_status set status_code = 1 where url = "%s"'%MySQLdb.escape_string(response.url)
-            self.cursor.execute(status_code_update)
-        else:
-            # response.status == 200:
-            status_code_update = 'update raidforums_status set status_code = 9 where url = "%s"'%MySQLdb.escape_string(response.url)
-            self.cursor.execute(status_code_update)
+	crawl_type = response.meta.get('crawl_type')
         Category = ''.join(response.xpath('//span[@class="crumbs"]//span/a/text()').extract()[1]).replace('\n','').replace('\r','')
-
         Subcategory = '['+''.join(response.xpath('//span[@class="crumbs"]//span/a/text()').extract()[2]).replace('\n','"') +']'
-
-        
         thread_type = ''.join(response.xpath('//span[@class="crumbs"]//span/a/text()').extract()[-1]).replace('\n','').replace('\r','')
         thread_Topics = ''.join(response.xpath('//span[@class="crust"]//a/text()').extract())
         thread_Topics = thread_Topics.strip().replace('\n\n', '/').strip('.')
         thread_nodes = response.xpath('//td[@id="posts_container"]//div[@class="post classic "]')
         json_posts = {}
-        Thread_url = ''
         Thread_url = response.url
         thread_text, email_id,commantdate = "","",""
         if '?page=' in Thread_url:
@@ -101,6 +62,9 @@ class Raidforums(scrapy.Spider):
                             'thread_url': Thread_url,
                             'thread_title' : thread_type
         })
+	if thread_nodes and crawl_type == 'keepup':
+	    status_code_update = 'update raidforums_threads_crawl set crawl_status = 1 where post_url = "%(url)s"'%({'url':response.url})
+            self.cursor.execute(status_code_update)
 
         for i in thread_nodes:
     	    links,links_,link = [],[],[]
@@ -108,8 +72,7 @@ class Raidforums(scrapy.Spider):
             quote = i.xpath('.//div[@class="post_content"]//div[contains(@class, "post_body")]//blockquote[@class="mycode_quote"]/@class').extract()
             if quote:
                 thread_text = thread_text.replace(quote[0], " Quote ")
-            thread_date = ''.join(i.xpath('.//div[@class="post_content"]//span[@class="post_date"]/span//@title').extract()\
-                +i.xpath('.//div[@class="post_content"]//span[@class="post_date"]/text()').extract())     
+            thread_date = ''.join(i.xpath('.//div[@class="post_content"]//span[@class="post_date"]/span//@title | .//div[@class="post_content"]//span[@class="post_date"]/text()').extract())     
 
             if """protected]""" in thread_text:
                 mails = i.xpath('.//div[@class="post_content"]//div[contains(@class, "post_body")]//@data-cfemail').extract()
@@ -144,24 +107,19 @@ class Raidforums(scrapy.Spider):
                     commant_date2 = datetime.datetime.strptime(thread_date, '%d-%m-%Y,%I:%M%p')
                 except:pass
             try:
-                commantdate = time.mktime(commant_date2.timetuple())*1000
+                #commantdate = time.mktime(commant_date2.timetuple())*1000
                 commant_date = int(time.mktime(commant_date2.timetuple())*1000)
-            except:pass
-            Fetch_Time = int(round(time.time()*1000))
-            commant_author = ''.join(i.xpath('.//div[@class="post_author scaleimages"]//span[@class="owner-hex"]/text()').extract()) or \
-                            ''.join(i.xpath('./div//span[@class="largetext"]/a/span/text()').extract()) or \
-                            ''.join(i.xpath('.//span[@class="largetext"]//img/@original-title').extract()) or \
-                            ''.join(i.xpath('.//span[@class="sparkles-ani"]//text()').extract())or \
-                             ''.join(i.xpath('.//span[@class="largetext"]//span[@class="god-hex"]//text()').extract())
-
+            except:
+		commantdate = time.mktime(commant_date2.timetuple())*1000
+            commant_author = ''.join(i.xpath('.//div[@class="post_author scaleimages"]//span[@class="owner-hex"]/text() | ./div//span[@class="largetext"]/a/span/text() | .//span[@class="largetext"]//img/@original-title | .//span[@class="sparkles-ani"]//text() | .//span[@class="largetext"]//span[@class="god-hex"]//text()').extract())
             Post_Url_ = ''.join(i.xpath('.//div[@class="post_content"]//div[@class="float_right"]//a/@href').extract())
             if  Post_Url_:
                 Post_Url = 'https://raidforums.com/'+Post_Url_
             else:
-                Post_Url = 'none'
+                Post_Url = ''
 
             if Post_Url != '-':Post_id = ''.join(re.findall('pid\d+',Post_Url)).replace('pid','')
-            else: Post_id = 'none'
+            else: Post_id = ''
             links_= i.xpath('.//div[@class="post_content"]//div[@class="post_body scaleimages"]//a//@href | .//div[@class="post_content"]//div[@class="post_body scaleimages"]//img[contains(@src, ".jpg")]/@src | .//div[@class="post_content"]//div[contains(@class, "post_body")]//img[@class="mycode_img"]/@src').extract()
             for link in links_:
                 if "http" not in link: link = "https://raidforums.com" + link
@@ -170,7 +128,6 @@ class Raidforums(scrapy.Spider):
             if not links: links= " "
             a_name = ''.join(i.xpath('.//div[@class="post_author scaleimages"]//span[@class="largetext"]//span/text()').extract())or \
             ''.join(i.xpath('.//span[@class="largetext"]//a//span//text()').extract())
-
             # passing commant_date,thread_type,thread_Topics using dict format
             # Write data into raidforums_crawl table 
             auth_url = ''.join(i.xpath('.//div[@class="author_avatar"]/a/@href').extract())
@@ -180,11 +137,8 @@ class Raidforums(scrapy.Spider):
                             'all_links':links
                     })
             meta = {'commant_date' : commantdate, 'thread_type' : thread_type.encode('utf8'), 'thread_Topics' : thread_Topics.encode('utf8')}
-            
-
-            # write data into raidforums_Threads_details table
              
-            thread_text = clean_spchar_in_text(self,thread_text)
+            thread_text = self.clean_spchar_in_text(thread_text)
             json_posts.update({
                                'category': Category,
                                'sub_category': Subcategory,
@@ -192,13 +146,12 @@ class Raidforums(scrapy.Spider):
                                'post_id': Post_id,
                                'post_url': Post_Url,
                                'publish_epoch':  commant_date,
-                               'fetch_epoch': Fetch_Time,
                                'author': commant_author,
                                'post_text': thread_text,
                                'reference_url': response.url
                 })
-            self.cursor.execute(self.query, json_posts)
-            self.conn.commit()
+            try:self.cursor.execute(d_que, json_posts)
+	    except:import pdb;pdb.set_trace()
             meta = {'publish_time': commant_date, 'thread_title': thread_type}
             json_crawl = {
                            'post_id': Post_id,
@@ -206,15 +159,10 @@ class Raidforums(scrapy.Spider):
                            'links':auth_url,
                            }
 
-            crawl_query = utils.generate_upsert_query_crawl('posts_raidforums')
-            self.cursor.execute(crawl_query, json_crawl)
-            self.conn.commit() 
+            try:self.cursor.execute(a_que, json_crawl)
+	    except:import pdb;pdb.set_trace()
         
-        # navigating to next page
         looppage_url = set(response.xpath('//a[@class="pagination_next"]/@href').extract())
         for url in looppage_url:
             if 'hhtps:/' or "http:" not in url:url  = 'https://raidforums.com/' +url
-            yield Request(url,callback = self.parse_comm)
-        # closing DB connection using spider signals
-
 

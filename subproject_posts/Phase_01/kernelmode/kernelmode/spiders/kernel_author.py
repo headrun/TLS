@@ -4,18 +4,19 @@ import json
 import MySQLdb
 import time
 import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
-
+sys.path.append('/home/epictions/tls_scripts/tls_utils')
+import tls_utils as utils
+from MySQLdb import OperationalError
 import scrapy
 from scrapy.spider import Spider
 from scrapy.selector import Selector
 from scrapy.http import Request
 from scrapy.http import FormRequest
-
 from kernelmode.spiders import xpaths
-import utils
-
+from scrapy.xlib.pydispatch import dispatcher
+from scrapy import signals
+from elasticsearch import Elasticsearch
+import hashlib
 
 def extract_data(sel, xpath_, delim=''):
     return delim.join(sel.xpath(xpath_).extract()).strip()
@@ -32,7 +33,6 @@ def extract_list_data(sel, xpath_):
 class KernelPost(scrapy.Spider):
     name = "kernel_author"
     start_urls = ["http://www.kernelmode.info/forum/"]
-    # handle_httpstatus_list=[404]
 
     def __init__(self):
         self.conn = MySQLdb.connect(db="posts",
@@ -42,9 +42,11 @@ class KernelPost(scrapy.Spider):
                                     use_unicode=True,
                                     charset='utf8')
         self.cursor = self.conn.cursor()
+	self.es = Elasticsearch(['10.2.0.90:9342'])
+	dispatcher.connect(self.close_conn, signals.spider_closed)
 
     def close_conn(self):
-        self.conn.commit()
+        self.cursor.close()
         self.conn.close()
 
     def add_http(self, url):
@@ -69,10 +71,8 @@ class KernelPost(scrapy.Spider):
         query = 'select DISTINCT(links) from kernel_crawl;'
         self.cursor.execute(query)
         data = self.cursor.fetchall()
-        urls = []
-        for datum in data:
-            urls.append(datum[0])
-        for url in urls:
+        for da in data:
+	    url = da[0]
             meta_query = 'select auth_meta from kernel_crawl where links = "%s"'%url.encode('utf8')
             self.cursor.execute(meta_query)
             meta_query = self.cursor.fetchall()
@@ -135,32 +135,20 @@ class KernelPost(scrapy.Spider):
                 active_times.append(active_time)
         active_times = ',  '.join(active_times)
         json_author.update({
-            'user_name': user_name,
+            'username': user_name,
             'domain': domain,
             'crawl_type': 'keep_up',
-            'author_signature': author_signature,
+            'author_sign': author_signature,
             'join_date': join_date,
-            'last_active': last_active,
-            'total_posts': total_posts,
+            'lastactive': last_active,
+            'totalposts': total_posts,
             'fetch_time': fetch_time,
             'groups': groups,
             'reputation': '',
             'credits': '',
             'awards': '',
             'rank': rank,
-            'active_time': active_times,
-            'contact_info': '',
-            'reference_url': response.url
+            'activetimes': active_times,
+            'contactinfo': '',
         })
-
-        query_author = utils.generate_upsert_query_authors('kernel_mode')
-
-	try:
-	    self.cursor.execute(query_author, json_author)
-        except OperationalError as e:
-            if 'MySQL server has gone away' in str(e):
-                self.conn,self.cursor = self.mysql_conn()
-                self.cursor.execute(query_author, json_author)
-            else:raise e()	    
-
-
+	self.es.index(index="forum_author", doc_type='post', id=hashlib.md5(str(user_name)).hexdigest(), body=json_author)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Scrapy settings for bleeping_computer project
+# Scrapy settings for raidforums project
 #
 # For simplicity, this file contains only settings considered important or
 # commonly used. You can find more settings consulting the documentation:
@@ -8,32 +8,35 @@
 #     https://doc.scrapy.org/en/latest/topics/settings.html
 #     https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://doc.scrapy.org/en/latest/topics/spider-middleware.html
+import random
+BOT_NAME = 'raidforums'
+#PROXIES_LIST = ['http://%s' % random.choice(list(open('/home/saai/Desktop/elenium_venv/raidforums/raidforums/proxy.list'))).strip()]
+SPIDER_MODULES = ['raidforums.spiders']
+NEWSPIDER_MODULE = 'raidforums.spiders'
+USER_AGENT = "Mozilla/5.0 (X11; CrOS i686 2268.111.0) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.57 Safari/536.11"
+#"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_0) AppleWebKit/536.3 "
+#"Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/22.0.1207.1 Safari/537.1"
 
-BOT_NAME = 'bleeping_computer'
-
-SPIDER_MODULES = ['bleeping_computer.spiders']
-NEWSPIDER_MODULE = 'bleeping_computer.spiders'
-
-USER_AGENT ='bleeping_computer (+http://www.yourdomain.com)'
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
-USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36'#'bleeping_computer (+http://www.yourdomain.com)'
+#USER_AGENT = 'raidforums (+http://www.yourdomain.com)'
 
 # Obey robots.txt rules
-ROBOTSTXT_OBEY = True
-
+ROBOTSTXT_OBEY = False
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
 CONCURRENT_REQUESTS = 1 
 
 # Configure a delay for requests for the same website (default: 0)
 # See https://doc.scrapy.org/en/latest/topics/settings.html#download-delay
 # See also autothrottle settings and docs
-DOWNLOAD_DELAY = 12 
+DOWNLOAD_DELAY = 6 
+DOWNLOAD_TIMEOUT = 520
+RANDOMIZE_DOWNLOAD_DELAY = True
 # The download delay setting will honor only one of:
 CONCURRENT_REQUESTS_PER_DOMAIN = 1
-CONCURRENT_REQUESTS_PER_IP = 1
+CONCURRENT_REQUESTS_PER_IP = 1 
 
 # Disable cookies (enabled by default)
-#COOKIES_ENABLED = True
+# COOKIES_ENABLED = False
 
 # Disable Telnet Console (enabled by default)
 #TELNETCONSOLE_ENABLED = False
@@ -43,18 +46,25 @@ CONCURRENT_REQUESTS_PER_IP = 1
 #   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
 #   'Accept-Language': 'en',
 #}
+DEFAULT_REQUEST_HEADERS = {
+	'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+ 	'Accept-Encoding': 'gzip,deflate',
+ 	'Accept-Language': 'en',
+    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36',
+	}
 
 # Enable or disable spider middlewares
 # See https://doc.scrapy.org/en/latest/topics/spider-middleware.html
 #SPIDER_MIDDLEWARES = {
-#    'bleeping_computer.middlewares.BleepingComputerSpiderMiddleware': 543,
+#    'raidforums.middlewares.RaidforumsSpiderMiddleware': 543,
 #}
 
 # Enable or disable downloader middlewares
 # See https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
-#DOWNLOADER_MIDDLEWARES = {
-#    'bleeping_computer.middlewares.BleepingComputerDownloaderMiddleware': 543,
-#}
+DOWNLOADER_MIDDLEWARES = {
+    'raidforums.middlewares.RaidforumsDownloaderMiddleware': 543,
+    'raidforums.middlewares.MyCustomDownloaderMiddleware': None
+}
 
 # Enable or disable extensions
 # See https://doc.scrapy.org/en/latest/topics/extensions.html
@@ -65,7 +75,7 @@ CONCURRENT_REQUESTS_PER_IP = 1
 # Configure item pipelines
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 #ITEM_PIPELINES = {
-#    'bleeping_computer.pipelines.BleepingComputerPipeline': 300,
+#    'raidforums.pipelines.RaidforumsPipeline': 300,
 #}
 
 # Enable and configure the AutoThrottle extension (disabled by default)

@@ -14,7 +14,7 @@ BOT_NAME = 'bleeping_computer'
 SPIDER_MODULES = ['bleeping_computer.spiders']
 NEWSPIDER_MODULE = 'bleeping_computer.spiders'
 
-USER_AGENT ='bleeping_computer (+http://www.yourdomain.com)'
+#USER_AGENT ='bleeping_computer (+http://www.yourdomain.com)'
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36'#'bleeping_computer (+http://www.yourdomain.com)'
 
@@ -27,7 +27,7 @@ CONCURRENT_REQUESTS = 1
 # Configure a delay for requests for the same website (default: 0)
 # See https://doc.scrapy.org/en/latest/topics/settings.html#download-delay
 # See also autothrottle settings and docs
-#DOWNLOAD_DELAY = 12 
+DOWNLOAD_DELAY = 6 
 # The download delay setting will honor only one of:
 CONCURRENT_REQUESTS_PER_DOMAIN = 1
 CONCURRENT_REQUESTS_PER_IP = 1

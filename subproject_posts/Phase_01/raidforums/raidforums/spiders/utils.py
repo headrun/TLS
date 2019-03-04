@@ -68,22 +68,15 @@ def activetime_str(activetime_,totalposts):
 def clean_text(input_text):
     text = re.compile(r'([\n,\t,\r]*\t)').sub('\n', input_text)
     text = re.sub(r'(\n\s*)', '\n', text)
-    text = re.sub('\s\s+', ' ', text)
     return text
 
 def clean_url(unclean_url):
    cleaned_url = re.sub(r'(\/\?|\/)$', '', unclean_url)
    return cleaned_url
 
+
 def decode_cloudflareEmail(cfString):
-    rand = int(cfString[:2],16)
+    rand = int(cfString[:2], 16)
     email_id = ''.join([chr(int(cfString[i:i+2], 16) ^ rand) for i in range(2, len(cfString), 2)])
     return email_id
 
-
-
-
-if __name__ == '__main__' and __package__ is None:
-    from os import sys, path
-    sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
-                                                                              

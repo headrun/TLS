@@ -24,7 +24,5 @@ python extract_dump.py --DB_SCHEMA posts --TABLE_NAME_AUTHORS kernel_authors --T
 }
 
 posts
-sleep 300
 authors
-#sleep 600
 #mysql_to_ES

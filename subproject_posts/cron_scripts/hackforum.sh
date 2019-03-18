@@ -11,8 +11,8 @@ scrapy crawl hackforums_crawl --logfile /home/epictions/Phase_02/log_files/hackf
 send_mail()
 { 
 export PATH='$PATH:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin';
-cd /home/epictions/Phase_02;
-python send_mail_log.py 
+cd /home/epictions/tls_scripts/scripts;
+python send_mail_log.py --BODY "hackforum_crawl is not working"
 }
 
 
@@ -34,7 +34,6 @@ then
     fi
   fi
 fi
-
 
 
 
@@ -60,7 +59,10 @@ then
     let three_test="`date +%s`"-$time_1;
     if [ $three_test -lt 900 ]
     then
-      send_mail
+        export PATH='$PATH:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin';
+	cd /home/epictions/tls_scripts/scripts;
+	python send_mail_log.py --BODY "hackforum_posts is not working"
+
     fi
   fi
 fi
@@ -87,7 +89,10 @@ then
     let three_test="`date +%s`"-$time_1;
     if [ $three_test -lt 900 ]
     then
-      send_mail
+     export PATH='$PATH:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin';
+     cd /home/epictions/tls_scripts/scripts;
+     python send_mail_log.py --BODY "hackforums_authors is not working"
+
     fi
   fi
 fi

@@ -1,7 +1,7 @@
 #version2
 import hashlib
 import MySQLdb
-import csv
+#import csv
 import datetime
 import sys
 from elasticsearch import Elasticsearch
@@ -12,7 +12,8 @@ sys.setdefaultencoding('utf-8')
 from dump_config import crawlers
 POSTS_COLUMNS = "domain, crawl_type, category, sub_category, thread_url, thread_title, post_id, post_url, post_title, publish_epoch as publish_time, fetch_epoch as fetch_time, author, author_url, post_text as text, all_links as links "#, reference_url"
 AUTHOR_COLUMNS = "user_name as username,domain,crawl_type,author_signature as auth_sign,join_date,last_active as lastactive,total_posts as totalposts,fetch_time,groups,reputation,credits,awards,rank,active_time as activetimes,contact_info as contactinfo "#,reference_url"
-CLAUSE = ''
+CLAUSE = '' #where modified_at >= DATE_SUB(CURDATE(), INTERVAL 1 day)'
+
 
 def get_conn(DB_SCHEMA,DB_CHARSET):
     conn=MySQLdb.connect(db=DB_SCHEMA,
@@ -79,14 +80,13 @@ class Data():
     def push_authors_data(self, es, cursor):
         print "Populating authors" 
         # Note: CLAUSE not appllicable for AUTHORS
-        que = 'SELECT {0} from {1} '.format(AUTHOR_COLUMNS,TABLE_NAME_AUTHORS)
+        que = 'SELECT {0} from {1} {2}'.format(AUTHOR_COLUMNS,TABLE_NAME_AUTHORS,CLAUSE)
         cursor.execute(que)
         row1 = cursor.fetchall()
 	print que
         for author_record in row1:
-            res = es.index(index="forum_author", doc_type='post', id=hashlib.md5(author_record.get('username')).hexdigest(), body=post_record)
+            res = es.index(index="forum_author", doc_type='post', id=hashlib.md5(author_record.get('username')).hexdigest(), body=author_record)
 	    #pprint(author_record)
-	    pass
         print "authors push is done"
 
 

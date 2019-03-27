@@ -1,0 +1,17 @@
+Expect-Ct: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+Strict-Transport-Security: max-age=0; preload
+X-Content-Type-Options: nosniff
+Content-Encoding: gzip
+Set-Cookie: __cfduid=d8bf05141ab8b8c660fd240c5db4b1fef1553238540; expires=Sat, 21-Mar-20 07:09:00 GMT; path=/; domain=.bhf.io; HttpOnly; Secure
+Cf-Cache-Status: HIT
+Expires: Fri, 22 Mar 2019 11:09:00 GMT
+Vary: Accept-Encoding
+Server: cloudflare
+Last-Modified: Mon, 18 Feb 2019 13:22:45 GMT
+Etag: W/"5c6ab1a5-41"
+Cache-Control: public, max-age=14400
+Date: Fri, 22 Mar 2019 07:09:00 GMT
+Cf-Ray: 4bb6566fed0acc1e-SIN
+Content-Type: text/plain
+X-Frame-Options: SAMEORIGIN
+X-Xss-Protection: 1; mode=block

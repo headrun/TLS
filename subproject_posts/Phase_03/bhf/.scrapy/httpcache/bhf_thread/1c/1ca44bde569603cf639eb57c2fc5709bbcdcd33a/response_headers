@@ -1,9 +1,0 @@
-Expect-Ct: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
-Strict-Transport-Security: max-age=0; preload
-Vary: Accept-Encoding
-Server: cloudflare
-Cache-Control: no-cache
-Date: Mon, 25 Mar 2019 09:37:31 GMT
-X-Frame-Options: SAMEORIGIN
-Content-Type: text/html; charset=UTF-8
-Cf-Ray: 4bcfe81e0806cbfe-SIN

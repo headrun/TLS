@@ -9,16 +9,21 @@ import time
 import MySQLdb
 import utils
 import json
+sys.path.append('/home/epictions/tls_scripts/tls_utils')
+import tls_utils as utils
+from elasticsearch import Elasticsearch
+import hashlib
 
 class HackerThread_Author(scrapy.Spider):
     name = 'hacker_threads_author'
     start_urls = ["https://www.hackerthreads.org/"]
 
     def __init__(self, *args, **kwargs):
+	self.es = Elasticsearch(['10.2.0.90:9342'])
 	self.conn = MySQLdb.connect(db="POSTS_HACKERTHREADS",
                                     host="localhost",
                                     user="root",
-                                    passwd="1216",
+                                    passwd="",
                                     use_unicode=True,
                                     charset="utf8mb4")
         self.cursor=self.conn.cursor()
@@ -95,22 +100,21 @@ class HackerThread_Author(scrapy.Spider):
 
         json_data.update({'user_name': user_name,
                          'domain': domain,
-                         'crawl_type': 'keep_up',
-                         'author_signature': author_signature,
+                         'auth_sign': author_signature,
                          'join_date': join_date,
-                         'last_active': "",
-                         'total_posts': total_posts,
+                         'lastactive': "",
+                         'totalposts': total_posts,
                          'fetch_time':fetch_time,
                          'groups': groups,
                          'reputation': '',
                          'credits': '',
                          'awards': '',
                          'rank': '',
-                         'active_time': (''.join(active_time)),
+                         'activetimes': (''.join(active_time)),
                          'contact_info': '',
-                         'reference_url': response.url
         })
         upsert_query_authors = utils.generate_upsert_query_authors('hacker_threads')
-        self.cursor.execute(upsert_query_authors, json_data)
+        #self.cursor.execute(upsert_query_authors, json_data)
+	self.es.index(index="forum_author", doc_type='post', id=hashlib.md5(str(user_name)).hexdigest(), body=json_data)
 
 

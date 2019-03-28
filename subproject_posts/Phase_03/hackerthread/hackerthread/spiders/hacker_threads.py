@@ -10,9 +10,12 @@ from scrapy import signals
 from scrapy.xlib.pydispatch import dispatcher
 import json
 import sys
-import utils
 import unicodedata
 from hacker_threads_xpaths import *
+sys.path.append('/home/epictions/tls_scripts/tls_utils')
+import tls_utils as utils
+from elasticsearch import Elasticsearch
+import hashlib
 crawl_query = utils.generate_upsert_query_authors_crawl('hacker_threads')
 
 def clean_spchar_in_text(self, text):
@@ -34,11 +37,12 @@ class Hacker_threads(scrapy.Spider):
 
     def __init__(self, *args, **kwargs):
         super(Hacker_threads, self).__init__(*args, **kwargs)
+	self.es = Elasticsearch(['10.2.0.90:9342'])
         self.query = utils.generate_upsert_query_posts('hacker_threads')
         self.conn = MySQLdb.connect(db="POSTS_HACKERTHREADS",
                                     host="localhost",
                                     user="root",
-                                    passwd="1216",
+                                    passwd="",
                                     use_unicode=True,
                                     charset="utf8mb4")
         self.cursor = self.conn.cursor()
@@ -55,50 +59,58 @@ class Hacker_threads(scrapy.Spider):
         self.conn.commit()
         self.conn.close()
 
+    def start_requests(self):
+	self.cursor.execute("select COUNT(distinct(post_url)) from hackerthreads_status where crawl_status = 0 ")
+	total_links = self.cursor.fetchall()
+        total_links = int(total_links[0][0])
+        for i in range(1,total_links/500+2):
+            que = 'select distinct(post_url) from hackerthreads_status where crawl_status = 0 limit {0},{1}'.format((i-1)*500,500)
+            self.cursor.execute(que)
+	    data = self.cursor.fetchall()
+            for url in data:
+                yield Request(url[0], callback = self.parse_meta)
 
-    def parse(self, response):
-        sel = Selector(response)
-        categories = sel.xpath('//a[@class="forumtitle"]/@href').extract()
-        for cate in categories[:2]:
-            if "http" not in cate:
-                cate =  self.add_http(cate)
-                yield Request(cate, callback=self.parse_links)
-
-    def parse_links(self, response):
-        sel = Selector(response)
-        links = sel.xpath('//div[@class="list-inner"]//a[@class="topictitle"]/@href').extract()
-        for link in links:
-            if "http" not in link:
-                #link = self.add_http(link)
-                link = "https://www.hackerthreads.org/Topic-35275#p120652"
-                yield Request(link, callback=self.parse_meta)
-
-        nxt_pg=''.join(sel.xpath('//div[@class="action-bar bar-top"]//following-sibling::div[@class="pagination"]//li[@class="arrow next"]//a[@class="button button-icon-only"]/@href').extract())
-        if nxt_pg:
-            if "http" not  in nxt_pg:
-                nxt_pg = self.add_http(nxt_pg)
-                yield Request(nxt_pg, callback=self.parse_links)
 
     def parse_meta(self, response):
         sel = Selector(response)
         url =response.url
         url_ = url.split('-')
-        if len(url_) > 2:
-            crawl_type = "catchup"
-        else:
-            crawl_type = "keepup"
-	    json_posts = {}
+	json_posts = {}
         thread_url = response.url
         domain = "www.hackerthreads.org"
         category = sel.xpath(CATEGORY).extract()[1]
         subcategory = "[" + ''.join(sel.xpath(CATEGORY).extract()[2]) + "]"
         thread_title = ''.join(sel.xpath(THREAD_TITLE).extract())
         json_posts.update({'domain': domain,
-                            'crawl_type': crawl_type,
                             'thread_url': thread_url,
                             'thread_title' : thread_title
         })
         nodes = sel.xpath('//div[contains(@class, "post has-profile bg")]')
+	if nodes:
+            query = 'update hackerthreads_status set crawl_status = 1 where post_url = %(url)s'
+            json_data={'url':response.request.url}
+            self.cursor.execute(query,json_data)
+	    self.conn.commit()
+
+	else:
+	    query = 'update hackerthreads_status set crawl_status = 9 where post_url = %(url)s'
+            json_data={'url':response.request.url}
+            self.cursor.execute(query,json_data)
+	    self.conn.commit()
+
+	nxt_pg = ''.join(response.xpath('//form//following-sibling::div[@class="pagination"]//li[@class="arrow next"]//a[@rel="next"]/@href').extract())
+        next_pg = re.sub('sid=(.*?)&', "", nxt_pg)
+        next_pg = self.add_http(next_pg)
+	if next_pg:
+            try:
+                text_case = ''.join(nodes[-1].xpath(POST_URL).extract())
+                test_id = hashlib.md5(str(text_case)).hexdigest()
+		query = {'query_string': {'use_dis_max': 'true', 'query': '_id:{0}'.format(test_id)}}
+		res = es.search(index="forum_posts", body={"query": query})
+		if res['hits']['hits']==[]:    
+	            yield Request(page_nav,callback = self.parse_meta)
+            except:pass
+
         for node in nodes:
             publishtime_, publish_epoch, publish_time,author_link,join_date,text ="","","","","",""
             post_title = ''.join(node.xpath(POST_TITLE).extract())
@@ -147,11 +159,10 @@ class Hacker_threads(scrapy.Spider):
                                 'post_title': post_title,
                                 'post_id': post_id,
                                 'post_url': post_url,
-                                'publish_epoch': publish_epoch,
-                                'fetch_epoch': fetchtime,
+                                'publish_time': publish_epoch,
+                                'fetch_time': fetchtime,
                                 'author': author,
-                                'post_text': text,
-                                'reference_url': response.url
+                                'text': text,
             })
 
             links = node.xpath('.//div[@class="content"]//a[@class="postlink"]/@href | .//div[@class="content"]//img[@class="postimage"]/@src | .//div[@class="content"]//following-sibling::div[@class="notice"]/a/@href | .//div[@class="content"]//following-sibling::dl[@class="attachbox"]//a[@class="postlink"]/@href').extract()
@@ -164,10 +175,15 @@ class Hacker_threads(scrapy.Spider):
 
             json_posts.update({
                                 'author_url': author_link,
-                                'all_links': Links
+                                'links': Links
             })
-            self.cursor.execute(self.query, json_posts)
-            self.conn.commit()
+            #self.cursor.execute(self.query, json_posts)
+            #self.conn.commit()
+	    query={"query":{"match":{"_id":hashlib.md5(str(post_url)).hexdigest()}}}
+            res = self.es.search(body=query)
+            if res['hits']['hits'] == []:
+	        self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts)
+
             author_signature = ''.join(node.xpath('.//div[@class="signature"]//text() | .//div[@class="signature"]//a[@class="postlink"]/@href').extract())
             if author_link:
                 meta = {'publish_epoch': publish_epoch, 'thread_title': thread_title, 'join_date':join_date, 'total_posts':total_posts, 'author':author, 'author_signature':author_signature, 'group':group}

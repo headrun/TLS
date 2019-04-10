@@ -54,7 +54,7 @@ name : value,
         self.cursor.execute(url_que)
         data = self.cursor.fetchall()
         for url in data:
-	    url =["http://thehub7xbw4dc5r2.onion/index.php?topic=9924.0"]
+	    url = ['http://thehub7xbw4dc5r2.onion/index.php?topic=8582.0']
             yield Request(url[0], callback = self.parse_thread)
 
     def parse_thread(self, response):
@@ -68,7 +68,8 @@ name : value,
 	if sub_category == []:
 	    sub_category = sub[2:]
 	thread_url = response.url
-	thread_title = ''.join(response.xpath('//h3[@class="catbg"]/text()').extract()).replace('\n','').replace('\t','')
+	thread_title = ''.join(response.xpath('//h3[@class="catbg"]/text()').extract()).split('(')[0].replace('\n','').replace('\t','')
+	print thread_title
 	nodes = sel.xpath('//div[@id="forumposts"]//div[contains(@class,"windowbg")]')
 	for node in nodes:	
 	    post_title= ''.join(node.xpath('.//h5[contains(@id,"subject_")]//text()').extract()).replace('\n','').replace('\t','')

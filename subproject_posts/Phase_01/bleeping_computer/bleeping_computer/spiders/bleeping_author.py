@@ -156,6 +156,7 @@ class BleepingSpider(Spider):
         fetch_epoch = int(datetime.datetime.now().strftime("%s")) * 1000
 
         json_data.update({'auth_sign': author_signature,
+			  'username':user_name,
                           'join_date': joindate,
                           'lastactive': lastactive,
                           'totalposts': total_posts,

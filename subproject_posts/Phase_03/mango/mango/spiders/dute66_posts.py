@@ -50,19 +50,19 @@ class Dute66(Spider):
             up_val = {'url':response.request.url.encode('utf8')}
             self.cursor.execute(up_que,up_val)
         try:
-            category = response.xpath('//div[@id="pt"]//div[@class="z"]//a[contains(@href,"dute66")]/text()').extract()[1]
-            sub_category = response.xpath('//div[@id="pt"]//div[@class="z"]//a[contains(@href,"dute66")]/text()').extract()[2:-1]
+            category = response.xpath('//div[@id="pt"]//div[@class="z"]//a[contains(@href,"dute56")]/text()').extract()[1]
+            sub_category = response.xpath('//div[@id="pt"]//div[@class="z"]//a[contains(@href,"dute56")]/text()').extract()[2:-1]
         except:
             category = ''
-            sub_category = []
+            sub_category = ''
 
         for node in nodes:
-            domain = 'dute66.com'
+            domain = 'dute56.com'
             author = ''.join(node.xpath('.//div[@class="pi"]//div[@class="authi"]//a[@target="_blank" and contains(@href,"space-uid")]//text()').extract())
             if not author:
                 author = u'\u533f\u540d\u8005'
             author_url = ''.join(node.xpath('.//div[@class="pi"]//div[@class="authi"]//a[@target="_blank" and contains(@href,"space-uid")]//@href').extract())
-            links = list(set(node.xpath('.//div[@class="pct"]//div[@class="pcb"]//div[@class="t_fsz"]//following-sibling::*//a[@target="_blank"]/@href | .//div[@class="pct"]//div[@class="pcb"]//div[@class="t_fsz"]//following-sibling::*//img[contains(@id,"aimg_" and @class="zoom")]/@src' ).extract()))
+            links = ', '.join(set(node.xpath('.//div[@class="pct"]//div[@class="pcb"]//div[@class="t_fsz"]//following-sibling::*//a[@target="_blank"]/@href | .//div[@class="pct"]//div[@class="pcb"]//div[@class="t_fsz"]//following-sibling::*//img[contains(@id,"aimg_" and @class="zoom")]/@src' ).extract()))
             post_id = ''.join(node.xpath('.//div[@class="pi"]//a[contains(@id,"postnum")]/@id').extract()).replace('postnum','')
             post_title = ''
             post_url = ''.join(node.xpath('.//div[@class="pi"]//a[contains(@id,"postnum")]/@href').extract())
@@ -73,7 +73,7 @@ class Dute66(Spider):
 	    if publish_time == None:
 		publish_time = 0
             text = clean_text(' '.join(node.xpath('.//div[@class="pct"]//div[@class="pcb"]//div[@class="t_fsz"]//following-sibling::*//text()').extract()))
-            thread_title = response.xpath('//div[@id="pt"]//div[@class="z"]//a[contains(@href,"dute66")]/text()').extract()[-1]
+            thread_title = response.xpath('//div[@id="pt"]//div[@class="z"]//a[contains(@href,"dute56")]/text()').extract()[-1]
             thread_url = ''.join(response.xpath('//link[@rel="canonical"]/@href').extract())
             doc = {
                     'domain':domain,
@@ -92,5 +92,12 @@ class Dute66(Spider):
                     'thread_url':thread_url
                     }
             sk = md5_val(post_url)
+	    query={"query":{"match":{"_id":sk}}}
+            res = es.search(body=query)
+            if res['hits']['hits'] == []:
             #es.index(index="new_data", doc_type='post', id=sk, body=doc)
-            doc_to_es(id=sk,doc_type='post',body=doc)
+                es.index(index="forum_posts", doc_type='post', id=sk, body=doc)
+	    else:
+		data_doc = res['hits']['hits'][0]
+		if (doc['links'] != data_doc['_source']['links']) or (doc['text'] != data_doc['_source']['text']):
+		    es.index(index="forum_posts", doc_type='post', id=sk, body=doc)

@@ -3,7 +3,7 @@ from mango.utils import *
 
 class Dute66(Spider):
     name = 'dute66_crawl'
-    start_urls = ['https://www.dute66.com/']
+    start_urls = ['https://www.dute56.com/']
     custom_settings = {
 	'CONCURRENT_REQUESTS_PER_DOMAIN':1,
 	'DOWNLOADER_MIDDLEWARES':{'mango.middlewares.MangoDownloaderMiddleware': 543}

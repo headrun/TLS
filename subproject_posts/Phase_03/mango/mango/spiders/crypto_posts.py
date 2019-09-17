@@ -23,7 +23,7 @@ class Cryptopro(Spider):
     def parse_next(self, response):
         domain = "cryptopro.ru"
         category = response.xpath('//div[@class="yafPageLink breadcrumb"]//a//text()').extract()[1]
-        sub_category = '["'+''.join(response.xpath('//div[@class="yafPageLink breadcrumb"]//a//text()').extract()[2])+'"]'.encode('utf8')
+        sub_category = response.xpath('//div[@class="yafPageLink breadcrumb"]//a//text()').extract()[2].encode('utf8')
         thread_title = response.xpath('//span[@id="forum_ctl03_TopicTitle"]//text()').extract()
         nodes = response.xpath('//table[contains(@class,"content postContainer")] | //table[contains(@class,"content postContainer_")]')
         for node in nodes:
@@ -62,7 +62,7 @@ class Cryptopro(Spider):
 		    else:
 			Link.append(link_)
                    
-                all_links = str(Link)
+                all_links = ', '.join(Link)
                 reference_url = response.url
                 if '&p=' in reference_url:
                     test = re.findall('(.*)&p',reference_url)
@@ -85,8 +85,16 @@ class Cryptopro(Spider):
                           'links': all_links,
                  }
                 #pprint(json_posts)
-                sk = md5_val(post_url)		
-                doc_to_es(id=sk,doc_type='post',body=json_posts)
+                sk = md5_val(post_url)
+		query={"query":{"match":{"_id":sk}}}
+            	res = es.search(body=query)
+            	if res['hits']['hits'] == []:		
+                    es.index(index="forum_posts", doc_type='post', id=sk, body=json_posts) 
+		else:
+		    data_doc = res['hits']['hits'][0]
+		    if (json_posts['links'] != data_doc['_source']['links']) or (json_posts['text'] != data_doc['_source']['text']):
+			es.index(index="forum_posts", doc_type='post', id=sk, body=json_posts)
+
         inner_nav = response.xpath('//td[@align="left"]//span[@class="pagecurrent"]//following-sibling::a//@href').extract_first()
         if inner_nav:
             inner_nav = "https://www.cryptopro.ru" + inner_nav

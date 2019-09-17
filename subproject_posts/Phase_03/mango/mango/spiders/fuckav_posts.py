@@ -42,8 +42,9 @@ class Fuckav1(Spider):
         login = ''.join(response.xpath('//td[@align="right"]/input[contains(@accesskey,"r")]/@type').extract())
         if login:
             return
+	#import pdb;pdb.set_trace()
         category = ''.join(response.xpath('//table[@class="tborder"]//td[@class="alt1"]//span[@itemprop="title"]/text()')[1].extract())
-        sub_category = '["'+''.join(response.xpath('//table[@class="tborder"]//td[@class="alt1"]//span[@itemprop="title"]/text()').extract()[2])+'"]'.encode('utf8')
+        sub_category = ''.join(response.xpath('//table[@class="tborder"]//td[@class="alt1"]//span[@itemprop="title"]/text()').extract()[2]).encode('utf8')
         thread_title = ''.join(response.xpath('//table[@class="tborder"]//td[@class="alt1"]//td[@class="navbar"]//text()').extract()).strip()
         thread_url = response.request.url.split('&')[0]
         nodes = response.xpath('//table[contains(@id,"post")]')
@@ -87,13 +88,21 @@ class Fuckav1(Spider):
                 'author_url': author_url,
                 'publish_time': publish_time,
                 'text': text,
-                'links': links,
+                'links': ', '.join(links),
                 'fetch_time': fetch_time(),
                 'reference_url': response.url
             })
             #pprint(json_values)
 	    sk = md5_val(post_url)
-            doc_to_es(id=sk,doc_type='post',body=json_posts)
+	    query={"query":{"match":{"_id":sk}}}
+            res = es.search(body=query)
+            if res['hits']['hits'] == []:
+		es.index(index="forum_posts", doc_type='post', id=sk, body=json_posts)
+	    else:
+		data_doc = res['hits']['hits'][0]
+                if (json_posts['links'] != data_doc['_source']['links']) or (json_posts['text'] != data_doc['_source']['text']):
+		    es.index(index="forum_posts", doc_type='post', id=sk, body=json_posts)
+
             meta = {'publish_time': publish_time}
             if author_url:
 

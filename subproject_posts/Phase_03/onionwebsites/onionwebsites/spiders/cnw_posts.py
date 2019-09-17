@@ -3,7 +3,7 @@ query = generate_upsert_query_authors_crawl('cnw')
 
 class CNW(scrapy.Spider):
     name = "cnw_posts"
-    start_urls = ["http://cnwv3ycmy4uc7vou.onion"]
+    start_urls = ["http://cnw4evazulooacab.onion/?tckattempt=1"]
 
     def __init__(self):
         self.conn = MySQLdb.connect(host="localhost", user=DATABASE_ID, passwd=DATABASE_PASS, db="posts", charset="utf8", use_unicode=True)
@@ -21,10 +21,11 @@ class CNW(scrapy.Spider):
         data = self.cursor.fetchall()
         for url in data:
             yield Request(url[0], callback = self.parse_next)
+
     def parse_next(self, response):
         domain = "cnwv3ycmy4uc7vou.onion"
         category = response.xpath('//ul[@data-role="breadcrumbList"]//li//span//text()').extract()[1]
-        sub_category = '["'+''.join(response.xpath('//ul[@data-role="breadcrumbList"]//li//span//text()').extract()[2])+'"]'.encode('utf8')
+        sub_category = response.xpath('//ul[@data-role="breadcrumbList"]//li//span//text()').extract()[2].encode('utf8')
         thread_title = ''.join(response.xpath('//span[@class="ipsType_break ipsContained"]//span//text()').extract()).strip()
         nodes = response.xpath('//div[@id="elPostFeed"]//article[contains(@id,"elComment_")]')
         for node in nodes:
@@ -49,7 +50,7 @@ class CNW(scrapy.Spider):
                         text = text.replace(auth,a1).replace(t_da,t1)
                     except:pass
             links = node.xpath('.//div[@class="ipsType_normal ipsType_richText ipsContained"]//p//a//@href | .//div[@class="ipsType_normal ipsType_richText ipsContained"]//h2//img/@src | .//img[@class="ipsImage_thumbnailed"]//@src').extract()
-            all_links = str(links)
+            all_links = ', '.join(links)
             reference_url = response.url
             fetch_time = int(datetime.datetime.now().strftime("%s")) * 1000
             thread_url = response.url
@@ -74,7 +75,16 @@ class CNW(scrapy.Spider):
                           'links': all_links,
             }
             sk = md5_val(post_url)
-            doc_to_es(id=sk,body=json_posts,doc_type='post')
+	    query={"query":{"match":{"_id":sk}}}
+            res = es.search(body=query)
+            if res['hits']['hits'] == []:
+		es.index(index="forum_posts", doc_type='post', id=sk, body=json_posts)
+            #doc_to_es(id=sk,body=json_posts,doc_type='post')
+	    else:
+		data_doc = res['hits']['hits'][0]
+                if (json_posts['links'] != data_doc['_source']['links']) or (json_posts['text'] != data_doc['_source']['text']):
+		    es.index(index="forum_posts", doc_type='post', id=sk, body=json_posts)
+
             auth_meta = {'publish_time': publish_epoch}
             json_posts.update({
                     'post_id': post_id,
@@ -84,6 +94,7 @@ class CNW(scrapy.Spider):
                     })
             self.cursor.execute(query, json_posts)
             self.conn.commit()
-        inner_nav = response.xpath('//li[@class="ipsPagination_next"]//a//@href').extract_first()
+        #inner_nav = response.xpath('//li[@class="ipsPagination_next"]//a//@href').extract_first()
+        inner_nav = response.xpath('//p[@class="pagelink conl"]//a[@rel="next"]//@href').extract_first()
         if inner_nav:
             yield Request(inner_nav, callback=self.parse_next)

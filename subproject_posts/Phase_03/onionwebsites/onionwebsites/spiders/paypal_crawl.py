@@ -31,10 +31,11 @@ class Paypal(scrapy.Spider):
             yield Request(main_url,callback= self.parse_nxt)
 
     def parse_nxt(self, response):
-        thread_urls = response.xpath('//div[@class="tclcon"]//span//a/@href').extract()
+        #thread_urls = response.xpath('//div[@class="tclcon"]//span//a/@href').extract()
+        thread_urls = response.xpath('//td[@class="tcl"]//div[@class="tclcon"]//div//a//@href').extract()
         for thread_url in thread_urls:
             post_url = "http://flkcpcprcfouwj33.onion/" + thread_url
-            sk = ''.join(post_url).split('=')[-1]
+            sk = ''.join(re.findall('id=\d+',post_url)).replace('id=','')
             query_status = utils.generate_upsert_query_posts_crawl('paypal')
             json_posts = {'sk':sk,
                           'post_url':post_url,
@@ -42,7 +43,8 @@ class Paypal(scrapy.Spider):
                           'reference_url':response.url
              }
             self.cursor.execute(query_status, json_posts)
-        inner_nav = ''.join(response.xpath('//p[@class="pagelink conl"]//strong[@class="item1"]//a[@rel="next"]//@href').extract())
+        #inner_nav = ''.join(response.xpath('//p[@class="pagelink conl"]//strong[@class="item1"]//a[@rel="next"]//@href').extract())
+        inner_nav = response.xpath('//p[@class="pagelink conl"]//a[@rel="next"]//@href').extract_first()
         if inner_nav:
             inner_nav = "http://flkcpcprcfouwj33.onion/" + inner_nav
             yield Request(inner_nav,callback=self.parse_nxt)

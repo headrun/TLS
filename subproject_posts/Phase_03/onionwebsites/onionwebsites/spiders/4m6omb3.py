@@ -42,18 +42,26 @@ class M6om(scrapy.Spider):
 
     def parse_meta(self,response):
         thread_title = response.xpath('//p[@style="font-size: 0.7em; margin-top: -30px; margin-bottom: 5px;"]/preceding-sibling::h3//text()').extract()[0]
+        try:
+            thread_title = thread_title
+        except:
+            pass
         post_title = response.xpath('//p[@style="font-size: 0.7em; margin-top: -30px; margin-bottom: 5px;"]/preceding-sibling::h3//text()').extract()[-1]
         post_id = re.sub('(.*)md5=','',response.request.url)
         post_url = response.request.url
         auth = ''.join(response.xpath('//p[@style="font-size: 0.7em; margin-top: -30px; margin-bottom: 5px;"]/text()').extract())
         date_ = re.sub('\w+, ','',auth)
         author = re.sub(', \w+ \d+, \d+ - \d+:\d+ \w\w UTC','',auth).strip()
-        if date_:
+        '''if date_:
             publish_epoch = time_to_epoch(date_,'%b %Y - %I:%M %p UTC')*1000
         else:
-            publish_epoch = 0
+            publish_epoch = 0'''
+        publish_epoch = time_to_epoch(date_,'%B %Y - %I:%M %p UTC')*1000
+        if publish_epoch ==False:
+            import pdb;pdb.set_trace()
         text = ''.join(response.xpath('//textarea[@cols="110"]/text()').extract())
-        links = str(re.findall("(?P<url>https?://[^\s]+)", text)) #re.findall('https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+', text))
+        #links = str(re.findall("(?P<url>https?://[^\s]+)", text)) #re.findall('https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+', text))
+	links = ', '.join(re.findall("(?P<url>https?://[^\s]+)", text))
         commants = []
         c_nodes = response.xpath('//textarea[(@cols="80") and not(contains(@maxlength,"2048"))]')
         for i ,node in enumerate(c_nodes):
@@ -69,7 +77,7 @@ class M6om(scrapy.Spider):
                     'comment_author': commant_author,
                     'comment_text':clean_text(commant_text),
                     'comment_date':commant_date,
-                    'comment_links': str(commant_links)
+                    'comment_links': ', '.join(commant_links)
                     }
                 commants.append(commant_doc)
             except:
@@ -88,6 +96,7 @@ class M6om(scrapy.Spider):
                 'publish_time': publish_epoch,
                 'fetch_time': round((time.time()- time.timezone)*1000),
                 'author': author,
+                'author_url':'',
                 'text': clean_text(text),
                 'links': links,
                 'comment': str(commants)
@@ -97,4 +106,8 @@ class M6om(scrapy.Spider):
         res = es.search(body=query)
         if res['hits']['hits'] == []:
             es.index(index="forum_posts", doc_type='post', id=sk, body=doc)
+	else:
+	    data_doc = res['hits']['hits'][0]
+            if (doc['links'] != data_doc['_source']['links']) or (doc['text'] != data_doc['_source']['text']):
+		es.index(index="forum_posts", doc_type='post', id=sk, body=doc)
 

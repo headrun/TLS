@@ -51,15 +51,15 @@ class Zzq7gpluliw6iq7l(Spider):
                 'thread_title':thread_title,
                 'author':author,
                 'author_url':'',
-                'publish_epoch':publish_epoch,
+                'publish_time':publish_epoch,
                 'fetch_time':fetch_time,
-                'post_text':post_text,
+                'text':post_text,
                 'fetch_time':fetch_time,
                 'post_id':'',
                 'post_url':'',
                 'category':'',
                 'sub_category':'',
-                'all_links': '[]'
+                'links': ''
             })
             all_posts.append(doc)
             sk = hashlib.md5(post_text).hexdigest() 
@@ -67,3 +67,10 @@ class Zzq7gpluliw6iq7l(Spider):
             res = self.es.search(body=query)
             if res['hits']['hits'] == []:
                 self.es.index(index="forum_posts",doc_type='post',id=(sk),body=doc)
+	    '''else:
+		data_doc = res['hits']['hits'][0]
+		if doc['text'] != data_doc['_source']['text']
+		    self.es.index(index="forum_posts",doc_type='post',id=(sk),body=doc)'''
+
+
+

@@ -25,7 +25,6 @@ class ChanSpider(scrapy.Spider):
         sel = Selector(response)
         links = response.xpath('//span[@class="col col-6"]/p/a/@href').extract()
         for link in links:
-            link = "http://oxwugzccvk3dk6tj.onion/v/res/16403303.html"
             yield Request(link, callback=self.parse_next)
         urls = response.xpath('//div[@class="box-title col col-6"]//p//small//a/@href').extract()
         for url in urls:
@@ -41,7 +40,7 @@ class ChanSpider(scrapy.Spider):
             post_url =  'http://oxwugzccvk3dk6tj.onion'+''.join(node.xpath('.//a[@class="post_no"]/@href').extract_first())
             x = post_url
             post_id =  ''.join(re.findall('#\d+',x)).replace("#","")
-            links_ =  node.xpath('.//div[@class="files"]//a[@target="_blank"]//@href | .//div[@class="file"]//img[@class="post-image"]//@src |.//div[@class="video-container"]//a[@target="_blank"]//@href |.//div[@class="video-container"]//a//img[@class="post-image"]//@src|.//div[@class="files"]//a//img[@class="post-image"]//@src|.//div[@class="body"]//p//a[@target="_blank"]//@href|.//div[@class="files"]//a[@target="_blank"]//@href |.//div[@class="files"]//a//img[@class="post-image"]//@src|.//div[@class="files"]//a[@class="file"]//@href|.//div[@class="files"]//a[class="hash_unix hash_h"]//@href |.//span[@class="unimportant"]//a//@href |.//div[@class="files"]//img[@class="post-image"]//@src').extract()
+            links_ =  node.xpath('.//div[@class="files"]//a[@target="_blank"]//@href | .//div[@class="file"]//img[@class="post-image"]//@src | .//div[@class="video-container"]//a[@target="_blank"]//@href | .//div[@class="video-container"]//a//img[@class="post-image"]//@src | .//div[@class="files"]//a//img[@class="post-image"]//@src | .//div[@class="body"]//p//a[@target="_blank"]//@href | .//div[@class="files"]//a[@target="_blank"]//@href | .//div[@class="files"]//a//img[@class="post-image"]//@src | .//div[@class="files"]//a[@class="file"]//@href | .//div[@class="files"]//a[class="hash_unix hash_h"]//@href | .//span[@class="unimportant"]//a//@href |.//div[@class="files"]//img[@class="post-image"]//@src').extract()
             linkss = []
             for link in links_:
                 if 'player.php?v=' in link:
@@ -58,7 +57,7 @@ class ChanSpider(scrapy.Spider):
             category = ''
             subcategory = ''
             author_link = ''
-            all_links = list(set(linkss))
+            all_links = ', '.join(set(linkss))
             publish =  ''.join(node.xpath('.//time//@datetime').extract_first())
             publish_time = datetime.datetime.strptime(publish ,'%Y-%m-%dT%H:%M:%SZ')
             publish_epoch = time.mktime(publish_time.timetuple())*1000
@@ -75,11 +74,16 @@ class ChanSpider(scrapy.Spider):
                          'author_url': author_link,
                          'post_url': post_url,
                          'post_id': post_id,
-                         'publish_epoch': publish_epoch,
-                         'fetch_epoch': fetch_epoch,
-                         'all_links':  str(all_links)
+                         'publish_time': publish_epoch,
+                         'fetch_time': fetch_epoch,
+                         'links': all_links
                        }
 	    query={"query":{"match":{"_id":hashlib.md5(post_url).hexdigest()}}}
             res = self.es.search(body=query)
             if res['hits']['hits'] == []:	
                 self.es.index(index="forum_posts",doc_type='post',id=hashlib.md5(post_url).hexdigest(),body=doc)
+	    else:
+		data_doc = res['hits']['hits'][0]
+		if (doc['links'] != data_doc['_source']['links']) or (doc['text'] != data_doc['_source']['text']):
+		    self.es.index(index="forum_posts",doc_type='post',id=hashlib.md5(post_url).hexdigest(),body=doc)
+ 

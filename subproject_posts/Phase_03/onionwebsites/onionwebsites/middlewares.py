@@ -8,7 +8,8 @@
 from scrapy import signals
 from stem import Signal
 from stem.control import Controller
-import requests
+from utils import TOR_PASS
+
 
 class TorSpiderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,
@@ -108,11 +109,17 @@ class TorDownloaderMiddleware(object):
 
 class ProxyMiddleware(object):
     def process_request(self, request, spider):
-	
         with Controller.from_port(port=9051) as controller:
-             controller.authenticate(password="tls")
+             controller.authenticate(password=TOR_PASS)
              controller.signal(Signal.NEWNYM)
              controller.close()
         request.meta['proxy'] = "http://127.0.0.1:8118"
 
+class Proxy_Rotation_Middleware(object):
+    def process_request(self, request, spider):
+        controller = Controller.from_port(port=9051)
+        controller.authenticate(password=TOR_PASS)
+        controller.signal(Signal.NEWNYM)
+        controller.close()
+        request.meta['proxy'] = "http://127.0.0.1:8118"
 

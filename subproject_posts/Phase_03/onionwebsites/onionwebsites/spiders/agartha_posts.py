@@ -23,7 +23,7 @@ class Agartha(scrapy.Spider):
     def parse_next(self, response):
         domain = "agartha2oooh2cxa.onion"
         category = response.xpath('//div[@class="navigate_section"]//ul//li//a//span//text()').extract()[1]
-        sub_category = '["'+''.join(response.xpath('//div[@class="navigate_section"]//ul//li//a//span//text()').extract()[2])+'"]'.encode('utf8')
+        sub_category = ''.join(response.xpath('//div[@class="navigate_section"]//ul//li//a//span//text()').extract()[2]).encode('utf8')
         thread_title = response.xpath('//li[@class="last"]//a//span/text()').extract()[1].strip()
         nodes = response.xpath('//div[contains(@class,"post_wrapper")]')
         for node in nodes:
@@ -50,7 +50,7 @@ class Agartha(scrapy.Spider):
 
             text = '\n'.join(node.xpath('.//div[@class="post"]//text()').extract())
             links = node.xpath('.//div[contains(@id,"msg_")]//a[@class="bbc_link"]//@href').extract()
-            all_links = str(links)
+            all_links = ', '.join(links)
             reference_url = response.url
             if 'prev_next' in reference_url:
                 test = re.findall('(.*);',reference_url)
@@ -73,7 +73,15 @@ class Agartha(scrapy.Spider):
                           'links': all_links,
             }
             sk = md5_val(domain + json_posts['post_id'])
-            doc_to_es(id=sk,body=json_posts,doc_type='post')
+	    query={"query":{"match":{"_id":sk}}}
+            res = es.search(body=query)
+            if res['hits']['hits'] == []:
+	        es.index(index="forum_posts", doc_type='post', id=sk, body=json_posts)
+            #doc_to_es(id=sk,body=json_posts,doc_type='post')
+	    else:
+		data_doc = res['hits']['hits'][0]
+                if (json_posts['links'] != data_doc['_source']['links']) or (json_posts['text'] != data_doc['_source']['text']):
+		    es.index(index="forum_posts", doc_type='post', id=sk, body=json_posts)
 
         inner_nav = response.xpath('//div[@class="nextlinks_bottom"]//following-sibling::a/@href').extract_first()
         if inner_nav:

@@ -43,7 +43,7 @@ class Paypal(scrapy.Spider):
     def parse_next(self, response):
         domain = "flkcpcprcfouwj33.onion"
         category = response.xpath('//ul[@class="crumbs"]//li//a/text()').extract()[0]
-        sub_category = '["'+''.join(response.xpath('//ul[@class="crumbs"]//li//a/text()').extract()[1])+'"]'.encode('utf8')
+        sub_category = response.xpath('//ul[@class="crumbs"]//li//a/text()').extract()[1].encode('utf8')
         thread_title = response.xpath('//ul[@class="crumbs"]//li//a/text()').extract()[2]
         thread_url = response.url
         nodes = response.xpath('//div[@id="brdmain"]//div[contains(@id,"p")]')
@@ -62,13 +62,12 @@ class Paypal(scrapy.Spider):
                 publish_date = datetime.datetime.strptime(date_,'%Y-%m-%d %H:%M:%S')
                 publish_epoch = time.mktime(publish_date.timetuple())*1000
             except:
-                import pdb;pdb.set_trace()
+		pass
             text = '\n'.join(node.xpath('.//div[@class="postmsg"]//text() | .//div[@class="postmsg"]//p[@class="postedit"]//text() | .//div[@class="postmsg"]//p//img/@alt | .//div[@class="postmsg"]//div[@class="quotebox"]/@class').extract()).replace('quotebox','quote')
 
             links = node.xpath('.//div[@class="postmsg"]//p//a/@href').extract()
-            all_links = str(links)
+            all_links = ', \n'.join(links)
             json_posts = {'domain': domain,
-                          'crawl_type':'',
                           'category': category,
                           'sub_category': sub_category,
                           'thread_title': thread_title,
@@ -77,18 +76,22 @@ class Paypal(scrapy.Spider):
                           'thread_url': thread_url,
                           'post_id': post_id,
                           'post_url': post_url,
-                          'publish_epoch': publish_epoch,
+                          'publish_time': publish_epoch,
                           'author': author,
                           'author_url': author_url,
-                          'post_text': utils.clean_text(text),
-                          'all_links': all_links,
-                          'reference_url': response.url
+                          'text': utils.clean_text(text),
+                          'links': all_links,
             }
 	    sk = hashlib.md5(domain + json_posts['post_id']).hexdigest()
 	    query={"query":{"match":{"_id":sk}}}
             res = self.es.search(body=query)
             if res['hits']['hits'] == []:
                 self.es.index(index='forum_posts',doc_type='post', id=sk, body=json_posts)
+	    else:
+		data_doc = res['hits']['hits'][0]
+		if (json_posts['links'] != data_doc['_source']['links']) or (json_posts['text'] != data_doc['_source']['text']):
+		    self.es.index(index='forum_posts',doc_type='post', id=sk, body=json_posts)
+
             auth_meta = {'publish_epoch': publish_epoch}
             json_posts.update({
                     'post_id': post_id,

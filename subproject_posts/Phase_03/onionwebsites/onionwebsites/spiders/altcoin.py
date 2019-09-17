@@ -15,24 +15,21 @@ from scrapy.http import FormRequest
 from urlparse import urljoin
 import time
 
-"""def clean_text(input_text):
-    text = re.compile(r'([\n,\t,\r]*\t)').sub('\n', input_text)
-    text = re.sub(r'(\n\s*)', '\n', text)
-    text = re.sub('\s\s+', ' ', text)
-    return text
-
-def time_captchato_epoch(str_of_time, str_of_patter):
-    try:time_in_epoch = (int(time.mktime(time.strptime(str_of_time, str_of_patter))) - time.timezone) * 1000
-    except:time_in_epoch = False
-    return time_in_epoch"""
-
 
 class Altcoin(scrapy.Spider):
     name = "altcoin"
     start_urls = ['http://altcoinexpx3on26hpsbu4b5ipojqetyla677xva66jnidyxhrxrizqd.onion.ws/']
+    custom_settings = {
+	'COOKIES_ENABLED':False,
+	'DOWNLOADER_MIDDLEWARES':{
+		'onionwebsites.middlewares.Proxy_Rotation_Middleware': 440
+				}
+		}
+	
 
     def parse(self,response):
-        urls = response.xpath('//div[@id="content"]//ul[@class="categories"]//li[@class="row clearfix"]//h2[@class="title"]//a[@itemprop="url"]/@href').extract()
+        urls = response.xpath('//div[@id="content"]//ul[@class="categories"]//li[@class="row clearfix"]//h2[@class="title"]//a[@itemprop="url"]/@href | \
+		//div[@id="content"]//ul[@class="categories"]//li[@class="row clearfix"]//span[@class="category-children-item pull-left"]//a/@href').extract()
         for url in urls:
             yield Request(urljoin('http://altcoinexpx3on26hpsbu4b5ipojqetyla677xva66jnidyxhrxrizqd.onion.ws/',url),callback = self.next_page)
 
@@ -45,7 +42,7 @@ class Altcoin(scrapy.Spider):
         nodes = response.xpath('//ul[@class="posts"]//li[@component="post"]')
         thread_title = ''.join(response.xpath('//h1[@class="hidden-xs"]//span[@class="topic-title"]//text()').extract()).strip()
         catagery = response.xpath('//ol[@class="breadcrumb"]//li[@itemscope="itemscope"]//span[@itemprop="title"]//text()').extract()[1].strip()
-        sub_catagery = [response.xpath('//ol[@class="breadcrumb"]//li[@itemscope="itemscope"]//span[@itemprop="title"]//text()').extract()[2].strip()]
+        sub_catagery = response.xpath('//ol[@class="breadcrumb"]//li[@itemscope="itemscope"]//span[@itemprop="title"]//text()').extract()[2].strip()
         for node in nodes:
             author = ''.join(node.xpath('./@data-username').extract()).strip()
             author_url = 'http://altcoinexpx3on26hpsbu4b5ipojqetyla677xva66jnidyxhrxrizqd.onion.ws/user/'+author
@@ -66,17 +63,18 @@ class Altcoin(scrapy.Spider):
                     except:
                         all_links.append(link)
             doc = {
+		    'thread_url':response.url,
                     'thread_title':thread_title,
-                    'catagery':catagery,
-                    'sub_catagery':sub_catagery,
+                    'category':catagery,
+                    'sub_category':sub_catagery,
                     'author':author,
                     'author_url':author_url,
-                    'publish_epoch':publish_epoch,
+                    'publish_time':publish_epoch,
                     'text':clean_text(text),
                     'post_id':post_id,
                     'post_url':'',
                     'fetch_time':fetch_time,
-                    'links':all_links,
+                    'links':', '.join(all_links),
                     'domain':'altcoinexpx3on26hpsbu4b5ipojqetyla677xva66jnidyxhrxrizqd.onion.ws',
                     }
             sk = hashlib.md5('altcoinexpx3on26hpsbu4b5ipojqetyla677xva66jnidyxhrxrizqd.onion.ws'+post_id).hexdigest()
@@ -84,3 +82,7 @@ class Altcoin(scrapy.Spider):
             res = es.search(body=query)
             if res['hits']['hits'] == []:
                 es.index(index="forum_posts", doc_type='post', id=sk, body=doc)
+	    else:
+		data_doc = res['hits']['hits'][0]
+                if (doc['links'] != data_doc['_source']['links']) or (doc['text'] != data_doc['_source']['text']):
+		    es.index(index="forum_posts", doc_type='post', id=sk, body=doc)

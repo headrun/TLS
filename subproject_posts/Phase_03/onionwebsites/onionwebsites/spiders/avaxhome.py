@@ -67,12 +67,12 @@ class Avax(scrapy.Spider):
                     'author_url':'http://avaxhome5lcpcok5.onion'+author_url,
                     'post_title':title,
                     'post_url':response.url,
-                    'links':str(links),
-                    'publish_epoch':publish_epoch,
-                    'fetch_epoch':fetch_epoch,
+                    'links':', '.join(links),
+                    'publish_time':publish_epoch,
+                    'fetch_time':fetch_epoch,
                     'domain':'avaxhome5lcpcok5.onion',
                     'category': '',
-                    'sub_category': [],
+                    'sub_category': '',
                     'thread_title': '',
                     'thread_url':'',
                     'thread_title':'',
@@ -83,4 +83,8 @@ class Avax(scrapy.Spider):
             res = es.search(body=query)
             if res['hits']['hits'] == []:
                 es.index(index="forum_posts", doc_type='post', id=sk, body=doc)
+	    else:
+		data_doc = res['hits']['hits'][0]
+                if (doc['links'] != data_doc['_source']['links']) or (doc['text'] != data_doc['_source']['text']):
+		    es.index(index="forum_posts", doc_type='post', id=sk, body=doc)
 

@@ -97,7 +97,7 @@ class Torum(Spider):
                 'submit':'Verify'
                 }
         cookies = response.meta.get('cook')
-        import pdb;pdb.set_trace()
+        #import pdb;pdb.set_trace()
         yield FormRequest('http://torum6uvof666pzw.onion/captcha',callback = self.meta_data, headers= headers,cookies = cookies,formdata= data)
 
     def meta_data(self,response):

@@ -21,7 +21,7 @@ class Paypal(scrapy.Spider):
 
 
     def __init__(self):
-         self.conn = MySQLdb.connect(db="posts",host="localhost",user="tls_dev",passwd="hdrn!" , use_unicode = True , charset = 'utf8mb4')
+         self.conn = MySQLdb.connect(host="localhost", user="tls_dev", passwd="hdrn!", db="posts", charset="utf8", use_unicode=True)
          self.cursor = self.conn.cursor()
 
     def close_conn(self, spider):
@@ -47,7 +47,7 @@ class Paypal(scrapy.Spider):
 
     def parse_author(self, response):
         json_posts = {}
-        domain = "flkcpcprcfouwj33.onion"
+        domain = 'flkcpcprcfouwj33.onion'
         user_name = ''.join(response.xpath('//dl//dt[contains(text(),"Username")]/following-sibling::dd/text()').extract()[0])
         author_signature = ''.join(response.xpath('//div[@class="postsignature postmsg"]//p/text()').extract())
         join_date = ''.join(response.xpath('//dt[contains(text(),"Registered")]/following-sibling::dd/text()').extract())
@@ -70,9 +70,8 @@ class Paypal(scrapy.Spider):
         if icq:
             contact_info.append({'user_id':icq,'channel':'ICQ'})
         json_posts.update({'username': user_name,
-                          'domain': domain,
-                          'crawl_type':'',
-                          'author_signature':author_signature,
+                          'domain': "flkcpcprcfouwj33.onion",
+                          'auth_sign':author_signature,
                           'join_date': joindate,
                           'lastactive': lastactive,
                           'totalposts': totalposts,
@@ -83,7 +82,7 @@ class Paypal(scrapy.Spider):
                           'awards': '',
                           'rank': '',
                           'activetimes': activetimes,
-                          'contactinfo': str(contact_info),
+                          'contact_info': str(contact_info),
         })
 	try:
 	    sk = hashlib.md5(domain + json_posts['username']).hexdigest()

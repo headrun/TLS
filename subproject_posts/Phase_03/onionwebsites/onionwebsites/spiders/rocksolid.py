@@ -66,11 +66,20 @@ class Rocksolid(Spider):
                                'author': author,
                                'author_url': '',
                                'text': post_text,
-                               'links': [],
+                               'links': '',
                                'organization': organization,
                                }
                 sk = md5_val(domain + post_text.encode('utf8'))
-                doc_to_es(id=sk,body=json_posts,doc_type='post')
+		query={"query":{"match":{"_id":sk}}}
+            	res = es.search(body=query)
+            	if res['hits']['hits'] == []:
+		    es.index(index="forum_posts", doc_type='post', id=sk, body=json_posts)
+                #doc_to_es(id=sk,body=json_posts,doc_type='post')
+		else:
+		    data_doc = res['hits']['hits'][0]
+		    if json_posts['text'] != data_doc['_source']['text']:
+			es.index(index="forum_posts", doc_type='post', id=sk, body=json_posts)
+		
         nav = response.xpath('//span[@class="np_pages_selected"]//following-sibling::a[@class="np_pages_unselected"]/@href').extract_first()
         if nav:
             p_nav = 'http://bchz4vggexx63qvy.onion/rocksolid/' + nav

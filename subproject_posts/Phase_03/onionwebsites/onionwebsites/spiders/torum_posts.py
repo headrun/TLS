@@ -1,30 +1,21 @@
-from scrapy.http import Request
-from scrapy.selector import Selector
-import scrapy
-from scrapy.utils.response import open_in_browser
-import re
-import time
-import datetime
-from pprint import pprint
-from elasticsearch import Elasticsearch
-import hashlib
-import requests
 import deathbycaptcha
-from scrapy.http import FormRequest
 from onionwebsites.utils import *
 
 crawl_query = generate_upsert_query_authors_crawl('torum')
 
-class Torum(scrapy.Spider):
+class Torum(Spider):
     name = "torum"
     start_urls = ['http://torum6uvof666pzw.onion']
+
     def __init__(self):
         self.conn = MySQLdb.connect(host="localhost", user=DATABASE_ID, passwd=DATABASE_PASS, db="posts", charset="utf8", use_unicode=True)
         self.cursor = self.conn.cursor()
+	dispatcher.connect(self.close_conn, signals.spider_closed)
 
     def close_conn(self, spider):
         self.conn.commit()
         self.conn.close()
+
     def parse(self,response):
         key = response.headers.get('Set-Cookie','').replace('; path=/','')
         cook = response.headers.get('Set-Cookie','').replace('; path=/','').replace('PHPSESSID=','')
@@ -96,7 +87,10 @@ class Torum(scrapy.Spider):
                 raise Exception('captcha not solved')
         except:
             client = deathbycaptcha.SocketClient("Innominds", "Helloworld1234")
-            client.report(captcha["captcha"])
+	    try:
+            	client.report(captcha["captcha"])
+	    except:
+		pass
             yield Request('http://torum6uvof666pzw.onion',callback = self.parse,dont_filter = True)
             return
         data = {
@@ -104,7 +98,6 @@ class Torum(scrapy.Spider):
                 'submit':'Verify'
                 }
         cookies = response.meta.get('cook')
-        import pdb;pdb.set_trace()
         pprint(cookies)
         pprint(headers)
         pprint(data)
@@ -146,13 +139,15 @@ class Torum(scrapy.Spider):
         for forum in forums:
             if 'php?' in forum:
                 forum = forum.replace('./','http://torum6uvof666pzw.onion/')
-                yield Request(forum,callback = self.threads_pages)
+                try:
+		    yield Request(forum,callback = self.threads_pages)
+		except:pass
 
     def threads_pages(self,response):
         npage = response.xpath('//h2[@class="forum-title"]/..//div[@class="action-bar bar-top"]/div[@class="pagination"]//li[@class="active"]//following-sibling::li//@href').extract_first()
         if npage:
             npage = npage.replace('./','http://torum6uvof666pzw.onion/')
-            #yield Request(npage, callback = self.threads_pages)
+            yield Request(npage, callback = self.threads_pages)
         threads = response.xpath('//ul[@class="topiclist topics"]//li[contains(@class,"row bg")]//a[@class="topictitle"]/@href').extract()
         for thread in threads:
             if './viewtopic' in thread:
@@ -163,7 +158,7 @@ class Torum(scrapy.Spider):
         thread_title = ''.join(response.xpath('//div[@class="page-body"]//h2[@class="topic-title"]//a/text()').extract())
         thread_url = response.url
         category = response.xpath('//ul[@role="menubar"]//span[@itemprop="title"]/text()').extract()[1]
-        sub_category = '["'+response.xpath('//ul[@role="menubar"]//span[@itemprop="title"]/text()').extract()[2]+'"]'
+        sub_category = response.xpath('//ul[@role="menubar"]//span[@itemprop="title"]/text()').extract()[2]
         nodes = response.xpath('//div[contains(@class,"post has-profile bg1")] | //div[contains(@class,"post has-profile bg2")]')
         npage = response.xpath('//h2[@class="forum-title"]/..//div[@class="action-bar bar-top"]/div[@class="pagination"]//li[@class="active"]//following-sibling::li//@href').extract_first()
         if npage:
@@ -180,7 +175,7 @@ class Torum(scrapy.Spider):
                 text = text.replace(quote,'Quote ')
 
             if not author:
-                import pdb;pdb.set_trace()
+                author = ''
             post_title = ''.join(node.xpath('.//div[@class="postbody"]//h3//a/text()').extract())
             post_url =  ''.join(node.xpath('.//div[@class="postbody"]//ul//li//a/@href').extract()).replace('./','http://torum6uvof666pzw.onion/')
             post_id= re.sub('(.*)&p=','',post_url)
@@ -197,7 +192,7 @@ class Torum(scrapy.Spider):
                 thread_url = ''.join(test)
             else:
                 thread_url = reference_url
-            all_links = []
+            all_links = ''
             json_posts = {
                     'domain':'torum6uvof666pzw.onion',
                     'category':category,
@@ -212,10 +207,18 @@ class Torum(scrapy.Spider):
                     'author':author,
                     'author_url':author_url,
                     'text':text,
-                    'links':str(all_links),
+                    'links':all_links,
                     }
             sk = md5_val(post_url)
-            doc_to_es(id=sk,body=json_posts,doc_type='post')
+	    query={"query":{"match":{"_id":sk}}}
+            res = es.search(body=query)
+            if res['hits']['hits'] == []:
+		es.index(index="forum_posts", doc_type='post', id=sk, body=json_posts)
+            #doc_to_es(id=sk,body=json_posts,doc_type='post')
+	    else:
+		data_doc = res['hits']['hits'][0]
+		if json_posts['text'] != data_doc['_source']['text']:
+		    es.index(index="forum_posts", doc_type='post', id=sk, body=json_posts)
             auth_meta = {'publish_time': publish_epoch}
             json_posts.update({
                 'post_id': post_id,

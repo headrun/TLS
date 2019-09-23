@@ -116,7 +116,6 @@ class Antichat(scrapy.Spider):
                     },
 
             }
-	    pprint(json_posts)
             sk = md5_val(post_url)
 	    #query={"query":{"match":{"_id":sk}}}
             #res = es.search(body=query)

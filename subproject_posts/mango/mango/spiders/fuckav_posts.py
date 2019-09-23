@@ -70,7 +70,7 @@ class Fuckav1(Spider):
 	    if publish_time:
                 month_year = time.strftime("%Y-%m", time.localtime(int(publish_time/1000)))
             else:
-                pass
+                import pdb;pdb.set_trace()
 
             author = ''.join(node.xpath('.//a[@class="bigusername"]//text()').extract()) or 'Null'
             auth_url = ''.join(node.xpath('.//a[@class="bigusername"]/@href').extract()) or 'Null'

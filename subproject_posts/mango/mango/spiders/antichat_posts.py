@@ -32,11 +32,12 @@ class Antichat(scrapy.Spider):
         sub_category = response.xpath('//span[@itemprop="title"]//text()').extract()[1].encode('utf8')  or 'Null'
 	sub_category_url = response.xpath('//span[@class = "crust"]//@href')[1].extract() or 'Null'
         thread_title = ''.join(response.xpath('//div[@class="titleBar"]//h1//text()').extract()).strip() or 'Null'
-	ord_in_thread = ''.join(response.xpath('//a[@class = "item muted postNumber hashPermalink OverlayTrigger"]//text()').extract()).replace('#','') or 'Null'
+	#ord_in_thread = ''.join(response.xpath('//a[@class = "item muted postNumber hashPermalink OverlayTrigger"]//text()').extract()).replace('#','') or 'Null'
         nodes = response.xpath('//ol[@class="messageList"]//li[contains(@id,"post-")]') 
         for node in nodes:
             author = ''.join(node.xpath('.//div[@class="uix_userTextInner"]//span//text() |  .//div[@class="uix_userTextInner"]//a//text()').extract()) or 'Null'
             author_url = ''.join(node.xpath('.//div[@class="uix_userTextInner"]//a//@href').extract()) or 'Null'
+	    ord_in_thread = ''.join(node.xpath('.//a[@class = "item muted postNumber hashPermalink OverlayTrigger"]//text()').extract()).replace('#','') or 'Null'
             if author_url:
                 author_url =  urljoin("https://forum.antichat.ru/", author_url)
             post_title = ''  or 'Null'
@@ -53,9 +54,9 @@ class Antichat(scrapy.Spider):
             if publish_epoch ==False:
                 publish_epoch = time_to_epoch(date_,'%d %b %Y ')
             if publish_epoch:
-                month_year = time.strftime("%Y-%m", time.localtime(int(publish_epoch/1000)))
+                month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
             else:
-		pass
+		import pdb;pdb.set_trace()
             
             text = '\n'.join(node.xpath('.//div[@class="messageContent"]//text() | .//blockquote[@class="messageText SelectQuoteContainer ugc baseHtml"]//img//@alt | .//div[@class="editDate item"]//text() | .//blockquote[@class="messageText SelectQuoteContainer ugc baseHtml"]//iframe//@src | .//blockquote[@class="messageText SelectQuoteContainer ugc baseHtml"]/a/text() | .//div[@class="attribution type"]//text()').extract()).replace('said:','said:Quote').replace('\n','') or 'Null'
             Links = node.xpath('.//div[@class="messageContent"]//a[@class="externalLink ProxyLink"]//@href  | .//blockquote[@class="messageText SelectQuoteContainer ugc baseHtml"]//img[not(contains(@class,"mceSmilieSprite mceSmilie"))]//@src | .//blockquote[@class="messageText SelectQuoteContainer ugc baseHtml"]/img[@class="bbCodeImage LbImage"]/@src | .//blockquote[@class="messageText SelectQuoteContainer ugc baseHtml"]//iframe//@src | .//div[@class="attribution type"]//a/@href | .//div[@class="quote"]//img[not(contains(@class,"mceSmilieSprite mceSmilie1"))]//@src | .//blockquote[@class="messageText SelectQuoteContainer ugc baseHtml"]//a//@href').extract() or 'Null'
@@ -84,7 +85,7 @@ class Antichat(scrapy.Spider):
                         'name':author,
                         'url':author_url
                         }
-            json_posts = {'id' : post_url,
+            json_posts = {'record_id' : re.sub(r"\/$", "", post_url.replace(r"https", "http").replace(r"www.", "")),
                     'hostname': 'forum.antichat.ru',
                     'domain': "forum.antichat.ru",
                     'sub_type':'openweb',
@@ -92,8 +93,8 @@ class Antichat(scrapy.Spider):
                     'author': json.dumps(author_data),
                     'title':clean_text(thread_title),
                     'text': text,
-                    'url': response.url,
-                    'original_url': response.url,
+                    'url':post_url,
+                    'original_url': post_url,
                     'fetch_time': fetch_time(),
                     'publish_time': publish_epoch,
                     'link_url':links,

@@ -50,19 +50,20 @@ class Virusinfo(Spider):
                     post_url = urljoin("https://virusinfo.info/", post_url)
 		else:
 		    post_url = 'Null'
+		record_id = re.sub(r"\/$", "", post_url.replace(r"https", "http").replace(r"www.", ""))
 	        ord_in_thread = ''.join(node.xpath('.//span[@class="nodecontrols"]//a//text()').extract()).replace('#','') or 'Null'
                 post_id = ''.join(re.findall('#post(.*)',post_url)) or 'Null'
                 date = ''.join(node.xpath('.//span[@class="date"]/text()').extract()) or 'Null'
                 date_ = ''.join(set(re.findall('(.*),',date)))
                 publish_epoch = time_to_epoch(date_,'%d.%m.%Y')
-                if publish_epoch ==False:
+                if publish_epoch ==None:
                     import pdb;pdb.set_trace()
 		if publish_epoch:
-                    month_year = time.strftime("%Y_%m", time.localtime(int(publish_epoch/1000)))
+                    month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
                 else:
                     import pdb;pdb.set_trace()
 
-                text = '\n'.join(node.xpath('.//blockquote[@class="postcontent restore "]//text() | .//blockquote[@class="postcontent lastedited"]//text() | .//div[@class="bbcode_postedby"]//img//@alt | .//div[@class="information-box"]//text()').extract()).replace(u'\u0426\u0438\u0442\u0430\u0442\u0430',u'\u0426\u0438\u0442\u0430\u0442\u0430 %s'%'Quote') or 'Null'
+                text = ' '.join(node.xpath('.//blockquote[@class="postcontent restore "]//text() | .//blockquote[@class="postcontent lastedited"]//text() | .//div[@class="bbcode_postedby"]//img//@alt | .//div[@class="information-box"]//text()').extract()).replace(u'\u0426\u0438\u0442\u0430\u0442\u0430',u'\u0426\u0438\u0442\u0430\u0442\u0430 %s'%'Quote').replace('\n','').replace('\r', '').replace('\t', '').strip() or 'Null'
                 Links = node.xpath('.//div[@class="bbcode_postedby"]//a[@rel="nofollow"]//@href | .//blockquote[@class="information-box"]//a[@rel="nofollow"]//@href | .//font//a//@href | .//div[@style="text-align: center;"]//a//img//@src | .//blockquote[@class="postcontent restore "]//a//@href | .//div[@style="text-align: center;"]//a//@href').extract()
                 Link = []
                 for link_ in Links:
@@ -87,16 +88,16 @@ class Virusinfo(Spider):
                             }
 
                 json_posts = {
-		    'id' : post_url,
+		    'record_id' : record_id,
                     'hostname': 'virusinfo.info',
                     'domain':"virusinfo.info",
                     'sub_type':'openweb',
                     'type' : 'forum',
                     'author': json.dumps(author_data),
                     'title':clean_text(thread_title),
-                    'text': text,
-                    'url': response.url,
-                    'original_url': response.url,
+                    'text': clean_text(text),
+                    'url': post_url,
+                    'original_url':post_url,
                     'fetch_time': fetch_time(),
                     'publish_time': publish_epoch,
                     'link_url': all_links,

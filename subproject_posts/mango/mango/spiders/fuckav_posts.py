@@ -42,7 +42,6 @@ class Fuckav1(Spider):
         login = ''.join(response.xpath('//td[@align="right"]/input[contains(@accesskey,"r")]/@type').extract())
         if login:
             return
-	#import pdb;pdb.set_trace()
         category = ''.join(response.xpath('//table[@class="tborder"]//td[@class="alt1"]//span[@itemprop="title"]/text()')[1].extract()) or 'Null'
         sub_category = ''.join(response.xpath('//table[@class="tborder"]//td[@class="alt1"]//span[@itemprop="title"]/text()').extract()[2]).encode('utf8') or 'Null'
 	sub_category_url = response.xpath('//span[@class = "navbar"]//a//@href')[2].extract() or 'Null'
@@ -54,6 +53,7 @@ class Fuckav1(Spider):
             post_title = ''.join(node.xpath('.//td[@class="alt1"]//div//strong//text()').extract()) or 'Null'
             post_url = ''.join(node.xpath('.//a[contains(@href,"showpost.php?")]//@href').extract()) or 'Null'
             post_url = urljoin("https://fuckav.ru/", post_url) or 'Null'
+	    record_id = re.sub(r"\/$", "", post_url.replace(r"https", "http").replace(r"www.", ""))
 	    ord_in_thread = ''.join(node.xpath('.//a[@target = "new"]//strong//text()').extract()) or 'Null'
             post_id = post_url.split('=')[1] or 'Null'
             post_id = post_id.split('&')[0]
@@ -68,17 +68,19 @@ class Fuckav1(Spider):
             if publish_time == None:
                 pass
 	    if publish_time:
-                month_year = time.strftime("%Y-%m", time.localtime(int(publish_time/1000)))
+                month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
             else:
                 import pdb;pdb.set_trace()
 
             author = ''.join(node.xpath('.//a[@class="bigusername"]//text()').extract()) or 'Null'
-            auth_url = ''.join(node.xpath('.//a[@class="bigusername"]/@href').extract()) or 'Null'
+            auth_url = ''.join(node.xpath('.//a[@class="bigusername"]/@href').extract()) 
             if auth_url == '':
                 continue
             if 'http' not in auth_url:
                 author_url = urljoin("https://fuckav.ru/", auth_url)
-            text =''.join(node.xpath('.//div[contains(@id,"post_message")]//text() |.//div[contains(@id,"post_message")]//@href |.//div[contains(@id,"post_message")]//@src').extract()).replace(u'\u0426\u0438\u0442\u0430\u0442\u0430:',u'\u0426\u0438\u0442\u0430\u0442\u0430: %s'%'Quote').strip() or 'Null'
+	    else:
+		author_url = "Null"
+            text =''.join(node.xpath('.//div[contains(@id,"post_message")]//text() |.//div[contains(@id,"post_message")]//@href |.//div[contains(@id,"post_message")]//@src').extract()).replace(u'\u0426\u0438\u0442\u0430\u0442\u0430:',u'\u0426\u0438\u0442\u0430\u0442\u0430: %s'%'Quote').strip().replace('\n','') or 'Null'
             text = clean_text(text)
             links = node.xpath('.//div[contains(@id,"post_message")]//a[contains(@target,"_blank")]//@href |.//div[contains(@id,"post_message")]//a[contains(@target,"_blank")]//img/@src |.//div[contains(@id,"post_message")]//a[contains(@class,"highslide")]//@href |.//div[contains(@id,"post_message")]//a[contains(@class,"highslide")]//@src | .//a[contains(@href,"https:")]//@href | .//div[contains(@id,"post_message")]//a[contains(@href,"@")]/@href').extract()
 	    if links == []:
@@ -88,7 +90,7 @@ class Fuckav1(Spider):
                 'url':author_url
             }
             json_posts.update({
-		    'id' : post_url,
+		    'record_id' : record_id,
                     'hostname': 'www.fuckav.ru',
                     'domain': "fuckav.ru",
                     'sub_type':'openweb',
@@ -96,8 +98,8 @@ class Fuckav1(Spider):
                     'author': json.dumps(author_data),
                     'title':clean_text(thread_title),
                     'text': text,
-                    'url': response.url,
-                    'original_url': response.url,
+                    'url': post_url,
+                    'original_url': post_url,
                     'fetch_time': fetch_time(),
                     'publish_time': publish_time,
                     'link_url':links,
@@ -118,7 +120,6 @@ class Fuckav1(Spider):
 		    	'thread_url': thread_url
                     },
             })
-            #pprint(json_values)
 	    sk = md5_val(post_url)
 	    #query={"query":{"match":{"_id":sk}}}
             #res = es.search(body=query)

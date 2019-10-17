@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-
+import random
 # Define here the models for your spider middleware
 #
 # See documentation in:
 # https://doc.scrapy.org/en/latest/topics/spider-middleware.html
-
+from w3lib.http import basic_auth_header
 from scrapy import signals
-
+proxy = random.choice(['fl.east.usa.torguardvpnaccess.com', 'atl.east.usa.torguardvpnaccess.com', 'ny.east.usa.torguardvpnaccess.com', 'chi.central.usa.torguardvpnaccess.com', 'dal.central.usa.torguardvpnaccess.com', 'la.west.usa.torguardvpnaccess.com', 'lv.west.usa.torguardvpnaccess.com', 'sa.west.usa.torguardvpnaccess.com', 'nj.east.usa.torguardvpnaccess.com', 'central.usa.torguardvpnaccess.com','centralusa.torguardvpnaccess.com','west.usa.torguardvpnaccess.com','westusa.torguardvpnaccess.com','east.usa.torguardvpnaccess.com','eastusa.torguardvpnaccess.com'])
 
 class SkyfraudruSpiderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,
@@ -69,6 +69,8 @@ class SkyfraudruDownloaderMiddleware(object):
         return s
 
     def process_request(self, request, spider):
+        request.meta['proxy'] = 'http://'+ proxy+':6060'
+        request.headers['Proxy-Authorization'] = basic_auth_header('vinuthna@headrun.com','Hotthdrn591!')
         # Called for each request that goes through the downloader
         # middleware.
 
@@ -78,7 +80,7 @@ class SkyfraudruDownloaderMiddleware(object):
         # - or return a Request object
         # - or raise IgnoreRequest: process_exception() methods of
         #   installed downloader middleware will be called
-        return None
+        #return None
 
     def process_response(self, request, response, spider):
         # Called with the response returned from the downloader.

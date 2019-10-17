@@ -3,8 +3,8 @@
 
 FORUMS = '//tr[@align="center"]//td[@class="alt1Active"]/div/a/@href'
 THREAD_URLS = '//div//a[contains(@id,"thread_title")]//@href'
-INNER_THREADS = '//table[@class="tborder"]/tr/td[@class="alt1"]/a/@href'
-PAGENAV = '//table[@class="tborder"]//tr/td[@class="alt1"]//a[@class="smallfont"]/@href'
+INNER_THREADS = '//table[@class="tborder"]//td[@class="alt1"]//a[@rel="next"]//@href'
+PAGENAV = '//table[@class="tborder"]//td[@class="alt1"]//a[@rel="next"]//@href'
 CATEGORY = '//span[@class="navbar"]/a/text()'
 SUB_CATEGORY = '//span[@class="navbar"]/a/text()'
 THREAD_TITLE = '//tr/td[@class="navbar"]//strong/text()'

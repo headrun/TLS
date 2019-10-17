@@ -6,6 +6,7 @@ import MySQLdb
 import json
 import re
 import xpaths
+from urlparse import urljoin
 import sys
 sys.path.append('/home/epictions/tls_scripts/tls_utils')
 import tls_utils as utils
@@ -15,7 +16,7 @@ class Monopoly(scrapy.Spider):
     start_urls = ["https://monopoly.ms/"]
 
     def __init__(self):
-        self.conn = MySQLdb.connect(db="posts_monopoly",host="localhost",user="root",passwd="qwerty123" , use_unicode = True , charset = 'utf8')
+        self.conn = MySQLdb.connect(db="posts",host="localhost",user="root",passwd="qwe123" , use_unicode = True , charset = 'utf8')
         self.cursor = self.conn.cursor()
 
 
@@ -67,7 +68,7 @@ class Monopoly(scrapy.Spider):
     def parse_next1(self, response):
         forums = response.xpath(xpaths.FORUMS).extract()
         for forum in forums:
-            forum = "https://monopoly.ms/" + forum
+            forum = urljoin("https://monopoly.ms/" ,forum)
             headers = response.request.headers
             yield Request(forum, callback=self.parse_next2, headers = headers)
         
@@ -76,18 +77,18 @@ class Monopoly(scrapy.Spider):
         sel = Selector(response)
         thread_urls = sel.xpath(xpaths.THREAD_URLS).extract()
         for thread_url in thread_urls:
-            thread_url = "https://monopoly.ms/" + thread_url
+            thread_url = urljoin("https://monopoly.ms/",thread_url)
             sk = re.findall('\d+',thread_url)
-            query_status = myutils.generate_upsert_query_posts_crawl('posts_monopoly')
+            query_status = utils.generate_upsert_query_posts_crawl('posts_monopoly')
             json_posts = {'sk':sk,
                           'post_url':thread_url,
                           'crawl_status':0,
                           'reference_url':response.url
                         }
             self.cursor.execute(query_status, json_posts)
-        inner_threads = sel.xpath(xpaths.INNER_THREADS).extract()
-        for inner_thread in inner_threads:
-            inner_thread = "https://monopoly.ms/" + inner_thread
+        inner_thread = sel.xpath(xpaths.INNER_THREADS).extract_first()
+        if inner_thread:
+            inner_thread = urljoin("https://monopoly.ms/",inner_thread )
             headers = response.request.headers
             yield Request(inner_thread, callback=self.parse_next2, headers = headers)
      

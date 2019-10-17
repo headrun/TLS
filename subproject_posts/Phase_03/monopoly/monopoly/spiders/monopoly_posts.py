@@ -4,6 +4,7 @@ from scrapy.selector import Selector
 import scrapy
 import MySQLdb
 import json
+from pprint import pprint
 import datetime
 import time
 from scrapy import signals
@@ -13,6 +14,7 @@ import xpaths
 from datetime import timedelta
 from elasticsearch import Elasticsearch
 import hashlib
+from urlparse import urljoin
 #query_posts = utils.generate_upsert_query_posts('posts_monopoly')
 import sys
 sys.path.append('/home/epictions/tls_scripts/tls_utils')
@@ -20,10 +22,10 @@ import tls_utils as utils
 
 
 class Monopoly(scrapy.Spider):
-    name = "monopoly_post"
+    name = "monopoly_posts"
 
     def __init__(self):
-        self.conn = MySQLdb.connect(db="posts_monopoly",host="localhost",user="root",passwd="qwerty123" , use_unicode = True , charset = 'utf8')
+        self.conn = MySQLdb.connect(db="posts",host="localhost",user="root",passwd="qwe123" , use_unicode = True , charset = 'utf8')
         self.cursor = self.conn.cursor()
 	self.es = Elasticsearch(['10.2.0.90:9342'])
 	dispatcher.connect(self.close_conn, signals.spider_closed)
@@ -80,10 +82,11 @@ class Monopoly(scrapy.Spider):
     def parse_next1(self,response):
 	if "inqspdr" in response.body:
             sel = Selector(response)
-            url_que = "select distinct(post_url) from monopoly_status where crawl_status = 0 "
+            url_que = "select distinct(post_url) from monopoly_status where crawl_status = 0 or 1"
             self.cursor.execute(url_que)
             data = self.cursor.fetchall()
             for url in data:
+		#url = 'https://monopoly.ms/showthread.php?t=5869'
 	        yield Request(url[0], callback = self.parse_thread)
         
 
@@ -91,54 +94,70 @@ class Monopoly(scrapy.Spider):
         sel = Selector(response)
         domain = "monopoly.ms"
         crawl_type = ''
+	text1 = ''.join(response.xpath('//div[@style="margin: 10px"]/a/@href').extract())
+	if text1:
+	    return
         try:
-	    category = ''.join(sel.xpath(xpaths.CATEGORY).extract()[1])
+	    category = ''.join(sel.xpath(xpaths.CATEGORY).extract()[1]) or 'Null'
 	except:
-	    pass
+	     pass
         try:
-            sub_category = '["' + ''.join(sel.xpath(xpaths.SUB_CATEGORY).extract()[2]) + '"]'
+            sub_category = ''.join(sel.xpath(xpaths.SUB_CATEGORY).extract()[2]) or 'Null'
 	except:
-	    pass
-        thread_title = ''.join(sel.xpath(xpaths.THREAD_TITLE).extract()).replace('\n','').replace('\r','').replace('\t','')
+	     pass
+	sub_category_url = response.xpath('//span[@class="navbar"]//a//@href')[2].extract() 
+	if sub_category_url:
+		sub_category_url = urljoin("https://monopoly.ms/",sub_category_url)
+	else:
+		sub_category_url = 'Null'
+        thread_title = ''.join(sel.xpath(xpaths.THREAD_TITLE).extract()).replace('\n','').replace('\r','').replace('\t','') or 'Null'
         nodes = sel.xpath(xpaths.NODES)
-	try:
-	    post_url_ = ''.join(node[-1].xpath(xpaths.POST_URL).extract())
+	'''try:
+	    post_url_ = ''.join(nodes[-1].xpath(xpaths.POST_URL).extract())
 	    test_id = hashlib.md5(str(post_url_)).hexdigest()
 	    query = {'query_string': {'use_dis_max': 'true', 'query': '_id:{0}'.format(test_id)}}
 	    res = es.search(index="forum_posts", body={"query": query})
-	    if res['hits']['hits']==[]:
-		page_nav= set(sel.xpath(xpaths.PAGENAV).extract())
-	        for page in page_nav:
-        	    if "http" not in page:
-                	page = "https://monopoly.ms/" + page
-	                yield Request(page, callback = self.parse_thread,meta = {'crawl_type':'catch_up'})
-        	    if page:
-                	pno = ''.join(re.findall('&page=\d+',page))
-	                if crawl_type == 'keep_up':
-        	            page = response.url + pno
-                	else:
-	                    page = re.sub('&page=\d+',pno,response.url)
+	    if res['hits']['hits']==[]:'''
+	try:
+	    page_nav= sel.xpath(xpaths.PAGENAV).extract_first()
+            if "http" not in page_nav:
+	        page = urljoin("https://monopoly.ms/",page_nav)
+	        yield Request(page, callback = self.parse_thread,meta = {'crawl_type':'catch_up'})
+            if page_nav:
+                pno = ''.join(re.findall('&page=\d+',page))
+	    if crawl_type == 'keep_up':
+                page = response.url + pno
+            else:
+	        page = re.sub('&page=\d+',pno,response.url)
 	except:pass
         for node in nodes:
-            author = ''.join(node.xpath(xpaths.AUTHOR).extract())
+            author = ''.join(node.xpath(xpaths.AUTHOR).extract()) or 'Null'
+	    ord_in_thread = ''.join(node.xpath('.//a[@rel="nofollow"]//strong//text()').extract()) or 'Null'
             author_url = ''.join(node.xpath(xpaths.AUTHOR_URL).extract())
             if  'member' in author_url :
-                author_url = "https://monopoly.ms/" + author_url
+                author_url = urljoin("https://monopoly.ms/",author_url)
 	    else :
-		author_url = ''
+		author_url = 'Null'
             post_url = ''.join(node.xpath(xpaths.POST_URL).extract())
             if 'http'and 'https' not in post_url :
-                post_url = "https://monopoly.ms/" + post_url
-            post_id = ''.join(re.findall('\p=\d+',post_url)).replace('p=','').strip()
-            post_title = ''
+                post_url = urljoin("https://monopoly.ms/",post_url)
+	    else:
+		post_url = 'Null'
+            post_id = ''.join(re.findall('\p=\d+',post_url)).replace('p=','').strip() or 'Null'
+            post_title = '' or 'Null'
+	    record_id = re.sub(r"\/$", "", post_url.replace(r"https", "http").replace(r"www.", "")) or 'Null'
             publish_times = ''.join(node.xpath(xpaths.PUBLISH_TIME).extract()).replace('\r','').replace('\n','').replace('\t','').replace(u'\u0421\u0435\u0433\u043e\u0434\u043d\u044f,',datetime.datetime.now().strftime('%d.%m.%Y,')).replace(u'\u0412\u0447\u0435\u0440\u0430,' ,(datetime.datetime.now() - timedelta(days=1)).strftime('%d.%m.%Y,'))
             try:
 	        publish_date = datetime.datetime.strptime(publish_times,'%d.%m.%Y, %H:%M')
 	    except:pass
             publish_time =time.mktime(publish_date.timetuple())*1000
+	    if publish_time:
+		month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+	    else:
+		publish_time = 'Null'
             fetch_epoch = int(datetime.datetime.now().strftime("%s")) * 1000
-            Text = ' '.join(node.xpath(xpaths.TEXT).extract()).replace(u'\u0426\u0438\u0442\u0430\u0442\u0430:',u'\u0426\u0438\u0442\u0430\u0442\u0430: %s'%'Quote')
-            text = re.sub('\s\s+', ' ', Text)
+            Text = ' '.join(node.xpath(xpaths.TEXT).extract()).replace(u'\u0426\u0438\u0442\u0430\u0442\u0430:',u'\u0426\u0438\u0442\u0430\u0442\u0430: %s'%'Quote').replace('\n','')
+            text = re.sub('\s\s+', ' ', Text) or 'Null'
             thread_url = response.url
             Links = node.xpath(xpaths.LINKS).extract()
             links = []
@@ -149,7 +168,8 @@ class Monopoly(scrapy.Spider):
                 else:
                     links.append(Link)
 
-            all_links = str(links)
+            all_links = ', '.join(links) or 'Null'
+	    
             reference_url = response.url
             if '&page=' not in response.url:
                 crawl_type = 'keepup'
@@ -160,22 +180,41 @@ class Monopoly(scrapy.Spider):
                 thread_url = reference_url.replace(''.join(test),"")
             else:
                 thread_url = reference_url
-            json_posts = {'domain': domain,
-                          'category': category,
-                          'sub_category': sub_category,
-                          'thread_title': thread_title,
-                          'post_title' : '',
-                          'thread_url': thread_url,
-                          'post_id': post_id,
-                          'post_url': post_url,
-                          'publish_time': publish_time,
-                          'fetch_time': fetch_epoch,
-                          'author': author,
-                          'author_url': author_url,
-                          'text': utils.clean_text(Text),
-                          'links': all_links,
+
+	    author_data = {
+			'name':author,
+			'url':author_url
+			}
+            json_posts = {
+		    'record_id' : record_id,
+                    'hostname': 'monopoly.ms',
+                    'domain': "monopoly.ms",
+                    'sub_type':'openweb',
+                    'type' : 'forum',
+                    'author':json.dumps(author_data),
+                    'title':thread_title,
+                    'text': text,
+                    'url':post_url,
+                    'original_url': post_url,
+                    'fetch_time': fetch_epoch,
+                    'publish_time': publish_time,
+                    'link_url':all_links,
+                    'post':{
+                        'cache_link':'',
+                        'author':json.dumps(author_data),
+                        'section':category,
+                        'language':'russian',
+                        'require_login':'false',
+                        'sub_section':sub_category,
+                        'sub_section_url':sub_category_url,
+                        'post_id': post_id,
+                        'post_title':post_title,
+                        'ord_in_thread': ord_in_thread,
+                        'post_url': post_url,
+                        'post_text':text,
+                        'thread_title':thread_title,
+                        'thread_url': thread_url
+                    },
+
             }
-	    query={"query":{"match":{"_id":hashlib.md5(str(post_url)).hexdigest()}}}
-            res = self.es.search(body=query)
-            if res['hits']['hits'] == []:
-                self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts)
+            self.es.index(index="forum_posts_"+month_year, doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts)

@@ -20,7 +20,7 @@ NEWSPIDER_MODULE = 'skyfraudru.spiders'
 USER_AGENT = "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.93 Safari/537.36"
 
 # Obey robots.txt rules
-ROBOTSTXT_OBEY = True
+ROBOTSTXT_OBEY = False
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
 CONCURRENT_REQUESTS = 1
@@ -53,9 +53,9 @@ CONCURRENT_REQUESTS_PER_IP = 1
 
 # Enable or disable downloader middlewares
 # See https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
-#DOWNLOADER_MIDDLEWARES = {
-#    'skyfraudru.middlewares.SkyfraudruDownloaderMiddleware': 543,
-#}
+DOWNLOADER_MIDDLEWARES = {
+    'skyfraudru.middlewares.SkyfraudruDownloaderMiddleware': 543,
+}
 
 # Enable or disable extensions
 # See https://doc.scrapy.org/en/latest/topics/extensions.html

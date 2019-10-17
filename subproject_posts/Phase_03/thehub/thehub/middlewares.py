@@ -9,6 +9,9 @@ from scrapy import signals
 from stem import Signal
 from stem.control import Controller
 import requests
+from  user_agent import user_agents
+import random
+
 
 class TorSpiderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,
@@ -109,9 +112,10 @@ class TorDownloaderMiddleware(object):
 class ProxyMiddleware(object):
     def process_request(self, request, spider):
         with Controller.from_port(port=9051) as controller:
-             controller.authenticate(password="")
-             controller.signal(Signal.NEWNYM)
-             controller.close()
+            controller.authenticate(password="tls")
+            controller.signal(Signal.NEWNYM)
+            controller.close()
+	#request.meta['USER_AGENT'] = random.choice(user_agents.split('\n'))
         request.meta['proxy'] = "http://127.0.0.1:8118"
 
 

@@ -7,17 +7,15 @@ from scrapy.selector import Selector
 import MySQLdb
 from scrapy import signals
 from scrapy.xlib.pydispatch import dispatcher
-import utils
 import datetime
 import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
+sys.path.append('/home/epictions/tls_scripts/tls_utils')
+import tls_utils as utils
 import json
 import re
 import time
 from urllib import urlencode
-upsert_query_authors = utils.generate_upsert_query_authors('thehub_tor')
-
+from thehub.items import Author_item
 
 class Thehub(scrapy.Spider):
     name = "thehub_authors"
@@ -25,10 +23,10 @@ class Thehub(scrapy.Spider):
     
     def __init__(self):
         self.conn = MySQLdb.connect(
-            db="thehub_tor",
+            db="posts",
             host="localhost",
             user="root",
-            passwd="1216",
+            passwd="qwe123",
             use_unicode=True,
             charset="utf8mb4")
         self.cursor = self.conn.cursor()
@@ -59,13 +57,12 @@ name : value,
 
     def parse_authors(self, response):
         urls = []
-        que = "select DISTINCT(links) from thehub_crawl"
+        que = "select DISTINCT(links) from thehub_author_crawl where crawl_status = 0 limit 300"
         self.cursor.execute(que)
         data = self.cursor.fetchall()
         for da in data:
-            urls.append(da[0])
-        for url in urls:
-            meta_query = 'select DISTINCT(auth_meta) from thehub_crawl where links = "%s"'%url.encode('utf8')
+            url = da[0]
+            meta_query = 'select DISTINCT(auth_meta) from thehub_author_crawl where links = "%s"'%url.encode('utf8')
             self.cursor.execute(meta_query)
             meta_query = self.cursor.fetchall()
             activetime = []
@@ -81,14 +78,24 @@ name : value,
         json_data = {}
         domain = 'thehub7xbw4dc5r2.onion'
 	username = ''.join(response.xpath('//div[@class="username"]//h4/text()').extract())
-        if username:
-            query = 'update thehub_status set crawl_status = 1 where reference_url = %(url)s'
-            json_data = {'url':response.url}
+	if 'The user whose profile you are trying to view does not exist.' in  response.body:
+	    query = 'update thehub_crawl set crawl_status = 9 where links = %(url)s'
+            json_data = {'url':response.request.url}
+            self.cursor.execute(query,json_data)
+            return 
+	if username:
+            query = 'update thehub_author_crawl set crawl_status = 1 where links = %(url)s'
+            json_data = {'url':response.request.url}
             self.cursor.execute(query,json_data)
         groups = ''.join(response.xpath('//span[@class="position"]/text()').extract())
 	totalposts = ''.join(response.xpath('//dt[contains(text(),"Posts: ")]//following-sibling::dd/text()').extract()).split('(')[0]
-	last_active = ''.join(response.xpath('//dl[@class="noborder"]//dt[contains(text(),"Date Registered: ")]//following-sibling::dd[3]/text()').extract())
-	last =  datetime.datetime.strptime(last_active,'%B %d, %Y, %H:%M:%S %p')
+	last_active = ''.join(response.xpath('//dl[@class="noborder"]//dt[contains(text(),"Date Registered: ")]//following-sibling::dd[3]/text()').extract()) \
+		.replace(' at ',datetime.datetime.now().strftime('%B %d, %Y, '))
+	if 'inqspdr' not in response.body:
+	    import sys
+	    print "user section is log out need to relog in once again"
+	    sys.exit()
+    	last =  datetime.datetime.strptime(last_active,'%B %d, %Y, %H:%M:%S %p')
         lastactive = time.mktime(last.timetuple())*1000
 	join_date = ''.join(response.xpath('//dl[@class="noborder"]//dt[contains(text(),"Date Registered: ")]//following-sibling::dd[1]/text()').extract())
 	join = datetime.datetime.strptime(join_date,'%B %d, %Y, %H:%M:%S %p')
@@ -98,22 +105,23 @@ name : value,
         activetimes = []
         activetimes = utils.activetime_str(activetimes_,totalposts)
         fetch_time = int(datetime.datetime.now().strftime("%s")) * 1000
-        json_data.update({'user_name': username,
+        json_data.update({'username': username,
                           'domain': domain,
-                          'crawl_type': 'keep_up',
-                          'author_signature':author_sign,
+                          'auth_sig':author_sign,
                           'join_date': joindate,
-                          'last_active': lastactive,
-                          'total_posts': totalposts,
+                          'lastactive': lastactive,
+                          'totalposts': totalposts,
                           'fetch_time': fetch_time,
                           'groups': groups,
                           'reputation': '',
                           'credits': '',
                           'awards': '',
                           'rank': '',
-                          'active_time': activetimes,
+                          'activetimes': activetimes,
                           'contact_info': '',
-                          'reference_url': response.url
          })
-        self.cursor.execute(upsert_query_authors, json_data)
-	self.conn.commit()
+	obj = Author_item()
+	obj['rec'] = json_data
+	yield obj
+        #self.cursor.execute(upsert_query_authors, json_data)
+	#self.conn.commit()

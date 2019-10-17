@@ -19,7 +19,7 @@ class Skyfraud(scrapy.Spider):
 
     def __init__(self, *args, **kwargs):
         super(Skyfraud,  self).__init__(*args, **kwargs)
-        self.conn = MySQLdb.connect(db="posts",host="localhost" , use_unicode = True , charset = 'utf8')
+        self.conn = MySQLdb.connect(db="posts",host="localhost" ,user="root",passwd="qwe123",  use_unicode = True , charset = 'utf8')
         self.cursor = self.conn.cursor()
 
     def parse(self, response):
@@ -31,7 +31,6 @@ class Skyfraud(scrapy.Spider):
 
     def parse_nxt(self, response):
         sel = Selector(response)
-	print response.url
         urls = sel.xpath(xpaths.URLS).extract()
         for url in urls:
             url = "https://sky-fraud.ru/" + url
@@ -43,7 +42,7 @@ class Skyfraud(scrapy.Spider):
                           'reference_url':response.url
                         }
             self.cursor.execute(query_status, json_posts)
-	for num in set(response.xpath('//td[@class="alt1"]//a[@class="smallfont"]/@href').extract()):
-	    if num:
-		num_= "https://sky-fraud.ru/" + num
-		yield Request(num_,callback=self.parse_nxt)
+	num = response.xpath('//td[@class="alt1"]//a[@rel="next"]//@href').extract_first()
+        if num:
+            num= "https://sky-fraud.ru/" + num
+	    yield Request(num,callback=self.parse_nxt)

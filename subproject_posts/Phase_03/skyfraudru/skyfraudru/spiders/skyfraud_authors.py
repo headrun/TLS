@@ -28,7 +28,7 @@ class skyfraud(scrapy.Spider):
        self.es = Elasticsearch(['10.2.0.90:9342'])
        self.conn,self.cursor = self.mysql_conn()
        self.upsert_query_authors = utils.generate_upsert_query_authors('posts_skyfraud')
-       select_query = 'select DISTINCT(links) from skyfraud_crawl;'
+       select_query = 'select DISTINCT(links) from skyfraud_author_crawl;'
        self.cursor.execute(select_query)
        self.data = self.cursor.fetchall()
 
@@ -36,7 +36,7 @@ class skyfraud(scrapy.Spider):
         conn = MySQLdb.connect(db="posts",
                                     host="localhost",
                                     user="root",
-                                    passwd="",
+                                    passwd="qwe123",
                                     use_unicode=True,
                                     charset="utf8mb4")
 
@@ -50,7 +50,7 @@ class skyfraud(scrapy.Spider):
 
    def parse(self,response):
        for url in self.data:
-           meta_query = 'select DISTINCT(auth_meta) from skyfraud_crawl where links = "%s"'%url[0].encode('utf8')
+           meta_query = 'select DISTINCT(auth_meta) from skyfraud_author_crawl where links = "%s"'%url[0].encode('utf8')
            self.cursor.execute(meta_query)
            meta_query = self.cursor.fetchall()
            activetime=[]
@@ -115,7 +115,6 @@ class skyfraud(scrapy.Spider):
        reference_url = response.url
        json_data.update({'username': user_name,
                           'domain': domain,
-                          'crawl_type': 'keep_up',
                           'auth_sign':authorsignature,
                           'join_date': join_date,
                           'lastactive': last_active,
@@ -127,7 +126,7 @@ class skyfraud(scrapy.Spider):
                           'awards': '',
                           'rank': '',
                           'activetimes': (''.join(activetime)),
-                          'contactinfo': contact_info
+                          'contact_info': contact_info
         })
        self.es.index(index="forum_author", doc_type='post', id=hashlib.md5(str(user_name)).hexdigest(), body=json_data)
 

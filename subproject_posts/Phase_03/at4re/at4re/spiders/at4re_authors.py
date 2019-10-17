@@ -37,9 +37,9 @@ class formus(scrapy.Spider):
 
     def __init__(self, *args, **kwargs):
 	self.es = Elasticsearch(['10.2.0.90:9342'])
-        self.conn = MySQLdb.connect(db="at4re",host="localhost",user="root",passwd="",use_unicode=True,charset="utf8")
+        self.conn = MySQLdb.connect(db="posts",host="localhost",user="root",passwd="qwe123",use_unicode=True,charset="utf8")
         self.cursor = self.conn.cursor()
-        select_query = 'select DISTINCT(links) from at4re_crawl;'
+        select_query = 'select DISTINCT(links) from at4re_author_crawl;'
         self.cursor.execute(select_query)
         self.data = self.cursor.fetchall()
 
@@ -48,7 +48,7 @@ class formus(scrapy.Spider):
         for da in self.data:
             urls.append(da[0])
         for url in urls:
-            meta_query = 'select DISTINCT(auth_meta) from at4re_crawl where links = "%s"'%url.encode('utf8')
+            meta_query = 'select DISTINCT(auth_meta) from at4re_author_crawl where links = "%s"'%url.encode('utf8')
             self.cursor.execute(meta_query)
             meta_query = self.cursor.fetchall()
             activetime=[]
@@ -72,7 +72,7 @@ class formus(scrapy.Spider):
            self.cursor.execute(query,json_data)
 
 
-        domain = "at4re.net"
+        domain = "www.at4re.net"
         author_signature = ''.join(sel.xpath(AUTHOR_SIGNATURE).extract())
 	fetchtime = int(datetime.datetime.now().strftime("%s")) * 1000
         totalposts = ''.join(sel.xpath(TOTAL_POSTS).extract()).replace('\n','').replace('\t','').replace('\r','').split('(')[0]
@@ -140,7 +140,6 @@ class formus(scrapy.Spider):
 	json_authors = {}
         json_authors.update({'username' : username,
                           'domain' : domain,
-                          'crawl_type' : "keepup",
                           'auth_sign': author_signature,
                           'join_date' : join_date,
                           'lastactive' : last_active,
@@ -152,7 +151,7 @@ class formus(scrapy.Spider):
                           'awards' : '',
                           'rank' : rank,
                           'activetimes' : activetimes,
-                          'contactinfo' : '',
+                          'contact_info' : '',
             })
         self.es.index(index="forum_author", doc_type='post', id=hashlib.md5(str(username)).hexdigest(), body=json_authors)
 

@@ -12,14 +12,16 @@ from scrapy.http import Request, FormRequest
 from scrapy import signals
 from scrapy.xlib.pydispatch import dispatcher
 from urllib import urlencode
-import utils
+import sys
+sys.path.append('/home/epictions/tls_scripts/tls_utils')
+import tls_utils as utils
 
 class Thehub(Spider):
     name = "thehub_crawl"
     start_urls = ["http://thehub7xbw4dc5r2.onion"]
 
-    def __init__(self, *args, **kwargs):
-        self.conn = MySQLdb.connect(host="localhost", user="root", passwd="hdrn59!", db="thehub_tor", charset="utf8", use_unicode=True)
+    def __init__(self):
+        self.conn = MySQLdb.connect(host="localhost", user="root", passwd="qwe123", db="posts", charset="utf8", use_unicode=True)
         self.cursor = self.conn.cursor()
         dispatcher.connect(self.close_conn, signals.spider_closed)
 

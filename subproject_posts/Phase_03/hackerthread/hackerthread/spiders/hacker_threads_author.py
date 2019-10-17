@@ -7,7 +7,6 @@ from scrapy.http import Request
 import datetime
 import time
 import MySQLdb
-import utils
 import json
 sys.path.append('/home/epictions/tls_scripts/tls_utils')
 import tls_utils as utils
@@ -20,14 +19,14 @@ class HackerThread_Author(scrapy.Spider):
 
     def __init__(self, *args, **kwargs):
 	self.es = Elasticsearch(['10.2.0.90:9342'])
-	self.conn = MySQLdb.connect(db="POSTS_HACKERTHREADS",
+	self.conn = MySQLdb.connect(db="posts",
                                     host="localhost",
                                     user="root",
-                                    passwd="",
+                                    passwd="qwe123",
                                     use_unicode=True,
                                     charset="utf8mb4")
         self.cursor=self.conn.cursor()
-        select_query = 'select DISTINCT(links) from hackerthreads_crawl ;'
+        select_query = 'select DISTINCT(links) from hackerthreads_author_crawl ;'
         self.cursor.execute(select_query)
         self.data = self.cursor.fetchall()
 
@@ -43,7 +42,7 @@ class HackerThread_Author(scrapy.Spider):
         for data_ in self.data:
             urls.append(data_[0])
         for url in urls:
-            meta_query =  'select DISTINCT(auth_meta) from hackerthreads_crawl where links = "%s"'%url.encode("utf8")
+            meta_query =  'select DISTINCT(auth_meta) from hackerthreads_author_crawl where links = "%s"'%url.encode("utf8")
             self.cursor.execute(meta_query)
             meta_query = self.cursor.fetchall()
             activetime, join_date, total_posts, author, group, author_signature = [], [], [], [], [], []
@@ -98,7 +97,7 @@ class HackerThread_Author(scrapy.Spider):
         username = response.meta.get("author","")
         for un in username: user_name = str(un)
 
-        json_data.update({'user_name': user_name,
+        json_data.update({'username': user_name,
                          'domain': domain,
                          'auth_sign': author_signature,
                          'join_date': join_date,

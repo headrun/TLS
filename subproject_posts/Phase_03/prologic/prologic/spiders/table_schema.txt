@@ -1,0 +1,43 @@
+CREATE TABLE `prologic_posts` (
+  `domain` varchar(150) COLLATE utf8_unicode_ci NOT NULL,
+  `crawl_type` varchar(20) COLLATE utf8_unicode_ci DEFAULT NULL,
+  `category` varchar(150) COLLATE utf8_unicode_ci NOT NULL,
+  `sub_category` varchar(150) COLLATE utf8_unicode_ci NOT NULL,
+  `thread_title` text COLLATE utf8_unicode_ci,
+  `thread_url` text COLLATE utf8_unicode_ci,
+  `post_id` int(20) NOT NULL,
+  `post_url` text COLLATE utf8_unicode_ci,
+  `post_title` text COLLATE utf8_unicode_ci,
+  `publish_epoch` bigint(20) DEFAULT NULL,
+  `fetch_epoch` bigint(20) DEFAULT NULL,
+  `author` text COLLATE utf8_unicode_ci,
+  `author_url` text COLLATE utf8_unicode_ci,
+  `post_text` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `all_links` text COLLATE utf8_unicode_ci,
+  `reference_url` text COLLATE utf8_unicode_ci,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `modified_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`post_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci
+
+
+ CREATE TABLE `prologic_status` (
+  `sk` varchar(50) COLLATE utf8_unicode_ci NOT NULL,
+  `post_url` mediumtext COLLATE utf8_unicode_ci,
+  `crawl_status` int(10) DEFAULT '0',
+  `reference_url` mediumtext COLLATE utf8_unicode_ci,
+  PRIMARY KEY (`sk`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci ;
+
+mysql> show tables;
++--------------------+
+| Tables_in_prologic |
++--------------------+
+| prologic_posts     |
+| prologic_status    |
++--------------------+
+2 rows in set (0.00 sec)
+
+
+
+

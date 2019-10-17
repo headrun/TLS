@@ -2,10 +2,9 @@ import datetime
 import json
 import MySQLdb
 import re
+from MySQLdb import OperationalError 
 import time
 import sys
-reload(sys)
-sys.setdefaultencoding('utf8')
 sys.path.append('/home/epictions/tls_scripts/tls_utils')
 import scrapy
 from scrapy import signals
@@ -18,13 +17,12 @@ import xpaths
 from elasticsearch import Elasticsearch
 import hashlib
 from urlparse import urljoin
+from pprint import pprint
 def extract_data(sel, xpath_, delim=''):
     return delim.join(sel.xpath(xpath_).extract()).strip()
 
-
 def get_nodes(sel, xpath_):
     return sel.xpath(xpath_)
-
 
 def extract_list_data(sel, xpath_):
     return sel.xpath(xpath_).extract()
@@ -40,15 +38,20 @@ class KernelPost(scrapy.Spider):
 	self.conn, self.cursor = self.mysql_conn()
 	dispatcher.connect(self.close_conn, signals.spider_closed)
 
-    def mysql_conn(self):
+    '''def mysql_conn(self):
         conn = MySQLdb.connect(db="posts",
                                     host="localhost",
-                                    user="root",
-                                    passwd="",
+                                    user="tls_dev",
+                                    passwd="hdrn!",
                                     use_unicode=True,
                                     charset='utf8')
         cursor = conn.cursor()
-	return conn, cursor
+	return conn, cursor'''
+    def __init__(self, *args, **kwargs):
+        self.es = Elasticsearch(['10.2.0.90:9342'])
+        super(KernelPost,  self).__init__(*args, **kwargs)
+        self.conn = MySQLdb.connect(db="posts",host="localhost",user="tls_dev",passwd="hdrn!" , use_unicode = True , charset = 'utf8')
+        self.cursor = self.conn.cursor()
 
     def close_conn(self, spider):
         self.cursor.close()
@@ -83,7 +86,7 @@ class KernelPost(scrapy.Spider):
             # getting 6forums urls
             if url not in ['./viewforum.php?f=8', './viewforum.php?f=10']:
                 url = self.add_http(url)
-                yield Request(url, callback=self.parse_nxt)
+        	yield Request(url, callback=self.parse_nxt)
 
     def parse_nxt(self, response):
         sel = Selector(response)
@@ -100,7 +103,7 @@ class KernelPost(scrapy.Spider):
 
     def parse_thread(self, response):
         json_posts = {}
-        domain = "www.kernelmode.info"
+        domain = "kernelmode.info"
         thread_url = response.url
         # if '&start=' in response.url:
         if '&start=' in thread_url:
@@ -117,89 +120,122 @@ class KernelPost(scrapy.Spider):
 
         sel = Selector(response)
         links = []
-        thread_title = ''.join(sel.xpath('//h2[@class="topic-title"]//a//text()').extract())
+        thread_title = ''.join(response.xpath('//div[@class="side-segment"]//a[contains(@href,"./viewtopic.php")]/text()').extract()) or 'Null'
         author_links = extract_list_data(sel, xpaths.AUTHOR_LINKS)
-        post_nodes = get_nodes(sel, xpaths.NODES)
+        post_nodes = response.xpath('//div[@id="page-body"]//div[@class="clearfix"]//article')
         json_posts.update({'domain': domain,
                            #'crawl_type': crawl_type,
                            'thread_url': thread_url,
-                           'thread_title': thread_title
-        })
-        next_page = ''.join(set(extract_list_data(sel, xpaths.PAGE_NAVIGATION)))
+                           'thread_title': thread_title,
+                           'hostname': 'www.kernelmode.info',
+                           'sub_type':'openweb',
+                           'type':'forum'
+                       })
+        ''''next_page = ''.join(response.xpath('//div[@class="row"]//div[@class="pull-right"]//li/a[@rel="next"]/@href').extract())
         if next_page:
 	     try:
-          	 last_post_id = extract_data(post_nodes[-1], xpaths.POST_ID)
+          	 last_post_id = ''.join(post_nodes[-1].xpath('.//div[@class="pull-left timepost"]//a[contains(@href,"./viewtopic.php?p=")]/text()').extract()) 
 		 post_url_ = response.url+last_post_id
 		 test_id = hashlib.md5(str(post_url_)).hexdigest()
 		 query = {'query_string': {'use_dis_max': 'true', 'query': '_id:{0}'.format(test_id)}}
 		 res = self.es.search(index="forum_posts", body={"query": query})
 		 if res['hits']['hits']==[]:
+		     next_page = urljoin('https://www.kernelmode.info/forum/',next_page)
                      yield Request(self.add_http(next_page), callback=self.parse_thread)
-	     except:pass
+	     except:pass '''
+        category = response.xpath('//div[@class="crumbs"]//li[@class="active"]//a/text()').extract()[0] or 'Null'
+	sub_category = ''.join(response.xpath('//div[@class="crumbs"]//li[@class="active"]//a/text()').extract()[1:]) or 'Null'
+        sub_category_url = "Null"
+        count = 0
         for node in post_nodes:
-            category = extract_data(node, xpaths.CATEGORY)
-            sub_category = '["' + ''.join(node.xpath('//span[@class="crumb"][3]//span[@itemprop="title"]/text()').extract()).encode('utf8') + '"]'
-            post_title = extract_data(node, xpaths.POST_TITLE)
-            post_id = extract_data(node, xpaths.POST_ID)
+            #count = 0
+            count +=1
+            post_title = extract_data(node, xpaths.POST_TITLE) or 'Null'
+            ord_in_thread = count
+            post_id = ''.join(node.xpath('.//div[@class="pull-left timepost"]//a[contains(@href,"./viewtopic.php?p=")]/text()').extract())
             post_url = '%s%s' %(response.url, post_id)
-            publish = extract_data(node, xpaths.PUBLISH).replace('\t', "").replace('\n', "")
-            publish_datetime = datetime.datetime.strptime(publish, '%a %b %d, %Y %I:%M %p')
-            publish_time = int(time.mktime(publish_datetime.timetuple())) * 1000
+            publish = ''.join(node.xpath('.//div[@class="pull-left timepost"]/text()').extract()).replace(u'\xa0','').replace('by','').strip()
+	    try:
+                publish_datetime = datetime.datetime.strptime(publish, '%a %b %d, %Y %I:%M %p')
+		publish_time = int(time.mktime(publish_datetime.timetuple())) * 1000
+	    except:pass
+            if publish_time:
+                   month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+            else:
+                import pdb;pdb.set_trace()
             fetch_time = int(datetime.datetime.now().strftime("%s")) * 1000
-            author = extract_data(node, xpaths.AUTHOR)
-            #post_text = '\n'.join(node.xpath('.//div[@class="content"]//text() | .//img[@class="smilies"]//@alt').extract()).encode('utf8') + ''.join(node.xpath('.//dl[@class="attachbox"]//text()').extract()).encode('utf8')
-            post_text_ = node.xpath('.//div[@class="content"]//text() | .//img[@class="smilies"]//@alt | .//dl[@class="attachbox"]//text() | .//div[@class="content"]//img[@class="postimage"]//@alt |.//dl[@class="attachbox"]//img[@class="postimage"]//@alt | .//div[@class="content"]//blockquote//cite').extract()
+            author_name = ''.join(node.xpath('.//div[@class="pull-left timepost"]//a[contains(@href,"./memberlist.php?mode=viewprofile&u")]/text()').extract())
+            author_link = ''.join(node.xpath('.//div[@class="pull-left timepost"]//a[contains(@href,"./memberlist.php?mode=viewprofile&u")]/@href').extract()).replace('./','http://www.kernelmode.info/forum/')
+            post_text_ = node.xpath('.//div[@class="content"]//text() | .//div[@class="content"]//img[@class="postimage"]//@alt |.//dl[@class="attachbox"]//img[@class="postimage"]//@alt | .//img[@class="smilies"]//@alt | .//div[@class="content"]//blockquote//cite | .//div[@class="content"]/following-sibling::div[@class="clearfix"]//text()').extract()
             post_text = []
             for i in post_text_:
                 if 'download/file.php' in i:
                     i = self.add_http(i)
                 post_text.append(i)
             post_text = ' '.join(post_text)
-            #post_text = post_text.replace('\\n', '\n')
             post_text = re.sub('(<cite>.*?</cite>)', 'Quote', post_text)
             post_text = re.compile(r'([\n,\t,\r]*\t)').sub('\n', post_text)
             post_text = re.sub(r'(\n\s*)', '\n', post_text)
             post_text = re.sub('\s\s+', ' ', post_text)
-            #post_text = re.sub('(<cite>.*?</cite>)', 'Quote\n', post_text)
             post_text = re.sub('(<blockquote[@class="uncited"]>.*?</blockquote>)', 'Quote', post_text)
             arrow = ', '.join(node.xpath('.//blockquote/div/cite/a[2]/@href').extract())
             if arrow:
                 arrow = self.add_http(arrow)
             else:
-                arrow = ''
-            json_posts.update({
-                'category': category,
-                'sub_category': sub_category,
-                'post_title': post_title if post_title else '',
-                'post_id': post_id,
-                'post_url': post_url,
-                'publish_time': publish_time,
-                'fetch_time': fetch_time,
-                'author': author,
-                'text': post_text,
-            })
-
+                arrow = 'Null'
+            post = {
+               'cache_link': '',
+               'section':category,
+               'language': "english",
+               'require_login':"True",
+               'sub_section':sub_category,
+               'sub_section_url':sub_category_url,
+               'post_id':post_id,
+               'post_title':post_title,
+               'ord_in_thread':ord_in_thread,
+               'post_url':post_url,
+               'post_text':post_text,
+               'thread_title':thread_title,
+               'thread_url':thread_url
+               } 
+            author_data= {
+                   'name':author_name,
+                   'url':author_link
+                   }
+            json_posts.update ({
+                       'id':post_url,
+                       'author':json.dumps(author_data),
+                       'title':thread_title,
+                       'url':post_url,
+                       'original_url':post_url,
+                       'fetch_time':fetch_time,
+                       'publish_time' : publish_time,
+                       'post':post
+               })
             Link = []
-            links = node.xpath('.//div[@class="content"]//a[@class="postlink"]/@href | .//dl[@class="attachbox"]//a[@class="postlink"]/@href | .//div[@class="content"]//img[@class="postimage"]//@src | .//dl[@class="attachbox"]//img[@class="postimage"]//@src').extract()
+            links = node.xpath('.//div[@class="content"]//a[@class="postlink"]/@href | .//div[@class="clearfix"]//a[@class="postlink"]//@href | .//dl[@class="attachbox"]//a[@class="postlink"]/@href | .//div[@class="content"]//img[@class="postimage"]//@src | .//dl[@class="attachbox"]//img[@class="postimage"]//@src').extract()
             for link in links:
                 link = self.add_http(link)
                 Link.append(link)
             Links = Link
-
-            author_link = ''.join(node.xpath('.//dl[@class="postprofile"]//a[contains(@class,"username")]//@href').extract()).replace('./','http://www.kernelmode.info/forum/')
+            #author = ''.join(node.xpath('.//div[@class="pull-left timepost"]//a[contains(@href,"./memberlist.php?mode=viewprofile&u")]/text()').extract()) or 'Null'
+            #author_link = ''.join(node.xpath('.//div[@class="pull-left timepost"]//a[contains(@href,"./memberlist.php?mode=viewprofile&u")]/@href').extract()).replace('./','http://www.kernelmode.info/forum/')
             a_link = extract_data(node, xpaths.AUTHOR).replace('./', 'http://www.kernelmode.info/forum/')
-
             json_posts.update({
-                'author_url': author_link,
-                'links': get_aggregated_links(Links)
+                #'author':author,
+                #'author_url': author_link,
+                'link_url': get_aggregated_links(Links)
             })
-	    query={"query":{"match":{"_id":hashlib.md5(str(post_url)).hexdigest()}}}
-            res = self.es.search(body=query)
-            if res['hits']['hits'] == []:
-                self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts)
+            #pprint(json_posts)
+	    #query={"query":{"match":{"_id":hashlib.md5(str(post_url)).hexdigest()}}}
+            #res = self.es.search(body=query)
+            #if res['hits']['hits'] == []:
+	    self.es.index(index="forum_posts_"+month_year, doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts,request_timeout=30)
+	    #else:
+		#data_doc = res['hits']['hits'][0]
+		#if (json_posts['links'] != data_doc['_source']['links']) or (json_posts['text'] != data_doc['_source']['text']):
+		    #self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts)
 	    if author_link:
-                # passing publish_time,thread_title,Topics using dict format
-                # Write data into forums_crawl table
                 meta = {'publish_time': publish_time, 'thread_title': thread_title}
                 json_crawl = {
                     'post_id': post_id,
@@ -215,12 +251,16 @@ class KernelPost(scrapy.Spider):
 			    self.conn,self.cursor = self.mysql_conn()
 			    self.cursor.execute(crawl_query, json_crawl)
                 	else:
-                    	    raise e()
-
+                      	    raise e()
+        next_page = ''.join(response.xpath('//div[@class="row"]//div[@class="pull-right"]//li/a[@rel="next"]/@href').extract())
+        if next_page:
+            next_page = urljoin('https://www.kernelmode.info/forum/',next_page)
+            yield Request(self.add_http(next_page), callback=self.parse_thread)
+     
 def get_aggregated_links(links):
     if not links:
-        aggregated_links = str([])
+        aggregated_links = ''
     else:
-        aggregated_links = str(list(set(links)))
+        aggregated_links = ', '.join(set(links))
 
     return aggregated_links

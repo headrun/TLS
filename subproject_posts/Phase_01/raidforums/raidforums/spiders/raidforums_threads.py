@@ -14,7 +14,7 @@ class Raidforums(scrapy.Spider):
     start_urls = ['https://raidforums.com/']
 
     def __init__(self):
-        self.conn = MySQLdb.connect(db="posts_raidforums", host="localhost", user="root", passwd="", use_unicode=True, charset="utf8")
+        self.conn = MySQLdb.connect(db="posts", host="localhost", user="tls_dev", passwd="hdrn!", use_unicode=True, charset="utf8")
         self.cursor=self.conn.cursor()
         dispatcher.connect(self.close_conn, signals.spider_closed)
 

@@ -1,7 +1,7 @@
 
-
 THREAD_TITLE = '//td[@class="navbar"]//text()'
 THREAD_TOPIC = '//span[@class="navbar"]//text()'
+#SUB_CATEGORY_URL = '//span[@class="navbar"]//a//@href'
 ALL_POSTS = '//div[@id="posts"]//div[@align="center"]'
 POST_URL = '//td[@class="thead"]//div[@class="normal"]//a//@href'
 POST_TIME = '//td[@class="thead"]//div[@class="normal"]//following-sibling::text()'
@@ -22,7 +22,7 @@ REPUTATION = '//div[@class="smallfont"]//div[contains(text(), "Rept. Rcvd")]//te
 GROUPS = '//div[@id="postmenu_%s"]//following-sibling::div[@class="smallfont"]//text()'
 NEXT_PAGE = '//td[@class="alt1"]//a[contains(@rel, "next")]//@href'
 
-URLS = [
+URLS = [ 
          'https://forum.exetools.com/showthread.php?t=15279',
          'https://forum.exetools.com/showthread.php?t=14329',
          'https://forum.exetools.com/showthread.php?t=13074',
@@ -34,4 +34,3 @@ URLS = [
 ]
 
 SITE_DOMAIN = 'https://forum.exetools.com/'
-

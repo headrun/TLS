@@ -8,7 +8,7 @@ sys.path.append('/home/epictions/tls_scripts/tls_utils')
 import tls_utils as utils
 from MySQLdb import OperationalError
 import scrapy
-from scrapy.spider import Spider
+from scrapy import Spider
 from scrapy.selector import Selector
 from scrapy.http import Request
 from scrapy.http import FormRequest
@@ -17,7 +17,8 @@ from scrapy.xlib.pydispatch import dispatcher
 from scrapy import signals
 from elasticsearch import Elasticsearch
 import hashlib
-
+from pprint import pprint
+import re
 def extract_data(sel, xpath_, delim=''):
     return delim.join(sel.xpath(xpath_).extract()).strip()
 
@@ -30,15 +31,15 @@ def extract_list_data(sel, xpath_):
     return sel.xpath(xpath_).extract()
 
 
-class KernelPost(scrapy.Spider):
+class KernelPost(Spider):
     name = "kernel_author"
     start_urls = ["http://www.kernelmode.info/forum/"]
 
     def __init__(self):
         self.conn = MySQLdb.connect(db="posts",
                                     host="localhost",
-                                    user="root",
-                                    passwd="",
+                                    user="tls_dev",
+                                    passwd="hdrn!",
                                     use_unicode=True,
                                     charset='utf8')
         self.cursor = self.conn.cursor()
@@ -90,35 +91,29 @@ class KernelPost(scrapy.Spider):
     def parse_author(self, response):
         sel = Selector(response)
         json_author ={}
-        user_name = extract_data(sel, xpaths.USER_NAME)
+        user_name = ''.join(response.xpath('//div[@class="col-md-7 col-sm-7"]//ul[@class="reset-list"]//li[contains(text(),"Username")]//span/text()').extract())
 
-        user_name = user_name if user_name else None
+        user_name = user_name if user_name else ''
         domain = "www.kernelmode.info"
-        author_signature = extract_data(sel, xpaths.AUTHOR_SIGNATURE)
-        if author_signature:
-            author_signature = author_signature
-        else:
-            author_signature = ''
+        author_signature = ''.join(response.xpath('//div[@class="signature"]//text()').extract())
 
-        joining_date = extract_data(sel, xpaths.JOINING_DATE)
+        joining_date = ''.join(response.xpath('//ul[@class="recent-activity"]//li[@class="item"]//div[contains(text(),"Joined:")]/../span[@class="recent-detail"]//text()').extract()).strip()
         try:
             joindate = datetime.datetime.strptime(joining_date, '%a %b %d, %Y %I:%M %p')
             join_date = time.mktime(joindate.timetuple()) * 1000
   	except:
-   	    import pdb;pdb.set_trace()
-        last_active_ts = extract_data(sel, xpaths.LAST_ACTIVE)
+   	    join_date = 0
+        last_active_ts = ''.join(response.xpath('//ul[@class="recent-activity"]//li[@class="item"]//span[contains(text(),"Last active:")]/../span[@class="recent-detail"]//text()').extract()).strip()
         try:
             last_active = datetime.datetime.strptime(last_active_ts, '%a %b %d, %Y %I:%M %p')
             last_active = time.mktime(last_active.timetuple()) * 1000
         except:
             last_active = 0
-        total_posts = extract_data(sel, xpaths.TOTAL_POSTS).replace('\t', "").encode("utf-8")
+        total_posts = ''.join(response.xpath('//ul[@class="recent-activity"]//li[@class="item"]//span[contains(text(),"Total posts:")]/../span[@class="recent-detail"]//text()').extract()).strip()
+	total_posts = re.sub(' \| Search(.*)','',total_posts)
         fetch_time = int(datetime.datetime.now().strftime("%s")) * 1000
-        groups = ','.join(sel.xpath('//div[@class="inner"]//dd/select[contains(@name,"g")]//text()').extract())
+        groups = ''.join(response.xpath('//div[@class="col-md-3 col-sm-3"]//span[@class=" pos-abs r-25"]/..//small/text()').extract())
         rank = extract_data(sel, xpaths.AUTHOR_RANK)
-        if not rank:
-            rank = ' '
-
         active_times_ = response.meta['publish_time']
         active_times = []
         thread_title = response.meta.get('thread_title', '-')
@@ -134,13 +129,11 @@ class KernelPost(scrapy.Spider):
                                     count)
                 active_times.append(active_time)
             except:
-                active_time = ' '
-                active_times.append(active_time)
+		pass
         active_times = ',  '.join(active_times)
         json_author.update({
             'username': user_name,
             'domain': domain,
-            'crawl_type': 'keep_up',
             'auth_sign': author_signature,
             'join_date': join_date,
             'lastactive': last_active,
@@ -152,6 +145,6 @@ class KernelPost(scrapy.Spider):
             'awards': '',
             'rank': rank,
             'activetimes': active_times,
-            'contactinfo': '',
+            'contact_info': '',
         })
 	self.es.index(index="forum_author", doc_type='post', id=hashlib.md5(str(user_name)).hexdigest(), body=json_author)

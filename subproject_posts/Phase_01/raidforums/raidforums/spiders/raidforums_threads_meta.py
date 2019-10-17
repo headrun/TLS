@@ -23,10 +23,10 @@ class Raidforums(scrapy.Spider):
 
     def __init__(self):
 	self.es = Elasticsearch(['10.2.0.90:9342'])
-        self.conn = MySQLdb.connect(db="posts_raidforums",
+        self.conn = MySQLdb.connect(db="posts",
                                    host="localhost",
-                                   user="root",
-                                   passwd = "",
+                                   user="tls_dev",
+                                   passwd = "hdrn!",
                                    use_unicode=True,
                                    charset="utf8")
         self.cursor = self.conn.cursor()
@@ -53,7 +53,7 @@ class Raidforums(scrapy.Spider):
         domain = "www.raidforums.com"
 	crawl_type = response.meta.get('crawl_type')
         Category = ''.join(response.xpath('//span[@class="crumbs"]//span/a/text()').extract()[1]).replace('\n','').replace('\r','')
-        Subcategory = '['+''.join(response.xpath('//span[@class="crumbs"]//span/a/text()').extract()[2]).replace('\n','"') +']'
+        Subcategory = ''.join(response.xpath('//span[@class="crumbs"]//span/a/text()').extract()[2]).replace('\n','"')
         thread_type = ''.join(response.xpath('//span[@class="crumbs"]//span/a/text()').extract()[-1]).replace('\n','').replace('\r','')
         thread_Topics = ''.join(response.xpath('//span[@class="crust"]//a/text()').extract())
         thread_Topics = thread_Topics.strip().replace('\n\n', '/').strip('.')
@@ -75,7 +75,6 @@ class Raidforums(scrapy.Spider):
         looppage_url = set(response.xpath('//a[@class="pagination_next"]/@href').extract())
         for url in looppage_url:
 	    try:
-		'''
 		post_url_ = ''.join(thread_nodes[-1].xpath('.//div[@class="post_content"]//div[@class="float_right"]//a/@href').extract())
 		if "http" not in post_url_:'https://raidforums.com/' +post_url_
 		test_id = hashlib.md5(str(post_url_)).hexdigest()
@@ -83,9 +82,8 @@ class Raidforums(scrapy.Spider):
                 res = self.es.search(index="forum_posts", body={"query": query})
                 in_es = res['hits']['hits']
                 if in_es ==[]:
-		'''
-                if "http" not in url:url  = 'https://raidforums.com/' +url
-                yield Request(url,callback = self.parse_comm,meta = {'crawl_type':'catchup'})
+                    if "http" not in url:url  = 'https://raidforums.com/' +url
+                    yield Request(url,callback = self.parse_comm,meta = {'crawl_type':'catchup'})
 	    except:pass
         for i in thread_nodes:
     	    links,links_,link = [],[],[]
@@ -140,7 +138,7 @@ class Raidforums(scrapy.Spider):
             for link in links_:
                 if "http" not in link: link = "https://raidforums.com" + link
                 links.append(link)
-            if links: links = str(links)
+            if links: links = ', '.join(links)
             if not links: links= " "
             a_name = ''.join(i.xpath('.//div[@class="post_author scaleimages"]//span[@class="largetext"]//span/text()').extract())or \
             ''.join(i.xpath('.//span[@class="largetext"]//a//span//text()').extract())
@@ -169,6 +167,10 @@ class Raidforums(scrapy.Spider):
             res = self.es.search(body=query)
             if res['hits']['hits'] == []:
                 self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(Post_Url)).hexdigest(), body=json_posts)
+	    else:
+		data_doc = res['hits']['hits'][0]
+                if (json_posts['links'] != data_doc['_source']['links']) or (json_posts['text'] != data_doc['_source']['text']):
+		    self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(Post_Url)).hexdigest(), body=json_posts)
             #try:self.cursor.execute(d_que, json_posts)
 	    #except:pass#import pdb;pdb.set_trace()
             meta = {'publish_time': commant_date, 'thread_title': thread_type}

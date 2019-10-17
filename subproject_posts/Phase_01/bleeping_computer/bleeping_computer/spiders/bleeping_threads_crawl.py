@@ -20,11 +20,12 @@ post_url_que = utils.generate_upsert_query_posts_crawl('bleeping_computer')
 
 class BleepingSpider(scrapy.Spider):
     name = 'bleeping_threads_crawl'
+    start_urls = ["https://www.bleepingcomputer.com/forums/"]
     def __init__(self):
         self.conn = MySQLdb.connect(db="posts",
                                     host="localhost",
-                                    user="root",
-                                    passwd="",
+                                    user="tls_dev",
+                                    passwd="hdrn!",
                                     use_unicode=True,
                                     charset="utf8mb4")
         self.cursor = self.conn.cursor()
@@ -34,7 +35,7 @@ class BleepingSpider(scrapy.Spider):
         self.conn.commit()
         self.conn.close()
 
-    def start_requests(self):
+    '''def start_requests(self):
 	try:
             key = ''.join(re.findall("secure_hash\'](.*)= '(.*)",x)[0][1].split(';'))[:-1]
         except:
@@ -46,10 +47,10 @@ class BleepingSpider(scrapy.Spider):
             'ips_password': 'lolw4@123~',
             'rememberMe': '1',
         }
-        url = 'https://www.bleepingcomputer.com/forums/index.php?app=core&module=global&section=login&do=process'
-        yield FormRequest(url, callback=self.parse_1st, formdata=data)
+        url = 'https://www.bleepingcomputer.com/forums/index.php'#?app=core&module=global&section=login&do=process'
+        yield Request(url, callback=self.parse_1st)#, formdata=data)'''
 
-    def parse_1st(self, response):
+    def parse(self, response):
         sel = Selector(response)
         urls = sel.xpath(xpaths.URLS).extract()
         for url in urls:#[0:5]:
@@ -68,6 +69,7 @@ class BleepingSpider(scrapy.Spider):
                         'reference_url':response.url
                     }
                 self.cursor.execute(post_url_que, val)
+		self.conn.commit()
         navigation = ''.join(response.xpath(
             xpaths.NAVIGATIONS_LINKS).extract())
         if navigation:

@@ -11,6 +11,6 @@ class CustomProxyMiddleware(object):
 	session_id = random.choice(range(1,31))
 	super_proxy_url = 'https://%s-country-us-session-%s:%s@zproxy.lum-superproxy.io:%d' % (username, session_id, password, port)
         request.meta['proxy'] = super_proxy_url 
-        ua = random.choice(user_agent_list)
-        request.headers['User-Agent']=ua
+        #ua = random.choice(user_agent_list)
+        #request.headers['User-Agent']=ua
 

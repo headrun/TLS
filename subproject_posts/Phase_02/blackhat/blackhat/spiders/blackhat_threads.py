@@ -14,6 +14,7 @@ from scrapy.xlib.pydispatch import dispatcher
 import xpaths
 from elasticsearch import Elasticsearch
 import hashlib
+from pprint import pprint
 crawl_query = utils.generate_upsert_query_authors_crawl('posts_blackhat')
 query_posts = utils.generate_upsert_query_posts('posts_blackhat')
 
@@ -28,7 +29,7 @@ class BlackHat(scrapy.Spider):
         dispatcher.connect(self.close_conn, signals.spider_closed)
 
     def mysql_conn(self):
-	conn = MySQLdb.connect(db="posts_blackhat",host="localhost",user="root",passwd="1216" , use_unicode = True , charset = 'utf8')
+	conn = MySQLdb.connect(db="posts_blackhat",host="localhost",user="tls_dev",passwd="hdrn!" , use_unicode = True , charset = 'utf8')
 	cursor = conn.cursor()
 	return conn,cursor
 
@@ -53,7 +54,7 @@ class BlackHat(scrapy.Spider):
     def parse_thread(self, response):
         sel = Selector(response)
         reference_url = response.url
-        domain = "www.blackhatworld.com"
+        domain = "blackhatworld.com"
         if '/page-' not in reference_url:
             crawl_type = 'keepup'
         else:
@@ -63,15 +64,17 @@ class BlackHat(scrapy.Spider):
             thread_url = reference_url.replace(''.join(test),"")
         else:
             thread_url = reference_url
-        thread_title = ''.join(sel.xpath(xpaths.THREADTITLE).extract())
+        thread_title = ''.join(sel.xpath(xpaths.THREADTITLE).extract()) or 'Null'
         try:
-	    category = ''.join(sel.xpath(xpaths.CATEGORY).extract()[1])
+	    category = ''.join(sel.xpath(xpaths.CATEGORY).extract()[1]) or 'Null'
 	except: pass
         try:
-	    sub_category = '["' + ''.join(sel.xpath(xpaths.SUBCATEGORY).extract()[2]) + '"]'
+	    sub_category = ''.join(sel.xpath(xpaths.SUBCATEGORY).extract()[2]) or 'Null'
 	except: pass
-        post_title = ' '
-        nodes=sel.xpath(xpaths.NODES)
+	sub_category_url = sel.xpath('//a[@itemprop="url"]/@href').extract()[2] or 'Null'
+        post_title = 'Null'
+        #nodes=sel.xpath(xpaths.NODES)
+	nodes = sel.xpath('//div[@class="pageContent"]//ol[@class="messageList"]//li[contains(@id,"post-")]')
         if nodes:
             query = 'update blackhat_status set crawl_status = 1 where post_url = %(url)s'
             json_data={'url':response.url}
@@ -81,7 +84,7 @@ class BlackHat(scrapy.Spider):
             json_data={'url':response.url}
             self.cursor.execute(query,json_data)
 
-        page_nav = ''.join(set(sel.xpath(xpaths.PAGENAV).extract()))
+        '''page_nav = ''.join(set(sel.xpath(xpaths.PAGENAV).extract()))
         if page_nav:
             try:
                 text_case = ''.join(nodes[-1].xpath(xpaths.POSTID).extract()).replace('post_url_','')
@@ -90,20 +93,28 @@ class BlackHat(scrapy.Spider):
 		res = es.search(index="forum_posts", body={"query": query})
 		if res['hits']['hits']==[]:    
 	            yield Request(page_nav,callback = self.parse_thread)
-            except:pass
+            except:pass'''
 
         for node in nodes:
-            author = ''.join(node.xpath(xpaths.AUTHOR).extract())
+            author = ''.join(node.xpath(xpaths.AUTHOR).extract()) or 'Null'
             authorurl =  ''.join(node.xpath(xpaths.AUTHORURL).extract())
-            if authorurl == '':
-                author_url = authorurl
-            else:
+            if authorurl:
                 author_url = "https://www.blackhatworld.com/"  + authorurl
+	    if authorurl == '':
+		authorurl = 'Null'
+		author_url = authorurl
             post_url = "https://www.blackhatworld.com/" + ''.join(node.xpath(xpaths.POSTURL).extract())
-            postid = ''.join(node.xpath(xpaths.POSTID).extract())
+	    ord_in_thread = ''.join(sel.xpath('.//div[@class="publicControls"]//a[@title="Permalink"]/text()').extract()).replace('#','') or 'Null'
+            postid = ''.join(node.xpath(xpaths.POSTID).extract()) or 'Null'
             post_id =  re.findall('\d+',postid)
-            publishtimes = ''.join(node.xpath(xpaths.PUBLISHTIME).extract())
+            publishtimes = ''.join(node.xpath(xpaths.PUBLISHTIME).extract()) or 'Null'
             publish_epoch = utils.time_to_epoch(publishtimes, '%b %d, %Y')
+	    if publish_epoch:
+	        publish_time = int(publish_epoch)
+	        month_year = time.strftime("%m_%Y", time.localtime(publish_time/1000))
+	    else:
+		import pdb;pdb.set_trace()
+
             post_texts = '\n'.join(node.xpath(xpaths.POST_TEXT).extract())
             post_text = utils.clean_text(post_texts.replace(u'[email\xa0protected]', ''))
             mails = node.xpath('//a[@class="__cf_email__"]/@data-cfemail').extract()
@@ -123,32 +134,59 @@ class BlackHat(scrapy.Spider):
                 else:
                     links.append(Link)
 
-            all_links = str(links)
-            json_posts = {'domain': domain,
-                          'category': category,
-                          'sub_category': sub_category,
-                          'thread_title': thread_title,
-                          'post_title' : post_title,
-                          'thread_url': thread_url,
-                          'post_id': post_id,
-                          'post_url': post_url,
-                          'publish_time': publish_epoch,
-                          'fetch_time': fetch_epoch,
-                          'author': author,
-                          'author_url': author_url,
-                          'text': utils.clean_text(post_text),
-                          'links': all_links
-            }
-            json_posts.update({
-                'author_url': author_url,
-                'links': all_links
-            })
-	    query={"query":{"match":{"_id":hashlib.md5(str(post_url)).hexdigest()}}}
-            res = self.es.search(body=query)
-	    if res['hits']['hits'] == []:
-          	self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts)
+            all_links = ', '.join(links)
+	    if all_links == '':
+		all_links = 'Null'
+	    if Links == []:
+		Links = 'Null'
+		all_links = Links
+	    post = {
+		'cache_link':'',
+		'section':category,
+		'language':'english',
+		'require_login':'false',
+		'sub_section':sub_category,
+		'sub_section_url':sub_category_url,
+		'post_id':''.join(post_id),
+		'post_title':post_title,
+		'ord_in_thread':int(ord_in_thread),
+		'post_url':post_url,
+		'post_text':utils.clean_text(post_text).replace('\n', ''),
+		'thread_title':thread_title,
+		'thread_url':thread_url
+		}
+	    author_data = {
+		'name':author,
+		'url':author_url
+		}
+            json_posts = {
+			  'id':post_url,
+			  'hostname':'www.blackhatworld.com',
+			  'domain': domain,
+			  'sub_type':'openweb',
+			  'type':'forum',
+			  'author':json.dumps(author_data),
+			  'title':thread_title,
+			  'text':utils.clean_text(post_text).replace('\n', ''),
+			  'url':post_url,
+			  'original_url':post_url,
+			  'fetch_time':fetch_epoch,
+			  'publish_time':publish_epoch,
+			  'link_url':all_links,
+			  'post':post
+			}
+            
+	    #query={"query":{"match":{"_id":hashlib.md5(str(post_url)).hexdigest()}}}
+            #res = self.es.search(body=query)
+	    #if res['hits']['hits'] == []:
+            self.es.index(index="forum_posts_" + month_year, doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts)
+	    #else:
+		#data_doc = res['hits']['hits'][0]
+                #if (json_posts['links'] != data_doc['_source']['links']) or (json_posts['text'] != data_doc['_source']['text']):
+		    #self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts)
+
             meta = {'publish_epoch': publish_epoch, 'author_signature':utils.clean_text(author_signature)}
-            json_crawl = {}
+            #json_crawl = {}
             json_crawl = {
                     'post_id': post_id,
                     'auth_meta': json.dumps(meta),

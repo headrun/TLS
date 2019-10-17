@@ -1,6 +1,5 @@
 import MySQLdb
 import scrapy
-from scrapy.spider import Spider
 from scrapy.selector import Selector
 from scrapy.http import Request
 from scrapy import signals
@@ -17,7 +16,7 @@ import tls_utils as utils
 A_QUE = utils.generate_upsert_query_authors("hellbound")
 
 
-class Hellbound(Spider):
+class Hellbound(scrapy.Spider):
     name = "hellbound_authors"
 
     def __init__(self):
@@ -26,7 +25,7 @@ class Hellbound(Spider):
 	dispatcher.connect(self.close_conn, signals.spider_closed)
 
     def mysql_conn(self):
-        conn = MySQLdb.connect(db= "hellbound", host = "localhost", use_unicode=True,charset="utf8mb4")
+        conn = MySQLdb.connect(db= "hellbound", host = "localhost", user="tls_dev",passwd="hdrn!",use_unicode=True,charset="utf8mb4")
         cursor = conn.cursor()
         return conn,cursor
 
@@ -57,7 +56,6 @@ class Hellbound(Spider):
         publish_epoch = response.meta.get('publish_epoch','')
         author_name = ''.join(response.xpath('//title/text()').extract()).replace("'s Profile | Hellbound Hackers",'')
         json_val.update({
-                        'crawl_type':"keep up",
                         'reputation':' ',
                         'domain':"www.hellboundhackers.org",
                         'username':author_name,
@@ -106,7 +104,7 @@ class Hellbound(Spider):
         if contact_info == []:
             contact_info.append({"channel":" ", "user_id": " "})
         json_val.update({
-                    'contactinfo': str(contact_info),
+                    'contact_info': str(contact_info),
                     })
 	self.es.index(index="forum_author", doc_type='post', id=hashlib.md5(str(author_name)).hexdigest(), body=json_val)
 	if author_name or response.url == "https://www.hellboundhackers.org/user/.html":

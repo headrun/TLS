@@ -1,5 +1,4 @@
 import scrapy
-from scrapy.spider import Spider
 from scrapy.selector import Selector
 from scrapy.http import Request
 from scrapy import signals
@@ -12,12 +11,12 @@ import tls_utils as utils
 
 QUE = utils.generate_upsert_query_posts_crawl('hellbound')
 
-class Hellbound(Spider):
+class Hellbound(scrapy.Spider):
     name="hellbound_thread_crawl"
     start_urls = ["https://www.hellboundhackers.org/forum/index.php"]
 
     def __init__(self):
-        self.conn = MySQLdb.connect(db= "hellbound", host = "localhost", use_unicode=True,charset="utf8")
+        self.conn = MySQLdb.connect(db= "hellbound", host = "localhost",user="tls_dev",passwd="hdrn!", use_unicode=True,charset="utf8")
 	self.cursor = self.conn.cursor()
 	dispatcher.connect(self.mysql_conn_close, signals.spider_closed)
 

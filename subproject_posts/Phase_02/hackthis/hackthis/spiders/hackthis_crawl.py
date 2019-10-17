@@ -6,7 +6,6 @@ from scrapy import signals
 import MySQLdb
 import json
 import scrapy
-from scrapy.spider import Spider
 from scrapy.selector import Selector
 import time
 from scrapy.http import Request
@@ -26,7 +25,7 @@ class HackThis(scrapy.Spider):
 	dispatcher.connect(self.close_conn, signals.spider_closed)
 
     def mysql_conn(self):
-        conn = MySQLdb.connect(db="posts_hackthissite", host="localhost",user="root", passwd="", use_unicode=True, charset='utf8')	
+        conn = MySQLdb.connect(db="posts_hackthissite", host="localhost",user="tls_dev", passwd="hdrn!", use_unicode=True, charset='utf8')	
         cursor = conn.cursor()
 	return conn,cursor
 

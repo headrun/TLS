@@ -23,7 +23,7 @@ class nulled(scrapy.Spider):
     name = "nulled_thread_crawl"
 
     def __init__(self):
-        self.conn =  MySQLdb.connect(db= "nulled", host = "localhost", charset="utf8mb4")
+        self.conn =  MySQLdb.connect(db= "nulled", host = "localhost",user= "tls_dev",passwd="hdrn!", charset="utf8mb4")
         self.cursor = self.conn.cursor()
         dispatcher.connect(self.mysql_conn_close, signals.spider_closed)
 

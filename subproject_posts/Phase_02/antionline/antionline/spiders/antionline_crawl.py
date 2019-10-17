@@ -25,7 +25,7 @@ class formus(BaseSpider):
 	dispatcher.connect(self.close_conn, signals.spider_closed)
 
     def mysql_conn(self):
-	conn = MySQLdb.connect(host="localhost", user="root", passwd="", db="tls_phase_2", charset="utf8", use_unicode=True)
+	conn = MySQLdb.connect(host="localhost", user="tls_dev", passwd="hdrn!", db="tls_phase_2", charset="utf8", use_unicode=True)
 	cursor = conn.cursor()
 	return conn,cursor
 

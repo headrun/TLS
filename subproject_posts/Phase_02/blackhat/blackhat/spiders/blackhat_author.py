@@ -1,5 +1,4 @@
 import scrapy
-from scrapy.spider import Spider
 import sys
 from scrapy.selector import Selector
 from scrapy.http import Request
@@ -20,7 +19,6 @@ class BlackHat(scrapy.Spider):
    name="blackhat_author"
    handle_httpstatus_list = [404,403]
    def __init__(self):
-       import pdb;pdb.set_trace()
        self.es = Elasticsearch(['10.2.0.90:9342'])
        self.conn ,self.cursor = self.mysql_conn()
        select_query = 'select DISTINCT(links) from blackhat_crawl;'
@@ -31,7 +29,7 @@ class BlackHat(scrapy.Spider):
        dispatcher.connect(self.close_conn, signals.spider_closed)
 
    def mysql_conn(self):
-       conn = MySQLdb.connect(db="posts_blackhat",host="localhost",user="root",passwd="",use_unicode=True,charset="utf8")
+       conn = MySQLdb.connect(db="posts_blackhat",host="localhost",user="tls_dev",passwd="hdrn!" , use_unicode = True , charset = 'utf8')
        cursor = conn.cursor()
        return conn,cursor
 

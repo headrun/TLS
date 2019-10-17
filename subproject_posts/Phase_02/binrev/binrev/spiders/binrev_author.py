@@ -4,7 +4,6 @@ import hashlib
 import random
 from elasticsearch import Elasticsearch
 import scrapy
-from scrapy.spider import Spider
 from scrapy.selector import Selector
 from scrapy.http import Request
 from scrapy.http import FormRequest
@@ -25,7 +24,7 @@ class formus(scrapy.Spider):
 
     def __init__(self):
 	self.es = Elasticsearch(['10.2.0.90:9342'])
-        self.conn = MySQLdb.connect(db="binrev",host="localhost",user="root",passwd="",use_unicode=True,charset="utf8")
+        self.conn = MySQLdb.connect(db="binrev",host="localhost",user="tls_dev",passwd="hdrn!",use_unicode=True,charset="utf8")
         self.cursor = self.conn.cursor()
  
     def start_requests(self):
@@ -58,7 +57,7 @@ class formus(scrapy.Spider):
            self.cursor.execute(query,json_data)
 	
 
-        domain = "www.binrev.com"
+        domain = "binrev.com"
         post_count = ''.join(sel.xpath(TOTAL_POST_COUNT).extract()).replace('\t', '').replace('\n', '')
         fetchtime = int(datetime.datetime.now().strftime("%s")) * 1000
         groups = ''.join(response.xpath('//div[@class="ipsPos_left ipsPad cProfileHeader_name"]//span//text()').extract())
@@ -99,7 +98,6 @@ class formus(scrapy.Spider):
         json_authors = {}
         json_authors.update({'username' : username,
 			  'domain' : domain,
-                          'crawl_type' : "keepup",
 			  'auth_sign': '',
 			  'join_date' : join_date,
 			  'lastactive' : lastactive,
@@ -111,8 +109,7 @@ class formus(scrapy.Spider):
 			  'awards' : '',
 			  'rank' : rank,
 			  'activetimes' : activetimes,
-			  'contactinfo' : '',
-			  #'reference_url' : response.url
+			  'contact_info' : '',
             })
 
 	#self.cursor.execute(query_authors, json_authors)

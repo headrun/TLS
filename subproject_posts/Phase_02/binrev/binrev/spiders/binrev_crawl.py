@@ -25,7 +25,7 @@ class formus(BaseSpider):
     name = 'binrev_crawl'
     
     def __init__(self):
-        self.conn = MySQLdb.connect(host="localhost", user="root", passwd="", db="binrev", charset="utf8", use_unicode=True)
+        self.conn = MySQLdb.connect(host="localhost", user="tls_dev", passwd="hdrn!", db="binrev", charset="utf8", use_unicode=True)
         self.cursor = self.conn.cursor()
         dispatcher.connect(self.close_conn, signals.spider_closed)
 

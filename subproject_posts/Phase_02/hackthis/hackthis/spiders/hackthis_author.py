@@ -1,7 +1,7 @@
 from urllib import urlencode
 import cfscrape
 import scrapy
-from scrapy.spider import Spider
+#from scrapy.spider import Spider
 import sys
 from scrapy.selector import Selector
 from scrapy.http import Request
@@ -9,7 +9,6 @@ import datetime,csv
 import time
 import MySQLdb
 import json
-import utils
 import xpaths
 import re
 from scrapy.xlib.pydispatch import dispatcher
@@ -32,7 +31,7 @@ class Hackthis(scrapy.Spider):
        dispatcher.connect(self.close_conn, signals.spider_closed)
 
     def mysql_conn(self):       
-       conn = MySQLdb.connect(db="posts_hackthissite",host="localhost",user="root",passwd="",use_unicode=True,charset="utf8")
+       conn = MySQLdb.connect(db="posts_hackthissite",host="localhost",user="tls_dev",passwd="hdrn!",use_unicode=True,charset="utf8")
        cursor = conn.cursor()
        return conn,cursor
 
@@ -120,7 +119,6 @@ class Hackthis(scrapy.Spider):
 
 	json_data.update({'username': user_name,
                           'domain': 'www.hackthissite.org',
-                          'crawl_type': 'keep_up',
                           'auth_sign':  author_signature,
                           'join_date': join_date,
                           'lastactive': last_active,
@@ -132,7 +130,7 @@ class Hackthis(scrapy.Spider):
                           'awards': '',
                           'rank': rank,
                           'activetimes': (''.join(activetime)),
-                          'contactinfo': str(contact_info),
+                          'contact_info': str(contact_info),
         })
 
         upsert_query_authors = utils.generate_upsert_query_authors('posts_hackthissite')

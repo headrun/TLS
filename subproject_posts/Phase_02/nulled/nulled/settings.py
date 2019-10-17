@@ -52,9 +52,9 @@ COOKIES_ENABLED = True
 
 # Enable or disable downloader middlewares
 # See https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
-#DOWNLOADER_MIDDLEWARES = {
-#    'nulled.middlewares.NulledDownloaderMiddleware': 543,
-#}
+DOWNLOADER_MIDDLEWARES = {
+    'nulled.middlewares.NulledDownloaderMiddleware': 543,
+}
 
 # Enable or disable extensions
 # See https://doc.scrapy.org/en/latest/topics/extensions.html

@@ -1,5 +1,4 @@
 import scrapy
-from scrapy.spider import Spider
 from scrapy.selector import Selector
 from scrapy.http import Request
 import re
@@ -16,6 +15,7 @@ sys.path.append('/home/epictions/tls_scripts/tls_utils')
 import tls_utils as utils
 from elasticsearch import Elasticsearch
 import hashlib
+from pprint import pprint 
 
 def clean_spchar_in_text(self, text):
     '''
@@ -40,8 +40,8 @@ class WilderssecuritySpider(scrapy.Spider):
         self.query = utils.generate_upsert_query_posts('POSTS_WILDER')
         self.conn = MySQLdb.connect(db="POSTS_WILDER",
                                     host="localhost",
-                                    user="root",
-                                    passwd = "",
+                                    user="tls_dev",
+                                    passwd = "hdrn!",
                                     use_unicode=True,
                                     charset="utf8mb4")
         self.cursor = self.conn.cursor()
@@ -63,19 +63,23 @@ class WilderssecuritySpider(scrapy.Spider):
     def parse_meta(self, response):
         thread_url = response.url.split('/page')[0]
         json_posts = {}
-        domain = "www.wilderssecurity.com"
+        domain = "wilderssecurity.com"
         if "/page-" in response.url:
             crawl_type = "catchup"
         else:
             crawl_type = "keepup"
-        category = ''.join(set(response.xpath(CATEGORY).extract()))
-        subcategory = "[" + ''.join(set(response.xpath(SUBCATEGORY).extract())) + "]"
+        category = ''.join(set(response.xpath(CATEGORY).extract())) or 'Null'
+        subcategory = ''.join(set(response.xpath(SUBCATEGORY).extract())) or 'Null'
+	sub_category_url = response.xpath('//span[3]//a[@class="crumb"]/@href').extract_first() or 'Null'
+	if sub_category_url == '':
+	    sub_category_url = 'Null'
 
-        thread_title = ''.join(response.xpath(THREAD_TITLE).extract())
-        json_posts.update({'domain': domain,
-                            'thread_url': thread_url,
-                            'thread_title' : thread_title
-        })
+        thread_title = ''.join(response.xpath(THREAD_TITLE).extract()) or 'Null'
+        '''json_posts.update({ 'hostname':'www.wilderssecurity.com',
+		  	    'domain': domain,
+			    'sub_type':'openweb',
+			    'type':'forum',
+        })'''
         nodes = response.xpath(NODES)
         up_que = 'update wilder_status set crawl_status = 1 where post_url like %(url)s'
         if nodes:
@@ -84,7 +88,8 @@ class WilderssecuritySpider(scrapy.Spider):
 	    self.conn.commit()
         text = ""
         for node in nodes:
-            text = ''.join(node.xpath(TEXT).extract())
+	    ord_in_thread = ''.join(node.xpath('.//div[@class="publicControls"]//a/text()').extract()).replace('#', '')
+            text = ''.join(node.xpath(TEXT).extract()) or 'Null'
             text = clean_spchar_in_text(self,text)
             asidess = node.xpath('.//aside//div[@class="attribution type"]/text()')
             if asidess:
@@ -95,18 +100,29 @@ class WilderssecuritySpider(scrapy.Spider):
             text = text.replace("Click to expand...", "")
             text = clean_spchar_in_text(self,text)
             author_link = ''.join(node.xpath(AUTHOR_LINK).extract())
-            if "http" not in author_link: author_link = site_domain + author_link
-            author = ''.join(node.xpath(AUTHOR).extract())
-            publish_time = ''.join(node.xpath(PUBLISH_TIME).extract()) or ''.join(node.xpath('.//a/abbr[@class="DateTime"]/@data-datestring').extract())
+            if "http" not in author_link: 
+	        author_link = site_domain + author_link
+	    if author_link == '':
+		author_link = 'Null'
+            author = ''.join(node.xpath(AUTHOR).extract()) or 'Null'
+            publish_time = ''.join(node.xpath(PUBLISH_TIME).extract()) or ''.join(node.xpath('.//a/abbr[@class="DateTime"]/@data-datestring').extract()) or 'Null'
             try:
                 publishtime_ = datetime.datetime.strptime((publish_time), '%b %d, %Y at %I:%M %p')
             except:
                 publishtime_ = datetime.datetime.strptime((publish_time), '%b %d, %Y')
             publish_epoch = int(time.mktime(publishtime_.timetuple())*1000)
+	    if publish_epoch:
+	        month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+	    else:
+		import pdb;pdb.set_trace()
+
             fetchtime = (round(time.time()*1000))
             posturl = ''.join(node.xpath(POSTURL).extract())
-            if "http" not in posturl: posturl = site_domain+ posturl
-            post_id = ''.join(node.xpath('.//a[@title="Permalink"]/@data-href').extract())
+            if "http" not in posturl: 
+		posturl = site_domain+ posturl
+	    if posturl == '':
+		posturl = 'Null'
+            post_id = ''.join(node.xpath('.//a[@title="Permalink"]/@data-href').extract()) or 'Null'
             post_id = ''.join(re.findall('\d+',post_id))
             total_posts = ''.join(node.xpath('.//dl[@class="pairsJustified"]//dt[contains(text(), "Posts:")]//following-sibling::dd/a/text()').extract()) or ''.join(node.xpath('.//dl[@class="pairsJustified"]//dt[contains(text(), "Posts:")]//following-sibling::dd//text()').extract())
             join_date = ''.join(node.xpath(JOINDATE).extract())
@@ -116,36 +132,69 @@ class WilderssecuritySpider(scrapy.Spider):
             except:
                 join_date = ""
 
-            json_posts.update({
-                                'category': category,
-                                'sub_category': subcategory,
-                                'post_title': '',
-                                'post_id': post_id,
-                                'post_url': posturl,
-                                'publish_time': publish_epoch,
-                                'fetch_time': fetchtime,
-                                'author': author,
-                                'text': text,
-            })
-
+	    post = {
+		'cache_link':'',
+		'section':category,
+		'language':'english',
+		'require_login':'false',
+		'sub_section':subcategory,
+		'sub_section_url':sub_category_url,
+		'post_id':post_id,
+		'post_title':'Null',
+		'ord_in_thread':ord_in_thread,
+		'post_url':posturl,
+		'post_text':text.replace('\n',''),
+		'thread_title':thread_title,
+		'thread_url':thread_url
+		}
             Link = []
             groups = ''.join(node.xpath(GROUPS).extract())
             if not groups: groups = ""
             links = node.xpath('.//blockquote[@class="messageText SelectQuoteContainer ugc baseHtml"]//img[contains(@class, "bbCodeImage")]/@src | .//blockquote[@class="messageText SelectQuoteContainer ugc baseHtml"]//a[contains(@class, "Link")]/@href | .//ul[@class="attachmentList SquareThumbs"]//div[@class="thumbnail"]//img/@src | .//blockquote[@class="messageText SelectQuoteContainer ugc baseHtml"]//a[@class="username"]/@href').extract()
 
             for link in links:
-                if "http" not in link: link = site_domain + link
-                Link.append(link)
-            Links = str(Link)
+                if "http" not in link: 
+		    link = site_domain + link
+                    Link.append(link)
+		elif link:
+		    Link.append(link)
+
+            Links = ', '.join(Link)
+	    if Links == '':
+	        Links = 'Null'
+	    if links == []:
+	        links = 'Null'
+		Links = links
+	    author_data = {
+		'name':author,
+		'url':author_link
+		}
             json_posts.update({
-                                'author_url': author_link,
-                                'links': Links
+				'id':posturl,
+				'hostname':'www.wilderssecurity.com',
+                            	'domain': domain,
+                            	'sub_type':'openweb',
+                            	'type':'forum',
+				'author':json.dumps(author_data),
+				'title':thread_title,
+				'text':text.replace('\n',''),
+				'url':posturl,
+				'original_url':posturl,
+				'fetch_time':fetchtime,
+				'publish_time':publish_epoch,
+				'link_url':Links,
+				'post':post
             })
             #self.cursor.execute(self.query, json_posts)
-	    query={"query":{"match":{"_id":hashlib.md5(str(posturl)).hexdigest()}}}
-            res = self.es.search(body=query)
-            if res['hits']['hits'] == []:
-                self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(posturl)).hexdigest(), body=json_posts)
+	    #query={"query":{"match":{"_id":hashlib.md5(str(posturl)).hexdigest()}}}
+            #res = self.es.search(body=query)
+            #if res['hits']['hits'] == []:
+            self.es.index(index="forum_posts_"+month_year, doc_type='post', id=hashlib.md5(str(posturl)).hexdigest(), body=json_posts, request_timeout=30)
+	    '''else:
+		data_doc = res['hits']['hits'][0]
+                if (json_posts['links'] != data_doc['_source']['links']) or (json_posts['text'] != data_doc['_source']['text']):
+		    self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(posturl)).hexdigest(), body=json_posts)'''
+
             if author_link:
                 meta = {'publish_epoch': publish_epoch, 'thread_title': thread_title, 'join_date':join_date, 'total_posts':total_posts, 'author':author, 'groups': groups}
                 json_crawl = {

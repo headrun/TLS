@@ -1,5 +1,5 @@
 import scrapy
-from scrapy.spider import Spider
+#from scrapy.spider import Spider
 from scrapy.selector import Selector
 from scrapy.http import Request
 import datetime
@@ -31,7 +31,7 @@ class formus(scrapy.Spider):
         self.data = self.cursor.fetchall()
 
     def mysql_conn(self):
-        conn = MySQLdb.connect(db="tls_phase_2",host="localhost",user="root",passwd="",use_unicode=True,charset="utf8")
+        conn = MySQLdb.connect(db="tls_phase_2",host="localhost",user="tls_dev",passwd="hdrn!",use_unicode=True,charset="utf8")
         cursor = conn.cursor()
 	return conn,cursor
 	
@@ -89,7 +89,6 @@ class formus(scrapy.Spider):
         json_authors.update({
 			  'username' : username,
                           'domain' : domain,
-                          'crawl_type' : "keepup",
                           'auth_sign': author_signature,
                           'join_date' : join_date,
                           'lastactive' : lastactive,
@@ -103,7 +102,7 @@ class formus(scrapy.Spider):
                           'activetimes' : ''.join(activetimes),
                           'contact_info' : '',
             })
-	self.es.index(index="forum_author", doc_type='post', id=hashlib.md5(str(username)).hexdigest(), body=json_authors)
+	self.es.index(index="forum_author", doc_type='author', id=hashlib.md5(str(username)).hexdigest(), body=json_authors)
 
 
 

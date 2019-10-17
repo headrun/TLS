@@ -1,5 +1,4 @@
 import scrapy
-from scrapy.spider import Spider
 from scrapy.selector import Selector
 from scrapy.http import Request
 import re
@@ -18,14 +17,14 @@ import tls_utils as utils
 class WilderssecuritySpider(scrapy.Spider):
     name = 'wilderssecurity_crawl'
     start_urls = ['http://wilderssecurity.com/']
-    handle_httpstatus_list=[403]
+    #handle_httpstatus_list=[403]
     
     def __init__(self):
         self.query = utils.generate_upsert_query_posts_crawl('POSTS_WILDER')
         self.conn = MySQLdb.connect(db="POSTS_WILDER",
                                     host="localhost",
-                                    user="root",
-                                    passwd = "",
+                                    user="tls_dev",
+                                    passwd = "hdrn!",
                                     use_unicode=True,
                                     charset="utf8mb4")
         self.cursor = self.conn.cursor()

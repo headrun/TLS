@@ -57,6 +57,8 @@ class NulledSpiderMiddleware(object):
     def spider_opened(self, spider):
         spider.logger.info('Spider opened: %s' % spider.name)
 
+import random
+
 
 class NulledDownloaderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,
@@ -71,6 +73,13 @@ class NulledDownloaderMiddleware(object):
         return s
 
     def process_request(self, request, spider):
+        username = 'lum-customer-headrunp3-zone-tls'#'lum-customer-headrunp3-zone-tls_mobil'
+        password = 'f3h6o6ru8beq'#'2m53ycary4yb'#'YOURPASS'
+        port = 22225
+        session_id = random.choice(range(1,31))
+        super_proxy_url = 'https://%s-country-us-session-%s:%s@zproxy.lum-superproxy.io:%d' % (username, session_id, password, port)
+        request.meta['proxy'] = super_proxy_url
+
         # Called for each request that goes through the downloader
         # middleware.
 

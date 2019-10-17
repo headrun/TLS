@@ -19,7 +19,7 @@ class BlackHat(scrapy.Spider):
     start_urls = ["https://www.blackhatworld.com/forums/"]
 
     def __init__(self):
-        self.conn = MySQLdb.connect(db="posts_blackhat",host="localhost",user="root",passwd="1216" , use_unicode = True , charset = 'utf8')
+        self.conn = MySQLdb.connect(db="posts_blackhat",host="localhost",user="tls_dev",passwd="hdrn!" , use_unicode = True , charset = 'utf8')
         self.cursor = self.conn.cursor()
 	self.query_status = utils.generate_upsert_query_posts_crawl('posts_blackhat')
 	dispatcher.connect(self.close_conn, signals.spider_closed)

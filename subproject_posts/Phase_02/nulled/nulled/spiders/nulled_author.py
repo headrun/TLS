@@ -135,7 +135,6 @@ class nulled(scrapy.Spider):
         json_val.update({
                'username':username,
                'domain': "www.nulled.to",
-               'crawl_type':"keep up",
                'auth_sign': utils.clean_text(author_signature),
                'join_date': join_date,
                'lastactive': lastactive,
@@ -146,7 +145,7 @@ class nulled(scrapy.Spider):
                'credits': credits,
                'awards': awards,
                'rank': rank,
-               'activetimeis': activetime,
-               'contactinfo': "",
+               'activetimes': activetime,
+               'contact_info': "",
                })
 	self.es.index(index="forum_author", doc_type='post', id=hashlib.md5(username).hexdigest(), body=json_val)

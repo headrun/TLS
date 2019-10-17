@@ -8,7 +8,6 @@ import datetime, csv
 import time
 import MySQLdb
 import json
-import utils
 from scrapy import signals
 from scrapy.xlib.pydispatch import dispatcher
 sys.path.append('/home/epictions/tls_scripts/tls_utils')
@@ -25,8 +24,8 @@ class WilderAuthors(scrapy.Spider):
 	self.es = Elasticsearch(['10.2.0.90:9342'])
         self.conn = MySQLdb.connect(db="POSTS_WILDER",
                                     host="localhost",
-                                    user="root",
-                                    passwd = "",
+                                    user="tls_dev",
+                                    passwd = "hdrn!",
                                     use_unicode=True,
                                     charset="utf8")
 	self.cursor=self.conn.cursor()
@@ -92,7 +91,6 @@ class WilderAuthors(scrapy.Spider):
 
         json_data.update({'username': user_name,
                          'domain': domain,
-                         'crawl_type': 'keep_up',
                          'auth_sign': "",
                          'join_date': join_date,
                          'lastactive': last_active,
@@ -104,8 +102,7 @@ class WilderAuthors(scrapy.Spider):
                          'awards': '',
                          'rank': '',
                          'activetimes': (''.join(active_time)),
-                         'contactinfo': '',
-                         #'reference_url': response.url
+                         'contact_info': '',
         })
         upsert_query_authors = utils.generate_upsert_query_authors('POSTS_WILDER')
         #self.cursor.execute(upsert_query_authors, json_data)

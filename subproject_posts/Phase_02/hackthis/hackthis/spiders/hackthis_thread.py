@@ -1,5 +1,4 @@
 import scrapy
-from scrapy.spider import Spider
 from scrapy.selector import Selector
 import time
 from scrapy.http import Request
@@ -15,6 +14,7 @@ sys.path.append('/home/epictions/tls_scripts/tls_utils')
 import tls_utils as utils
 from elasticsearch import Elasticsearch
 import hashlib
+from pprint import pprint 
 
 class HackThis(scrapy.Spider):
     name = "hackthis_thread"
@@ -28,7 +28,7 @@ class HackThis(scrapy.Spider):
 	dispatcher.connect(self.close_conn, signals.spider_closed)
 
     def mysql_conn(self):
-        conn = MySQLdb.connect(db="posts_hackthissite",host="localhost",user="root",passwd="" , use_unicode = True , charset = 'utf8')
+        conn = MySQLdb.connect(db="posts_hackthissite",host="localhost",user="tls_dev",passwd="hdrn!" , use_unicode = True , charset = 'utf8')
         cursor = conn.cursor()
 	return conn,cursor	
 
@@ -46,11 +46,6 @@ class HackThis(scrapy.Spider):
 
     def parse_thread(self,response):
         sel = Selector(response)
-        if '&start=' not in response.url:
-            crawl_type = 'keepup'
-        else:
-            crawl_type = 'catchup'
-
         if '&start=' in response.url:
             reference_url = ''.join(re.sub('&sid=(.*)&start','&start',response.url))
         else:
@@ -62,11 +57,12 @@ class HackThis(scrapy.Spider):
         else:
             thread_url = reference_url
 
-        thread_title = ''.join(sel.xpath(xpaths.THREADTITLE).extract())
-        category = ','.join(sel.xpath(xpaths.CATEGORY).extract()).split(',')[1]
+        thread_title = ''.join(sel.xpath(xpaths.THREADTITLE).extract()) or 'Null'
+        category = ','.join(sel.xpath(xpaths.CATEGORY).extract()).split(',')[1] or 'Null'
         try:
-            sub_category = '["' + ','.join(sel.xpath(xpaths.SUBCATEGORY).extract()).split(',')[2] + '"]'
+            sub_category = ','.join(sel.xpath(xpaths.SUBCATEGORY).extract()).split(',')[2] or 'Null'
         except:pass
+	sub_category_url = sel.xpath('//li[@class="icon-home"]//a/@href').extract()[1].replace('./', 'https://www.hackthissite.org/forums/') or 'Null'
         nodes = sel.xpath(xpaths.NODES)
         if nodes:
             query = 'update hackthis_status set crawl_status = 1 where post_url = %(url)s'
@@ -78,26 +74,38 @@ class HackThis(scrapy.Spider):
             json_data={'url':response.url}
             self.cursor.execute(query,json_data)
             self.conn.commit()
-
+	x = 0
         for node in nodes:
-            post_title = ''.join(node.xpath(xpaths.POSTTITLE).extract())
-            author = ''.join(node.xpath(xpaths.AUTHOR).extract())
+	    x = x+1
+            post_title = ''.join(node.xpath(xpaths.POSTTITLE).extract()) or 'Null'
+            author = ''.join(node.xpath(xpaths.AUTHOR).extract()) or 'Null'
             authorurl = ''.join(node.xpath(xpaths.AUTHOR_URL).extract()).replace('./','')
             if 'http:' not  in authorurl:
                 authorurls = response.urljoin(authorurl)
                 author_url = re.sub('&sid=(.*)','',authorurls)
             else:
-                author_url = ''
-            post_id = ''.join(node.xpath(xpaths.POSTID).extract()).replace('#p','')
+                author_url = 'Null'
+	    if authorurl == '':
+		authorurl = 'Null'
+		author_url = authorurl
+            post_id = ''.join(node.xpath(xpaths.POSTID).extract()).replace('#p','') or 'Null'
             posturl = ''.join(node.xpath(xpaths.POSTURL).extract())
             if '#p' in posturl:
                 post_url = reference_url + posturl
+	    if posturl == '':
+	        posturl = 'Null'
+		post_url = posturl
             publishtimes = node.xpath(xpaths.PUBLISHTIMES).extract()
             publishtime = re.findall('\w+ \w+ \d+, \d+ \d+:\d+ \wm',publishtimes[0])
             publish_time = ''.join(publishtime).strip()
             publish_epoch = utils.time_to_epoch(publish_time, '%a %b %d, %Y %H:%M %p')
+	    if publish_epoch:
+	        month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+	    else:
+		import pdb;pdb.set_trace()
+
             fetch_epoch = utils.fetch_time()
-            post_text = '\n'.join(node.xpath(xpaths.POST_TEXT).extract())
+            post_text = '\n'.join(node.xpath(xpaths.POST_TEXT).extract()) or 'Null'
             if 'wrote:' in post_text:
                 post_text = post_text.replace('wrote:','wrote: Quote ')
             if 'uncited' in post_text:
@@ -117,27 +125,57 @@ class HackThis(scrapy.Spider):
                     link.append(Link)
 		
 	
-            all_links = str(link).replace('https://www.hackthissite.org/forums/#','').replace('./','/').replace('forums//','forums/')
+            all_links = ', '.join(link).replace('https://www.hackthissite.org/forums/#','').replace('./','/').replace('forums//','forums/')
+	    if all_links == '':
+		all_links = 'Null'
+	    if links == []:
+	        links = 'Null'
+		all_links = links
+	    post = {
+		'cache_link':'',
+		'section':category,
+		'language':'english',
+		'require_login':'false',
+		'sub_section':sub_category,
+		'sub_section_url':sub_category_url,
+		'post_id':post_id,
+		'post_title':post_title,
+		'ord_in_thread':x,
+		'post_url':post_url,
+		'post_text':utils.clean_text(post_text).replace('\n', ''),
+		'thread_title':thread_title,
+		'thread_url':thread_url
+		}
+	    author_data = {
+		'name':author,
+		'url':author_url
+		}
             query_posts = utils.generate_upsert_query_posts('posts_hackthissite')
-	    json_posts = {'domain': "www.hackthissite.org",
-                          'category': category,
-                          'sub_category': sub_category,
-                          'thread_title': thread_title,
-                          'post_title' : post_title,
-                          'thread_url': thread_url,
-                          'post_id': post_id,
-                          'post_url': post_url,
-                          'publish_time': publish_epoch,
-                          'fetch_time': fetch_epoch,
-                          'author': author,
-                          'author_url': author_url,
-                          'text': utils.clean_text(post_text),
-                          'links': all_links,
+	    json_posts = {
+			  'id':post_url,
+			  'hostname':"www.hackthissite.org",
+			  'domain': "hackthissite.org",
+			  'sub_type':'openweb',
+			  'type':'forum',
+			  'author':json.dumps(author_data),
+			  'title':thread_title,
+			  'text':utils.clean_text(post_text).replace('\n', ''),
+			  'url':post_url,
+			  'original_url':post_url,
+			  'fetch_time':fetch_epoch,
+			  'publish_time':publish_epoch,
+			  'link_url':all_links,
+			  'post':post
             }
-	    query={"query":{"match":{"_id":hashlib.md5(str(post_url)).hexdigest()}}}
-            res = self.es.search(body=query)
-            if res['hits']['hits'] == []:
-	        self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts)
+	    #query={"query":{"match":{"_id":hashlib.md5(str(post_url)).hexdigest()}}}
+            #res = self.es.search(body=query)
+            #if res['hits']['hits'] == []:
+	    self.es.index(index="forum_posts_" + month_year, doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts)
+	    #else:
+		#data_doc = res['hits']['hits'][0]
+                #if (json_posts['links'] != data_doc['_source']['links']) or (json_posts['text'] != data_doc['_source']['text']):
+		    #self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts)
+
             if author_url:
                 meta = {'publish_epoch': publish_epoch}
                 json_crawl = {

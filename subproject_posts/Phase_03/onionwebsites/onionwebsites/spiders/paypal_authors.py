@@ -1,24 +1,23 @@
-from scrapy.http import Request
-from scrapy.selector import Selector
 import scrapy
-import MySQLdb
+from scrapy import Spider
+from scrapy.selector import Selector
+from scrapy.http import Request
 import datetime
-import os
 import requests
-import sys
-from onionwebsites import utils 
 import json
+import MySQLdb
 import time
+from scrapy import signals
+from scrapy.xlib.pydispatch import dispatcher
+import re
 from urllib import urlencode
 from datetime import date, timedelta
 from elasticsearch import Elasticsearch
 import hashlib
 
-
 class Paypal(scrapy.Spider):
     name = "paypal_authors"
     es = Elasticsearch(['10.2.0.90:9342'])
-
 
     def __init__(self):
          self.conn = MySQLdb.connect(host="localhost", user="tls_dev", passwd="hdrn!", db="posts", charset="utf8", use_unicode=True)

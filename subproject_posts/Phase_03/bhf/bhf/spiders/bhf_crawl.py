@@ -1,27 +1,35 @@
 import scrapy
-from scrapy.spider import Spider
 from scrapy.selector import Selector
 from scrapy.http import Request
 import MySQLdb
-import  utils
+import sys
+sys.path.append('/home/epictions/tls_scripts/tls_utils')
+import  tls_utils as utils
+from scrapy.xlib.pydispatch import dispatcher
+from scrapy import signals
 
-query_status = utils.generate_upsert_query_posts_crawl('tls')
+query_status = utils.generate_upsert_query_posts_crawl('bhf')
 
-class TheGub(Spider):
+class TheGub(scrapy.Spider):
     name="bhf_crawl"
     start_urls = ["https://bhf.io/"]
 
-    def __init__(self,*args,**kwargs):
-        self.conn = MySQLdb.connect(db= "tls", host = "localhost", user="root", passwd = "123", use_unicode=True,charset="utf8mb4")
+    def __init__(self):
+        self.conn = MySQLdb.connect(db= "posts", host = "localhost", user="tls_dev", passwd = "hdrn!", use_unicode=True,charset="utf8mb4")
         self.cursor=self.conn.cursor()
+        dispatcher.connect(self.close_conn, signals.spider_closed)
+
+    def close_conn(self, spider):
+        self.conn.commit()
+        self.conn.close()
 
     def parse(self,response):
         sel = Selector(response)
+        import pdb;pdb.set_trace()
         main_urls = sel.xpath('//h3[@class="node-title"]/a/@href').extract()
         for url in main_urls:
-            url = "https://bhf.io" + url 
+            url = "https://bhf.io" + url
             yield Request(url,callback=self.parse_next)
-
     def parse_next(self,response):
         sel = Selector(response)
         yield Request(response.url,callback=self.parse)
@@ -34,10 +42,10 @@ class TheGub(Spider):
                           'crawl_status':0,
                           'reference_url':response.url
             }
-            print post_url
             self.cursor.execute(query_status, json_posts)
-        navigations = response.xpath('//a[@class="pageNav-jump pageNav-jump--next"]//@href').extract()
-        for navigation in set(navigations):
-            navigation = "https://bhf.io" + navigation
-            yield Request(navigation,callback=self.parse_next)
+            self.conn.commit()
+        navigations = ''.join(set(response.xpath('//a[@class="pageNav-jump pageNav-jump--next"]//@href').extract()))
+        if navigations:
+            navigations = "https://bhf.io" + navigations
+            yield Request(navigations,callback=self.parse_next)
 

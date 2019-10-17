@@ -6,6 +6,7 @@ import re
 import time
 from pprint import pprint
 from elasticsearch import Elasticsearch
+from onionwebsites.utils import *
 import hashlib
 es = Elasticsearch(['10.2.0.90:9342'])
 
@@ -41,73 +42,105 @@ class M6om(scrapy.Spider):
 
 
     def parse_meta(self,response):
-        thread_title = response.xpath('//p[@style="font-size: 0.7em; margin-top: -30px; margin-bottom: 5px;"]/preceding-sibling::h3//text()').extract()[0]
+	ord_in_thread = 0
+	ord_in_thread = ord_in_thread+1
+        thread_title = response.xpath('//p[@style="font-size: 0.7em; margin-top: -30px; margin-bottom: 5px;"]/preceding-sibling::h3//text()').extract()[0] or 'Null'
         try:
             thread_title = thread_title
         except:
             pass
-        post_title = response.xpath('//p[@style="font-size: 0.7em; margin-top: -30px; margin-bottom: 5px;"]/preceding-sibling::h3//text()').extract()[-1]
-        post_id = re.sub('(.*)md5=','',response.request.url)
+        post_title = response.xpath('//p[@style="font-size: 0.7em; margin-top: -30px; margin-bottom: 5px;"]/preceding-sibling::h3//text()').extract()[-1] or 'Null'
+        post_id = re.sub('(.*)php?','',response.request.url).replace('?', '').replace('md5=','')
         post_url = response.request.url
         auth = ''.join(response.xpath('//p[@style="font-size: 0.7em; margin-top: -30px; margin-bottom: 5px;"]/text()').extract())
         date_ = re.sub('\w+, ','',auth)
         author = re.sub(', \w+ \d+, \d+ - \d+:\d+ \w\w UTC','',auth).strip()
+	if author == '':
+	    author = 'Null'
         '''if date_:
             publish_epoch = time_to_epoch(date_,'%b %Y - %I:%M %p UTC')*1000
         else:
             publish_epoch = 0'''
-        publish_epoch = time_to_epoch(date_,'%B %Y - %I:%M %p UTC')*1000
+        publish_epoch = time_to_epoch(date_,'%B %Y - %I:%M %p UTC')
         if publish_epoch ==False:
             import pdb;pdb.set_trace()
-        text = ''.join(response.xpath('//textarea[@cols="110"]/text()').extract())
+	if publish_epoch:
+	    month_year = get_index(publish_epoch)
+	else:
+	    import pdb;pdb.set_trace()
+
+        text = ''.join(response.xpath('//textarea[@cols="110"]/text()').extract()).replace('\n', '').strip() or 'Null'
         #links = str(re.findall("(?P<url>https?://[^\s]+)", text)) #re.findall('https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+', text))
-	links = ', '.join(re.findall("(?P<url>https?://[^\s]+)", text))
+	all_links = ', '.join(re.findall("(?P<url>https?://[^\s]+)", text))
+	if all_links == '':
+	    all_links = 'Null'
         commants = []
         c_nodes = response.xpath('//textarea[(@cols="80") and not(contains(@maxlength,"2048"))]')
         for i ,node in enumerate(c_nodes):
             try:
-                commant_data = response.xpath('//textarea[@cols="80"]/preceding-sibling::span[not(contains(@style,"float: right;"))]//text()').extract()[i]
-                commant_text = ''.join(response.xpath('//textarea[(@cols="80") and not(contains(@maxlength,"2048"))]')[i].xpath('.//text()').extract())
-                commant_links = re.findall("(?P<url>https?://[^\s]+)", commant_text)
+                commant_data = response.xpath('//textarea[@cols="80"]/preceding-sibling::span[not(contains(@style,"float: right;"))]//text()').extract()[i] or 'Null'
+                commant_text = ''.join(response.xpath('//textarea[(@cols="80") and not(contains(@maxlength,"2048"))]')[i].xpath('.//text()').extract()) or 'Null'
+                commant_link = re.findall("(?P<url>https?://[^\s]+)", commant_text)
+		commant_links = ', '.join(commant_link)
+		if commant_links == '':
+		    commant_links = 'Null'
+		if commant_link == []:
+		    commant_links = 'Null'
                 #re.findall('https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+', commant_text)
                 commant_author = re.sub(', \w+ \d+, \d+ - \d+:\d+ \w\w UTC','',commant_data).strip()
+	  	if commant_author == '':
+		    commant_author = 'Null'
                 commant_date = re.sub('\w+, ','',commant_data)
                 commant_date = time_to_epoch(commant_date.split(),'%b %Y - %I:%M %p UTC')*1000
                 commant_doc = {
                     'comment_author': commant_author,
-                    'comment_text':clean_text(commant_text),
+                    'comment_text':clean_text(commant_text).replace('\n', ''),
                     'comment_date':commant_date,
-                    'comment_links': ', '.join(commant_links)
+                    'comment_links': commant_links
                     }
                 commants.append(commant_doc)
             except:
                 pass
 
-
+	author_data = {
+		'name':author,
+		'url':'Null'
+		}
+	post = {
+		'cache_link':'',
+		'section':'Null',
+		'language':'english',
+		'require_login':'false',
+		'sub_section':'Null',
+		'sub_section_url':'Null',
+		'post_id':post_id,
+		'post_title':post_title,
+		'ord_in_thread':ord_in_thread,
+		'post_url':post_url,
+		'post_text':clean_text(text),
+		'thread_title':thread_title,
+		'thread_url':post_url,
+		}
         doc = {
+		'record_id':re.sub(r"\/$", "", post_url.replace(r"https", "http").replace(r"www.", "")),
+		'hostname':'4m6omb3gmrmnwzxi.onion',
                 'domain': '4m6omb3gmrmnwzxi.onion',
-                'thread_url': '',
-                'thread_title': thread_title,
-                'category': '',
-                'sub_category': '',
-                'post_title': post_title,
-                'post_id': post_id,
-                'post_url': post_url,
-                'publish_time': publish_epoch,
-                'fetch_time': round((time.time()- time.timezone)*1000),
-                'author': author,
-                'author_url':'',
-                'text': clean_text(text),
-                'links': links,
-                'comment': str(commants)
-            }
-	sk = hashlib.md5(post_url).hexdigest()
-	query={"query":{"match":{"_id":sk}}}
-        res = es.search(body=query)
-        if res['hits']['hits'] == []:
-            es.index(index="forum_posts", doc_type='post', id=sk, body=doc)
-	else:
-	    data_doc = res['hits']['hits'][0]
-            if (doc['links'] != data_doc['_source']['links']) or (doc['text'] != data_doc['_source']['text']):
-		es.index(index="forum_posts", doc_type='post', id=sk, body=doc)
+		'sub_type':'darkweb',
+		'type':'forum',
+		'author':json.dumps(author_data),
+		'title':thread_title,
+		'text':clean_text(text),
+		'url':post_url,
+		'original_url':post_url,
+	 	'fetch_time':round((time.time()- time.timezone)*1000),
+		'publish_time':publish_epoch,
+		'link_url':all_links,
+		'post':post,
+		'comment':json.dumps(commants)
+		}
+	sk = md5_val(post_url)
+	#query={"query":{"match":{"_id":sk}}}
+        #res = es.search(body=query)
+        #if res['hits']['hits'] == []:
+        es.index(index=month_year, doc_type='post', id=sk, body=doc, request_timeout=30)
 

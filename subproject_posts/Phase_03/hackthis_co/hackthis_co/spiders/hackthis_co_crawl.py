@@ -1,12 +1,5 @@
-#import xpaths
-import utils
-import unicodedata
-import re
-from scrapy.xlib.pydispatch import dispatcher
-from scrapy import signals
-import MySQLdb
-import json
 import scrapy
+from scrapy import Spider
 from scrapy.selector import Selector
 import time
 from scrapy.http import Request
@@ -14,6 +7,16 @@ import datetime
 import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
+sys.path.append('/home/epictions/tls_scripts/tls_utils')
+import tls_utils as utils
+from elasticsearch import Elasticsearch
+import hashlib
+import json
+import MySQLdb
+from scrapy import signals
+from scrapy.xlib.pydispatch import dispatcher
+import re
+import unicodedata
 
 
 class HackThisCo(scrapy.Spider):
@@ -22,7 +25,7 @@ class HackThisCo(scrapy.Spider):
 
     def __init__(self, *args, **kwargs):
         self.conn = MySQLdb.connect(db="posts_hackthis_co", host="localhost",
-                                    user="root", passwd="1216", use_unicode=True, charset='utf8')
+                                    user="tls_dev", passwd="hdrn!", use_unicode=True, charset='utf8')
         self.crawl_query = utils.generate_upsert_query_posts_crawl(
             'posts_hackthis_co')
         self.cursor = self.conn.cursor()

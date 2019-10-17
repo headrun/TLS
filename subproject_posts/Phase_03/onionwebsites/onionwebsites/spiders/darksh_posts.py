@@ -87,6 +87,9 @@ class Dark(Spider):
         post_url = response.request.url
         post_id = post_url.split('/')[-2]
         title = ''.join(response.xpath('//div[@class="fm-fbox"]//h3/text()').extract())
+	time_epcoh = int(time.time())
+	if time_epoch:
+	    month_year = time.strftime("%m_%Y", time.localtime(time_epoch))
         product_info = {}
         ships_from = ''.join(response.xpath('//div[@class="ym-g66 ym-gl product-infos"]//div[@class="ym-cbox"]//td[contains(text(),"Ships From:")]//following-sibling::td/text()').extract())
         if ships_from:
@@ -103,10 +106,13 @@ class Dark(Spider):
         text = ''.join(response.xpath('//div[@class="ym-gbox"]//h4[contains(text(),"Product description")]//following-sibling::p//text()').extract()).strip().encode('ascii', 'ignore')
         pgp_key = ''.join(response.xpath('//div[@class="ym-form"]//h4[contains(text(),"PGP Key")]//following-sibling::p//text()').extract()).strip()
         query='insert into dark_authors_crawl(post_id, links, crawl_status) values(%s,%s,%s)'
-        import pdb;pdb.set_trace()
         values=(post_id, author_url, crawl_status)
         self.cursor.execute(query,values)
         self.conn.commit
+	author_data = {
+		'name':author,
+		'url':author_url
+		}
         json_posts = {
                 'domain':'darksh4d35kjp7fl.onion',
                 'category':category,
@@ -122,12 +128,12 @@ class Dark(Spider):
                 'pgp_key':pgp_key
                 }
         sk = md5_val(post_url)
-	query={"query":{"match":{"_id":sk}}}
-        res = es.search(body=query)
-        if res['hits']['hits'] == []:
-	    es.index(index="forum_posts", doc_type='post', id=sk, body=json_posts)
+	#query={"query":{"match":{"_id":sk}}}
+        #res = es.search(body=query)
+        #if res['hits']['hits'] == []:
+	es.index(index="forum_posts_"+month_year, doc_type='post', id=sk, body=json_posts)
         #doc_to_es(id=sk,body=json_posts,doc_type='post')
-	else:
+	'''else:
 	    data_doc = res['hits']['hits'][0]
 	    if json_posts['text'] != data_doc['_source']['text']:
-		es.index(index="forum_posts", doc_type='post', id=sk, body=json_posts)
+		es.index(index="forum_posts", doc_type='post', id=sk, body=json_posts)'''

@@ -155,35 +155,49 @@ class Torum(Spider):
                 yield Request(thread,callback = self.meta_page)
 
     def meta_page(self,response):
-        thread_title = ''.join(response.xpath('//div[@class="page-body"]//h2[@class="topic-title"]//a/text()').extract())
+        thread_title = ''.join(response.xpath('//div[@class="page-body"]//h2[@class="topic-title"]//a/text()').extract()) or 'Null'
         thread_url = response.url
-        category = response.xpath('//ul[@role="menubar"]//span[@itemprop="title"]/text()').extract()[1]
-        sub_category = response.xpath('//ul[@role="menubar"]//span[@itemprop="title"]/text()').extract()[2]
+        category = response.xpath('//ul[@role="menubar"]//span[@itemprop="title"]/text()').extract()[1] or 'Null'
+        sub_category = response.xpath('//ul[@role="menubar"]//span[@itemprop="title"]/text()').extract()[2] or 'Null'
+	sub_categoryurl = response.xpath('//ul[@role="menubar"]//span[@class="crumb"]//a/@href').extract()[2].replace('./', '/')
+	if sub_categoryurl:
+	    sub_category_url = 'http://torum6uvof666pzw.onion' + sub_categoryurl
+	if  sub_categoryurl == '':
+	    sub_category_url = 'Null'
         nodes = response.xpath('//div[contains(@class,"post has-profile bg1")] | //div[contains(@class,"post has-profile bg2")]')
         npage = response.xpath('//h2[@class="forum-title"]/..//div[@class="action-bar bar-top"]/div[@class="pagination"]//li[@class="active"]//following-sibling::li//@href').extract_first()
         if npage:
             npage = npage.replace('./','http://torum6uvof666pzw.onion/')
             yield Request(npage, callback = self.meta_page)
+	ord_in_thread =0
         for node in nodes:
-
-            author=  ''.join(node.xpath('.//div[@class="postbody"]//strong//a//text()').extract()).strip()
+	    ord_in_thread = ord_in_thread+1    
+            author=  ''.join(node.xpath('.//div[@class="postbody"]//strong//a//text()').extract()).strip() 
             author_url =  ''.join(node.xpath('.//div[@class="postbody"]//strong//a//@href').extract()).replace('./','http://torum6uvof666pzw.onion/')
-
-            text = clean_text(' '.join(node.xpath('.//div[@class="postbody"]//div[@class="content"]//text() | .//div[@class="postbody"]//div[@class="content"]//blockquote').extract()))
+	    if author_url == '':
+		author_url = 'Null'
+            text = clean_text(' '.join(node.xpath('.//div[@class="postbody"]//div[@class="content"]//text() | .//div[@class="postbody"]//div[@class="content"]//blockquote').extract())) or 'Null'
             blockquote = node.xpath('.//div[@class="postbody"]//div[@class="content"]//blockquote').extract()
             for quote in blockquote:
                 text = text.replace(quote,'Quote ')
 
             if not author:
-                author = ''
-            post_title = ''.join(node.xpath('.//div[@class="postbody"]//h3//a/text()').extract())
+                author = 'Null'
+            post_title = ''.join(node.xpath('.//div[@class="postbody"]//h3//a/text()').extract()) or 'Null'
             post_url =  ''.join(node.xpath('.//div[@class="postbody"]//ul//li//a/@href').extract()).replace('./','http://torum6uvof666pzw.onion/')
-            post_id= re.sub('(.*)&p=','',post_url)
+	    if post_url == '':
+		post_url = 'Null'
+            post_id= re.sub('(.*)&p=','',post_url) or 'Null'
             pub = ''.join(node.xpath('.//div[@class="postbody"]//p//span//following-sibling::text()').extract()).replace("\n","").replace("\t","")
             publish =''.join( re.findall('\d+ \w+ \d+',pub))
             publish_time = datetime.datetime.strptime(publish,'%d %b %Y')
             publish_epoch = time.mktime(publish_time.timetuple())*1000
-            publish_epoch = time.mktime(publish_time.timetuple())*1000
+            #publish_epoch = time.mktime(publish_time.timetuple())*1000
+	    if publish_epoch:
+		month_year = get_index(publish_epoch)
+	    else:
+		import pdb;pdb.set_trace()
+
             fetch_time = int(datetime.datetime.now().strftime("%s")) * 1000
             reference_url = response.url
             thread_url = response.url
@@ -192,34 +206,49 @@ class Torum(Spider):
                 thread_url = ''.join(test)
             else:
                 thread_url = reference_url
-            all_links = ''
+            all_links = 'Null'
+	    author_data = {
+		'name':author,
+		'url':author_url
+		}
+	    post = {
+		'cache_link':'',
+		'section':category,
+		'language':'english',
+		'require_login':'true',
+		'sub_section':sub_category,
+		'sub_section_url':sub_category_url,
+		'post_id':post_id,
+		'post_title':post_title,
+		'ord_in_thread':int(ord_in_thread),
+		'post_url':post_url,
+		'post_text':text,
+		'thread_title':thread_title,
+		'thread_url':thread_url
+		}
             json_posts = {
+		    'record_id':re.sub(r"\/$", "", post_url.replace(r"https", "http").replace(r"www.", "")),
+		    'hostname':'torum6uvof666pzw.onion',
                     'domain':'torum6uvof666pzw.onion',
-                    'category':category,
-                    'sub_category':sub_category,
-                    'thread_title':thread_title,
-                    'publish_time':publish_epoch,
-                    'fetch_time':fetch_time,
-                    'post_title':post_title,
-                    'thread_url':thread_url,
-                    'post_url':post_url,
-                    'post_id':post_id,
-                    'author':author,
-                    'author_url':author_url,
-                    'text':text,
-                    'links':all_links,
-                    }
+		    'sub_type':'darkweb',
+		    'type':'forum',
+		    'author':json.dumps(author_data),
+		    'title':thread_title,
+		    'text':text,
+		    'url':post_url,
+		    'original_url':post_url,
+		    'fetch_time':fetch_time,
+		    'publish_time':publish_epoch,
+		    'link_url':all_links,
+		    'post':post
+		    }
             sk = md5_val(post_url)
-	    query={"query":{"match":{"_id":sk}}}
-            res = es.search(body=query)
-            if res['hits']['hits'] == []:
-		es.index(index="forum_posts", doc_type='post', id=sk, body=json_posts)
-            #doc_to_es(id=sk,body=json_posts,doc_type='post')
-	    else:
-		data_doc = res['hits']['hits'][0]
-		if json_posts['text'] != data_doc['_source']['text']:
-		    es.index(index="forum_posts", doc_type='post', id=sk, body=json_posts)
-            auth_meta = {'publish_time': publish_epoch}
+	    #query={"query":{"match":{"_id":sk}}}
+            #res = es.search(body=query)
+            #if res['hits']['hits'] == []:
+	    es.index(index=month_year, doc_type='post', id=sk, body=json_posts)
+            
+	    auth_meta = {'publish_time': publish_epoch}
             json_posts.update({
                 'post_id': post_id,
                 'auth_meta': json.dumps(auth_meta),

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import scrapy
-from scrapy.spider import Spider
+from scrapy import Spider
 from scrapy.selector import Selector
 import time
 from scrapy.http import Request
@@ -18,15 +18,16 @@ from scrapy import signals
 from scrapy.xlib.pydispatch import dispatcher
 import re
 import unicodedata
+from pprint import pprint
 #import xpaths
 
 
-class HackThisiCo(scrapy.Spider):
+class HackThisiCo(Spider):
     name = "hackthis_co_posts"
 
     def __init__(self, *args, **kwargs):
         self.es = Elasticsearch(['10.2.0.90:9342'])
-        self.conn = MySQLdb.connect(db="posts_hackthis_co",host="localhost",user="root",passwd="1216" , use_unicode = True , charset = 'utf8')
+        self.conn = MySQLdb.connect(db="posts_hackthis_co",host="localhost",user="tls_dev",passwd="hdrn!" , use_unicode = True , charset = 'utf8')
         self.crawl_query = utils.generate_upsert_query_authors_crawl('posts_hackthis_co')
         self.cursor = self.conn.cursor()
         dispatcher.connect(self.close_conn, signals.spider_closed)
@@ -44,26 +45,43 @@ class HackThisiCo(scrapy.Spider):
 
 
     def parse_thread(self,response):
-        domain = "www.hackthis.co.uk"
+	if response.url == 'https://www.hackthis.co.uk/forum/':
+	    return
+        domain = "hackthis.co.uk"
         thread_url = response.url
-        thread_title = ''.join(response.xpath('//h1[@itemprop="name"]/text()').extract())
-        category = ''.join(response.xpath('//div[@class="col span_18 forum-main"]//a/text()').extract()[0])
-        sub_category = '["' + ''.join(response.xpath('//div[@class="col span_18 forum-main"]//a/text()').extract()[1])+ '"]'
-        nodes = response.xpath('//li[@class="row clr  "]')
+        thread_title = ''.join(response.xpath('//h1[@itemprop="name"]/text()').extract()) or 'Null'
+        category = ''.join(response.xpath('//div[@class="col span_18 forum-main"]//a/text()').extract()[0]) or 'Null'
+        sub_category = ''.join(response.xpath('//div[@class="col span_18 forum-main"]//a/text()').extract()[1]) or 'Null'
+	sub_categoryurl = ''.join(response.xpath('//div[@class="col span_18 forum-main"]//a/@href').extract()[1])
+	if sub_categoryurl:
+	    sub_category_url = 'https://www.hackthis.co.uk/forum' + sub_categoryurl
+	if sub_categoryurl == '':
+	    sub_category_url = 'Null'
+        #nodes = response.xpath('//li[@class="row clr  "]')
+	nodes = response.xpath('//li[contains(@class,"row clr   ")] | //li[@class="row clr  "]')
         if nodes:
             query = 'update hackthis_co_status set crawl_status = 1 where post_url = %(url)s'
             json_data={'url':response.url}
             self.cursor.execute(query,json_data)
+	x = 0
         for node in nodes:
-            post_id = ''.join(node.xpath('.//@data-id').extract())
-            author = ''.join(node.xpath('.//a[@itemprop="author"]/text() | .//div[@class="col span_5 post_header"]//a/text()').extract()).strip()
+	    x = x+1
+            post_id = ''.join(node.xpath('.//@data-id').extract()) or 'Null'
+            author = ''.join(node.xpath('.//a[@itemprop="author"]/text() | .//div[@class="col span_5 post_header"]//a/text()').extract()).strip() or 'Null'
             author_url = ''.join(node.xpath('.//a[@itemprop="author"]/@href | .//div[@class="col span_5 post_header"]//a/@href').extract())
             if "http" not in author_url:
                 authorurl = "https://www.hackthis.co.uk" + author_url
-            publish_time = ''.join(node.xpath('.//time[@itemprop="datePublished"]/@datetime | .//li[@class="highlight"]//@datetime ').extract())
+	    if author_url == '':
+		authorurl = 'Null'
+            publish_time = ''.join(node.xpath('.//time[@itemprop="datePublished"]/@datetime | .//li[@class="highlight"]//@datetime ').extract()) or 'Null'
             publish_epoch = utils.time_to_epoch(publish_time, '%Y-%m-%dT%H:%M:%S+00:00')
+	    if publish_epoch:
+		month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+	    else:
+		import pdb;pdb.set_trace()
+
             fetch_epoch = utils.fetch_time()
-            texts = ''.join(node.xpath('.//div[@class="post_body"]//text() | .//div[@class="post_body"]//img[@class="bbcode_img"]/@alt | .//div[@class="bbcode-youtube"]//iframe/@src ').extract())
+            texts = ''.join(node.xpath('.//div[@class="post_body"]//text() | .//div[@class="post_body"]//img[@class="bbcode_img"]/@alt | .//div[@class="bbcode-youtube"]//iframe/@src ').extract()) or 'Null'
             text_sign = ''.join(node.xpath('.//div[@class="post_signature"]//text() | .//div[@class="post_signature"]//img[@class="bbcode_img"]/@alt ').extract())
             text = texts.replace(text_sign,'')
             linkes = node.xpath('.//div[@class="post_body"]//img[@class="bbcode_img"][not(contains(@src,"gif"))]/@src | .//div[@class="post_body"]//a[@class="bbcode_url"]/@href | .//div[@class="bbcode-youtube"]//iframe/@src | .//div[@class="post_body"]//a[not(contains(@href,"gif"))]/@href').extract()
@@ -76,29 +94,51 @@ class HackThisiCo(scrapy.Spider):
                     link.append(Link)
                 else:
                     link.append(Link)
-            all_links = str(link)
+            links = ', '.join(link)
+	    if links == '':
+		links = 'Null'
+	    if link_ == []:
+		links = 'Null'
             query_posts = utils.generate_upsert_query_posts('posts_hackthis_co')
-            json_posts = {'domain': domain,
-                          'crawl_type': '',
-                          'category': category,
-                          'sub_category': sub_category,
-                          'thread_title': thread_title,
-                          'post_title' : '',
-                          'thread_url': thread_url,
-                          'post_id': post_id,
-                          'post_url': '',
-                          'publish_epoch': publish_epoch,
-                          'fetch_epoch': fetch_epoch,
-                          'author': author,
-                          'author_url': authorurl,
-                          'post_text': utils.clean_text(text),
-                          'all_links': all_links,
-                          'reference_url': response.url
+	    post = {
+		'cache_link':'',
+		'section':category,
+		'language':'english',
+		'require_login':'false',
+		'sub_section':sub_category,
+		'sub_section_url':sub_category_url,
+		'post_id':post_id,
+		'post_title':'Null',
+		'ord_in_thread':x,
+		'post_url':'Null',
+		'post_text':utils.clean_text(text).replace('\n',''),
+		'thread_title':thread_title,
+		'thread_url':thread_url
+		}
+	    author_data = {
+		'name':author,
+		'url':authorurl
+		}
+            json_posts = {
+			  'id':'Null',
+			  'hostname':'www.hackthis.co.uk',
+			  'domain': domain,
+			  'sub_type':'openweb',
+			  'type':"forum",
+			  'author':json.dumps(author_data),
+			  'title':thread_title,
+			  'text':utils.clean_text(text).replace('\n',''),
+			  'url':'Null',
+			  'original_url':'Null',
+			  'fetch_time':fetch_epoch,
+			  'publish_time':publish_epoch,
+			  'link_url':links,
+			  'post':post
             }
-            query={"query":{"match":{"_id":hashlib.md5(str(post_url)).hexdigest()}}}
-            res = self.es.search(body=query)
-            if res['hits']['hits'] == []:
-                self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts)
+            #query={"query":{"match":{"_id":hashlib.md5(str(post_url)).hexdigest()}}}
+            #res = self.es.search(body=query)
+            #if res['hits']['hits'] == []:
+            self.es.index(index="forum_posts_"+month_year, doc_type='post', id=hashlib.md5(domain+post_id).hexdigest(), body=json_posts, request_timeout=30)
 
             if author_url:
                 # Write data into forums_crawl table

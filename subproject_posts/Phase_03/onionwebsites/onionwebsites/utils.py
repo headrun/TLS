@@ -102,6 +102,11 @@ def time_to_epoch(str_of_time, str_of_patter):
     except:time_in_epoch = False
     return time_in_epoch
 
+def get_index(time_in_epoch):
+    try:indices = time.strftime("%m_%Y", time.localtime(int(time_in_epoch/1000)))
+    except:indices = time.strftime("%m_%Y", time.localtime(int(time_in_epoch)))
+    return 'forum_posts_'+indices
+
 def activetime_str(activetime_,totalposts):
     activetime = []
     for a in set(activetime_):

@@ -1,40 +1,13 @@
 import json
-import cfscrape
 import re
 import unicodedata
-import configurations
+#import configurations
 import time
 import MySQLdb
 import logging
 from time import strftime
-from pprint import pprint
 import datetime
-import os,sys
-reload(sys)
-sys.setdefaultencoding('utf8')
-sys.path.append('/home/epictions/mango/mango')
-from scrapy import signals
-from scrapy.xlib.pydispatch import dispatcher
-from urllib import urlencode
-from elasticsearch import Elasticsearch
-from datetime import date, timedelta
-import hashlib
-import scrapy
-from scrapy import Spider 
-from scrapy.selector import Selector
-from scrapy.http import Request
-from urlparse import urljoin
-from user_agent import user_agent_list
-
-
-es = Elasticsearch(['10.2.0.90:9342'])
-FORUM_POST = 'forum_posts'
-DOC_TYPE = 'post'
-FORUM_AUTHOR = 'forum_author'
-DATABASE_USER = 'tls_dev'
-DATABASE_PASS = 'hdrn!'
-TOR_PASS = 'tls'
-
+import os
 
 def generate_upsert_query_posts_crawl(crawler):
     table_name = configurations.tables[crawler]['post_crawl']
@@ -75,38 +48,18 @@ def generate_upsert_query_authors(crawler):
                     reference_url=%(reference_url)s ,modified_at = now()""".format(table_name)
     return upsert_query
 
-def check_rec_in_es(sk):
-    query={"query":{"match":{"_id":sk}}}
-    res = es.search(body=query)
-    if res['hits']['hits'] == []:
-	return True
-    else:
-	return None
-
-def doc_to_es(**kwargs):
-    try:
-	sk = kwargs['id']
-        doc = kwargs['body']
-        doc_type = kwargs['doc_type']
-    except:
-	raise Exception("need all id,doc_type and doc")
-    if doc_type =='post':
-        if check_rec_in_es(sk):
-            es.index(index=FORUM_POST,doc_type=DOC_TYPE,id=sk,body=doc)
-    elif doc_type == 'author':
-        es.index(index=FORUM_AUTHOR,doc_type=DOC_TYPE,id=sk,body=doc)
-
-
-def md5_val(text):
-    return hashlib.md5(text).hexdigest()
-
 def fetch_time():
     return round((time.time()- time.timezone)*1000)
 
 def time_to_epoch(str_of_time, str_of_patter):
     try:time_in_epoch = (int(time.mktime(time.strptime(str_of_time, str_of_patter))) - time.timezone) * 1000
-    except:time_in_epoch = None
+    except:time_in_epoch = False
     return time_in_epoch
+
+def get_index(time_in_epoch):
+    try:indices = time.strftime("%m_%Y", time.localtime(int(time_in_epoch/1000)))
+    except:indices = time.strftime("%m_%Y", time.localtime(int(time_in_epoch)))
+    return 'forum_posts_'+indices
 
 def activetime_str(activetime_,totalposts):
     activetime = []
@@ -135,7 +88,7 @@ def decode_cloudflareEmail(cfString):
 
 def que_filename(name):
     name = name + str(int(time.time()))
-    que_val = open('/home/epictions/query_files/'+name+'.txt','w')    
+    que_val = open('/home/epictions/query_files/'+name+'.txt','w')
     return que_val
 
 def quefile_to_mysql(fname_,query,conn,cursor):
@@ -145,18 +98,15 @@ def quefile_to_mysql(fname_,query,conn,cursor):
     log = open('/home/epictions/query_files/mysql_error.txt','a+')
     for val in lines:
         try:
-	    val_ = json.loads(val)
-	except:
-	    log.write('it is not a dict {0}'.format(val))
-	    continue
-	try:
-	    cursor.execute(query, val_)
-	    conn.commit()
+            val_ = json.loads(val)
+        except:
+             log.write('it is not a dict {0}'.format(val))
+             continue
+        try:
+            cursor.execute(query, val_)
+            conn.commit()
         except Exception as e:
             log.write('error: {0},filename:{1}'.format(str(e),fname_)+'\n')
-    
+
     os.rename(que_file.name,que_file.name.replace('.txt','_old.txt'))
     que_file.close()
-
-proxy_list = ['fl.east.usa.torguardvpnaccess.com', 'atl.east.usa.torguardvpnaccess.com', 'ny.east.usa.torguardvpnaccess.com', 'chi.central.usa.torguardvpnaccess.com', 'dal.central.usa.torguardvpnaccess.com', 'la.west.usa.torguardvpnaccess.com', 'lv.west.usa.torguardvpnaccess.com', 'sa.west.usa.torguardvpnaccess.com', 'nj.east.usa.torguardvpnaccess.com', 'central.usa.torguardvpnaccess.com','centralusa.torguardvpnaccess.com','west.usa.torguardvpnaccess.com','westusa.torguardvpnaccess.com','east.usa.torguardvpnaccess.com','eastusa.torguardvpnaccess.com']+ ['au.torguardvpnaccess.com', 'melb.au.torguardvpnaccess.com', 'bul.torguardvpnaccess.com', 'cp.torguardvpnaccess.com', 'egy.torguardvpnaccess.com', 'iom.torguardvpnaccess.com', 'isr.torguardvpnaccess.com', 'fin.torguardvpnaccess.com', 'br.torguardvpnaccess.com', 'ca.torguardvpnaccess.com', 'vanc.ca.west.torguardvpnaccess.com', 'frank.gr.torguardvpnaccess.com', 'ice.torguardvpnaccess.com', 'ire.torguardvpnaccess.com', 'in.torguardvpnaccess.com', 'jp.torguardvpnaccess.com', 'nl.torguardvpnaccess.com', 'lon.uk.torguardvpnaccess.com', 'ro.torguardvpnaccess.com', 'ru.torguardvpnaccess.com', 'mos.ru.torguardvpnaccess.com', 'swe.torguardvpnaccess.com', 'swiss.torguardvpnaccess.com', 'bg.torguardvpnaccess.com', 'hk.torguardvpnaccess.com', 'cr.torguardvpnaccess.com', 'hg.torguardvpnaccess.com', 'my.torguardvpnaccess.com', 'thai.torguardvpnaccess.com', 'turk.torguardvpnaccess.com', 'tun.torguardvpnaccess.com', 'mx.torguardvpnaccess.com', 'singp.torguardvpnaccess.com', 'saudi.torguardvpnaccess.com', 'fr.torguardvpnaccess.com', 'pl.torguardvpnaccess.com', 'czech.torguardvpnaccess.com', 'gre.torguardvpnaccess.com', 'it.torguardvpnaccess.com', 'sp.torguardvpnaccess.com', 'no.torguardvpnaccess.com', 'por.torguardvpnaccess.com', 'za.torguardvpnaccess.com', 'den.torguardvpnaccess.com', 'vn.torguardvpnaccess.com', 'sk.torguardvpnaccess.com', 'lv.torguardvpnaccess.com', 'lux.torguardvpnaccess.com', 'nz.torguardvpnaccess.com', 'md.torguardvpnaccess.com', 'uae.torguardvpnaccess.com', 'slk.torguardvpnaccess.com', 'fl.east.usa.torguardvpnaccess.com', 'atl.east.usa.torguardvpnaccess.com', 'ny.east.usa.torguardvpnaccess.com', 'chi.central.usa.torguardvpnaccess.com', 'dal.central.usa.torguardvpnaccess.com', 'la.west.usa.torguardvpnaccess.com', 'lv.west.usa.torguardvpnaccess.com', 'sa.west.usa.torguardvpnaccess.com', 'nj.east.usa.torguardvpnaccess.com', 'central.usa.torguardvpnaccess.com', 'centralusa.torguardvpnaccess.com', 'west.usa.torguardvpnaccess.com', 'westusa.torguardvpnaccess.com', 'east.usa.torguardvpnaccess.com', 'eastusa.torguardvpnaccess.com']
-                                                                              

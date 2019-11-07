@@ -52,9 +52,9 @@ CONCURRENT_REQUESTS_PER_IP = 1
 
 # Enable or disable downloader middlewares
 # See https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
-#DOWNLOADER_MIDDLEWARES = {
-#    'monopoly.middlewares.MonopolyDownloaderMiddleware': 543,
-#}
+DOWNLOADER_MIDDLEWARES = {
+    'monopoly.middlewares.MonopolyDownloaderMiddleware': 543,
+}
 
 # Enable or disable extensions
 # See https://doc.scrapy.org/en/latest/topics/extensions.html

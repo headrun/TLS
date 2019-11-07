@@ -28,16 +28,16 @@ class Forummedia(scrapy.Spider):
     def __init__(self):
 	self.es = Elasticsearch(['10.2.0.90:9342'])
         self.conn,self.cursor = self.mysql_conn()
-        select_query = 'select DISTINCT(links) from forumbit_crawl;'
+        select_query = 'select DISTINCT(links) from forumbit_author_crawl;'
         self.cursor.execute(select_query)
         self.data = self.cursor.fetchall()
 
 
     def mysql_conn(self):
-        conn = MySQLdb.connect(db="posts_forumbit",
+        conn = MySQLdb.connect(db="posts",
                                     host="localhost",
                                     user="root",
-                                    passwd="",
+                                    passwd="qwe123",
                                     use_unicode=True,
                                     charset="utf8mb4")
 
@@ -54,7 +54,7 @@ class Forummedia(scrapy.Spider):
         for da in self.data:
             urls.append(da[0])
         for url in urls:
-            meta_query = 'select DISTINCT(auth_meta) from forumbit_crawl where links = "%s"'%url.encode('utf8')
+            meta_query = 'select DISTINCT(auth_meta) from forumbit_author_crawl where links = "%s"'%url.encode('utf8')
             self.cursor.execute(meta_query)
             meta_query = self.cursor.fetchall()
             activetime=[]
@@ -103,7 +103,6 @@ class Forummedia(scrapy.Spider):
         fetch_time = int(datetime.datetime.now().strftime("%s")) * 1000
         json_data.update({'username': username,
                           'domain': domain,
-                          'crawl_type': 'keep_up',
                           'auth_sign': '',
                           'join_date': join_date,
                           'lastactive': last_active,
@@ -115,6 +114,6 @@ class Forummedia(scrapy.Spider):
                           'awards': '',
                           'rank': rank,
                           'activetimes': activetime,
-                          'contactinfo': ''
+                          'contact_info': ''
         })
 	self.es.index(index="forum_author", doc_type='post', id=hashlib.md5(str(username)).hexdigest(), body=json_data)

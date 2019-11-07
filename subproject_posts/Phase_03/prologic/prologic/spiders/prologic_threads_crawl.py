@@ -22,7 +22,7 @@ class PrlogicSpider(scrapy.Spider):
     start_urls = ["https://prologic.su"]
 
     def __init__(self):
-        self.conn = MySQLdb.connect(db="prologic", host="localhost", use_unicode=True, charset="utf8mb4")
+        self.conn = MySQLdb.connect(db="posts", host="localhost", user="root",passwd="qwe123", use_unicode=True, charset="utf8mb4")
         self.cursor = self.conn.cursor()
         dispatcher.connect(self.mysql_conn_close, signals.spider_closed)
 
@@ -45,7 +45,7 @@ class PrlogicSpider(scrapy.Spider):
                          'reference_url':response.url
                        }
             self.cursor.execute(query_status, json_posts)
-        navigation = response.xpath(xpaths.NAVIGATION).extract()
-        for pagenation in navigation:
-            yield Request(pagenation, callback = self.parse_next)
+        navigation = response.xpath(xpaths.NAVIGATION).extract_first()
+        if navigation:
+            yield Request(navigation, callback = self.parse_next)
 

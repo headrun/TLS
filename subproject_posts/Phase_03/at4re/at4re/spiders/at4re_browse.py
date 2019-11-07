@@ -21,7 +21,7 @@ class formus(BaseSpider):
     handle_httpstatus_list = [403, 404]
 
     def __init__(self, *args, **kwargs):
-        self.conn = MySQLdb.connect(host="localhost", user="root", passwd="", db="at4re", charset="utf8", use_unicode=True)
+        self.conn = MySQLdb.connect(host="localhost", user="root", passwd="qwe123", db="posts", charset="utf8", use_unicode=True)
         self.cursor = self.conn.cursor()
         dispatcher.connect(self.close_conn, signals.spider_closed)
 
@@ -39,6 +39,7 @@ class formus(BaseSpider):
 
 
     def parse(self, response):
+	import pdb;pdb.set_trace()
         '''
           Main page urls
         '''

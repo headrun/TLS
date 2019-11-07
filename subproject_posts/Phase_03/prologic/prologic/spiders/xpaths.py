@@ -1,7 +1,7 @@
 FORUM_URLS = '//strong[@class="highlight_unread"]//a//@href'
 
 THREAD_URLS = '//td[@class="col_f_content "]//h4//a//@href'
-NAVIGATION = '//ul//li[@class="next"]//a//@href'
+NAVIGATION = '//ul[@class="ipsList_inline forward left"]//li[@class="next"]//a[@rel="next"]//@href'
 
 CATEGORY = '//li[@itemtype="http://data-vocabulary.org/Breadcrumb"][2]//a//span//text()'
 SUBCATEGORY = '//li[@itemtype="http://data-vocabulary.org/Breadcrumb"][3]//a//span//text()'
@@ -12,4 +12,4 @@ POST_URL = './/span[contains(@class, "post_id")]//a//@href'
 PUBLISH_TIME = './/div[@class="post_date"]//abbr//@title'
 POST_TEXT = './/div[@class="post_body"]//div[@itemprop="commentText"]//text() | .//div[@itemprop="commentText"]//img//@alt | .//div[@itemprop="commentText"]//span[@rel="lightbox"]//img//@alt'
 LINKS = './/div[@itemprop="commentText"]//a//@href | .//div[@itemprop="commentText"]//span[@rel="lightbox"]//img//@src'
-PAGENATION = '//li[@class="next"]//a//@href'
+PAGENATION = '//ul[@class="ipsList_inline forward left"]//li[@class="next"]//a[@rel="next"]//@href'

@@ -24,16 +24,18 @@ CONCURRENT_REQUESTS= 1
 # Configure a delay for requests for the same website (default: 0)
 # See http://scrapy.readthedocs.org/en/latest/topics/settings.html#download-delay
 # See also autothrottle settings and docs
-DOWNLOAD_DELAY=3
+#DOWNLOAD_DELAY=3
 # The download delay setting will honor only one of:
 CONCURRENT_REQUESTS_PER_DOMAIN=1
 CONCURRENT_REQUESTS_PER_IP=1
-
+DOWNLOAD_TIMEOUT =120
 # Disable cookies (enabled by default)
 COOKIES_ENABLED= True
 
 # Disable Telnet Console (enabled by default)
 #TELNETCONSOLE_ENABLED=False
+
+#CLOSESPIDER_ITEMCOUNT = 60
 
 # Override the default request headers:
 #DEFAULT_REQUEST_HEADERS = {
@@ -54,7 +56,7 @@ COOKIES_ENABLED= True
 #}
 DOWNLOADER_MIDDLEWARES = {
     #'scrapy.contrib.downloadermiddleware.httpproxy.HttpProxyMiddleware': 500,
-    'thehub.middlewares.TorDownloaderMiddleware': 543,
+#    'thehub.middlewares.TorDownloaderMiddleware': 543,
     'thehub.middlewares.ProxyMiddleware': 400,
 }
 
@@ -66,9 +68,9 @@ DOWNLOADER_MIDDLEWARES = {
 
 # Configure item pipelines
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
-#ITEM_PIPELINES = {
-#    'thehub.pipelines.SomePipeline': 300,
-#}
+ITEM_PIPELINES = {
+    'thehub.pipelines.ThehubPipeline': 300,
+}
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See http://doc.scrapy.org/en/latest/topics/autothrottle.html

@@ -23,10 +23,10 @@ class Hacker_threads(scrapy.Spider):
     def __init__(self, *args, **kwargs):
         super(Hacker_threads, self).__init__(*args, **kwargs)
         self.query = utils.generate_upsert_query_posts('hacker_threads')
-        self.conn = MySQLdb.connect(db="POSTS_HACKERTHREADS",
+        self.conn = MySQLdb.connect(db="posts",
                                     host="localhost",
                                     user="root",
-                                    passwd="",
+                                    passwd="qwe123",
                                     use_unicode=True,
                                     charset="utf8mb4")
         self.cursor = self.conn.cursor()

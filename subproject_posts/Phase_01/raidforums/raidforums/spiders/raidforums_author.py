@@ -26,8 +26,8 @@ class Raidforums(scrapy.Spider):
 
     def __init__(self):
 	self.es = Elasticsearch(['10.2.0.90:9342'])
-        self.conn = MySQLdb.connect(db="posts_raidforums", host="localhost",
-                                    user="root", passwd="", use_unicode=True, charset="utf8")
+        self.conn = MySQLdb.connect(db="posts", host="localhost",
+                                    user="root", passwd="qwe123", use_unicode=True, charset="utf8")
         self.cursor = self.conn.cursor()
         dispatcher.connect(self.close_conn, signals.spider_closed)
 
@@ -84,7 +84,7 @@ class Raidforums(scrapy.Spider):
 
         # fetch urls from DB using __init__ method
     def parse_user(self, response):
-	select_qry = 'select DISTINCT(links) from raidforums_author_crawl ;'
+	select_qry = 'select DISTINCT(links) from raidforums_author_crawl where crawl_status = 0'
         self.cursor.execute(select_qry) 
 	self.conn.commit()
         data = self.cursor.fetchall()
@@ -382,7 +382,6 @@ class Raidforums(scrapy.Spider):
             '//strong[contains(text(), "awards")]/..//../../tr//td[contains(@class, "trow")]//following-sibling::span/../text()').extract() if e.replace('>>', '').replace('\n', '').strip()])
         json_data.update({'username': username,
                 'domain': 'www.raidforums.com',
-                'crawl_type': 'keep_up',
                 'auth_sign': author_signature,
                 'join_date': join_date,
                 'lastactive': last_active,
@@ -394,8 +393,7 @@ class Raidforums(scrapy.Spider):
                 'awards': awards,
                 'rank' :rank,
                 'activetimes': (''.join(activetimes)),
-                'contactinfo':contact_info,
-                #'reference_url': response.url
+                'contact_info':contact_info,
         })
 	self.es.index(index="forum_author", doc_type='post', id=hashlib.md5(username).hexdigest(), body=json_data)
         #upsert_query_authors = utils.generate_upsert_query_authors('raidforums')

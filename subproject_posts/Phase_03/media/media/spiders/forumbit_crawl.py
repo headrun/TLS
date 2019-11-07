@@ -23,7 +23,7 @@ class Forumbit(scrapy.Spider):
     start_urls = ["https://forum.bits.media/"]
 
     def __init__(self, *args, **kwargs):
-        self.conn = MySQLdb.connect(db="posts_forumbit",host="localhost",user="root", use_unicode = True , charset = 'utf8mb4')
+        self.conn = MySQLdb.connect(db="posts",host="localhost",user="root", passwd="qwe123",use_unicode = True , charset = 'utf8mb4')
         self.cursor = self.conn.cursor()
 
     def close_conn(self, spider):
@@ -40,7 +40,7 @@ class Forumbit(scrapy.Spider):
         sel = Selector(response)
         link = sel.xpath(xpaths.FORUM_LINKS).extract()
         for forum_link in link:
-			yield Request(forum_link, callback=self.parse_nxt)
+	    yield Request(forum_link, callback=self.parse_nxt)
 
     def parse_nxt(self, response):
         sel = Selector(response)
@@ -53,6 +53,8 @@ class Forumbit(scrapy.Spider):
                           'post_url':post_url,
                           'crawl_status':0,
                           'reference_url':response.url
-            }
+             }
             self.cursor.execute(query_status, json_posts)
-
+        nav = response.xpath('//ul[@class="ipsPagination"]//li[@class="ipsPagination_next"]//a[@rel="next"]//@href').extract_first()
+        if nav:
+            yield Request(nav, callback=self.parse_nxt)

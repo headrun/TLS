@@ -14,7 +14,7 @@ PUBLISH = './/td/a[contains(@name,"post")]//following-sibling::text()'
 AUTHOR = './/td[@class="alt2"]//div/a[@class="bigusername"]//span//text()'
 TEXT = './/div[contains(@id,"post_message")]//font/text() | .//div[contains(@id,"post_message")]//img/@alt | .//div[contains(@id,"post_message")]//text() | .//hr[@style="color: #173146; background-color:#0D1114"]/../text() | .//span[@class="time"]/text()| .//td//div[contains(@id,"post_message")]//img/@title | .//td//div[contains(@id,"post_message")]//img/@title | .//div[@style="margin:20px; margin-top:5px; "]/div[@class="smallfont"]/text() | .//td[@class="alt2"]//div//a/img[@class="inlineimg"]/@alt'
 LINKS_ = './/td//div[contains(@id,"post_message")]//img/@src | .//td//div[contains(@id,"post_message")]//a/@href'
-PAGENAV = '//table[@class="tborder"]//td[@class="alt1"]/a[@rel="next"]/@href'
+PAGENAV = '//td[@class="alt1"]//a[@rel="next"]//@href'
 
 #Authors
 

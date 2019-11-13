@@ -1,11 +1,13 @@
 import scrapy
-from scrapy.spider import Spider
+from scrapy import Spider
 from scrapy.selector import Selector
 from scrapy.http import Request
 from scrapy import signals
 from scrapy.xlib.pydispatch import dispatcher
 from scrapy.selector import Selector
-import utils
+import sys
+sys.path.append('/home/epictions/tls_scripts/tls_utils')
+import tls_utils as utils
 import MySQLdb
 import re
 import xpaths
@@ -16,8 +18,8 @@ class Bbs(Spider):
     name="bbs_thread_crawl"
     start_urls = ["https://bbs.pediy.com/"]
 
-    def __init__(self):
-        self.conn = MySQLdb.connect(db= "bbs", host = "127.0.0.1", user="root", passwd = "123", use_unicode=True,charset="utf8")
+    def __init__(self,*args, **kwargs):
+        self.conn = MySQLdb.connect(db= "posts", host = "localhost", user="tls_dev", passwd = "hdrn!", use_unicode=True,charset="utf8")
         self.cursor = self.conn.cursor()
         dispatcher.connect(self.conn_close, signals.spider_closed)
 

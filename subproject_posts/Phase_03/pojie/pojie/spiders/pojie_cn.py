@@ -5,9 +5,13 @@ import re
 import datetime
 import time
 import MySQLdb
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
+sys.path.append('/home/epictions/tls_scripts/tls_utils')
+import tls_utils as utils
 from scrapy import signals
 from scrapy.xlib.pydispatch import dispatcher
-import utils
 from pojie_cn_xpaths import *
 
 
@@ -16,10 +20,10 @@ class Pojie_CN(scrapy.Spider):
     start_urls = ['https://www.52pojie.cn/']
 
     def __init__(self, *args, **kwargs):
-        self.conn = MySQLdb.connect(db="POJIE_DB",
+        self.conn = MySQLdb.connect(db="posts",
                                         host="localhost",
-                                        user="root",
-                                        passwd="1216",
+                                        user="tls_dev",
+                                        passwd="hdrn!",
                                         use_unicode=True,
                                         charset="utf8mb4")
         self.cursor =  self.conn.cursor()

@@ -3,6 +3,10 @@ tables = {
 	'post_crawl':'fuckav_post_crawl',
 	'author_crawl':'fuckav_authors_crawl'
     },
+    'centerclub':{
+        'post_crawl':'centerclub_post_crawl',
+        'author_crawl':'centerclub_authors_crawl'
+    },
     'crypto':{
         'post_crawl':'crypto_post_crawl'
     },

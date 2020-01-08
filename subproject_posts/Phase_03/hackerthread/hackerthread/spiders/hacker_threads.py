@@ -82,10 +82,6 @@ class Hacker_threads(scrapy.Spider):
         subcategory = ''.join(sel.xpath(CATEGORY).extract()[2]) or 'Null'
 	sub_category_url = 'https://www.hackerthreads.org'+ ''.join(response.xpath('//a[@itemprop="url"]//@href')[2].extract()).replace('.','') or 'Null'
         thread_title = ''.join(sel.xpath(THREAD_TITLE).extract()) or 'Null'
-        '''json_posts.update({'domain': domain,
-                            'thread_url': thread_url,
-                            'thread_title' : thread_title
-        })'''
         nodes = sel.xpath('//div[contains(@class, "post has-profile bg")]')
 	if nodes:
             query = 'update hackerthreads_status set crawl_status = 1 where post_url = %(url)s'
@@ -109,7 +105,7 @@ class Hacker_threads(scrapy.Spider):
 		query = {'query_string': {'use_dis_max': 'true', 'query': '_id:{0}'.format(test_id)}}
 		res = es.search(index="forum_posts", body={"query": query})
 		if res['hits']['hits']==[]:'''    
-	    yield Request(page_nav,callback = self.parse_meta)
+	    yield Request(next_pg,callback = self.parse_meta)
             #except:pass
         order = 0
         for node in nodes:
@@ -137,7 +133,11 @@ class Hacker_threads(scrapy.Spider):
                 pass
             publish_epoch = int(time.mktime(publish_time_.timetuple())*1000)
 	    if publish_epoch:
-                month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                if year > '2011':
+                    month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                else:
+                    continue
 	    else:
 		publish_epoch = 'Null'
             fetchtime = (round(time.time()*1000))
@@ -174,6 +174,8 @@ class Hacker_threads(scrapy.Spider):
             Links = ', '.join(Link)
 	    if Links == '':
 		Links = 'Null'
+	    if links == []:
+		Links = 'Null'
 
 	    author_data = {
 			   'name':author,
@@ -194,9 +196,10 @@ class Hacker_threads(scrapy.Spider):
                     'original_url': post_url,
                     'fetch_time': fetchtime,
                     'publish_time': publish_epoch,
-                    'link_url':Links,
+                    'link.url':Links,
                     'post':{
                         'cache_link':'',
+			'author':json.dumps(author_data),
                         'section':category,
                         'language':'english',
                         'require_login':'false',

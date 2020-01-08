@@ -39,7 +39,6 @@ class formus(BaseSpider):
 
 
     def parse(self, response):
-	import pdb;pdb.set_trace()
         '''
           Main page urls
         '''

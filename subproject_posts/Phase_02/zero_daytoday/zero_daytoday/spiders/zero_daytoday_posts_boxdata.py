@@ -28,7 +28,7 @@ class formus(Spider):
 
     def __init__(self, *args, **kwargs):
 	self.es = Elasticsearch(['10.2.0.90:9342'])
-        self.conn = MySQLdb.connect(host="localhost", user="root", passwd="hdrn59!", db="0_daytoday", charset="utf8", use_unicode=True)
+        self.conn = MySQLdb.connect(host="localhost", user="root", passwd="qwe123", db="0_daytoday", charset="utf8", use_unicode=True)
         self.cursor = self.conn.cursor()
         dispatcher.connect(self.close_conn, signals.spider_closed)
 
@@ -82,11 +82,19 @@ class formus(Spider):
 	thread_url = response.url
 	thread_id = response.url
 	thread_id =  ''.join(re.findall('description/\d+',thread_id)).replace('description/', '')
-	print thread_id
+	#print thread_id
         reference_url = response.url
         full_title =''.join(response.xpath('//div[@class="exploit_title"]//h1/text()').extract()).replace('Report Error','')
         category = ''.join(sel.xpath(CATEGORY).extract())
         date_add = ''.join(sel.xpath(DATE_ADD).extract())
+        if date_add:
+            year = ''.join(re.findall('-\d+(.*)',date_add)).replace('-','')
+            if year > '2011':
+                month_year = ''.join(re.findall('-(.*)',date_add)).replace('-','_')
+            else:
+                import pdb;pdb.set_trace()
+                return None
+      
         platform = ''.join(sel.xpath(PLATFORM).extract())
         price = ''.join(sel.xpath(PRICE).extract())
 	if price == "free":
@@ -161,7 +169,8 @@ class formus(Spider):
               		  'reference_url' : reference_url,
 	})
 	#self.cursor.execute(query_posts_boxdata, json_posts_boxdata)
-	self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(thread_id)).hexdigest(), body=json_posts_boxdata)
+	#self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(thread_id)).hexdigest(), body=json_posts_boxdata)
+        self.es.index(index="forum_posts_"+month_year, doc_type='post', id=hashlib.md5(str(thread_id)).hexdigest(), body=json_posts_boxdata)
         json_author = {}
         json_author.update({
             'links' : author_url,

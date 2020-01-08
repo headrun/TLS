@@ -113,45 +113,73 @@ class formus(BaseSpider):
                 publish_time_11 = datetime.datetime.strptime((publish_time), '%d-%m-%Y, %H:%M %p')
                 publish_time = time.mktime(publish_time_11.timetuple())*1000
 		if publish_time:
-                	month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                    year = time.strftime("%Y", time.localtime(int(publish_time/1000)))
+                    if year > '2011':
+                        month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                    else:
+                        continue         
+               
             except:
                 try:
                     publish_time_2 = datetime.datetime.strptime((publish_time), '%d-%m-%Y, %H:%M %p ')
                     publish_time = time.mktime(publish_time_2.timetuple())*1000
 		    if publish_time:
-                	month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                       year = time.strftime("%Y", time.localtime(int(publish_time/1000)))
+                       if year > '2011':
+                           month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                       else:
+                           continue
                 except:
                     #pass
                     try:
                         publish_time_3 = datetime.datetime.strptime((publish_time), '%d\%m\%Y, %H:%M %p ')
                         publish_time = time.mktime(publish_time_3.timetuple())*1000
 			if publish_time:
-	                    month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                           year = time.strftime("%Y", time.localtime(int(publish_time/1000)))
+                           if year > '2011':
+                               month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                           else:
+                               continue
                     except:
                         try:
                             publish_time_4 = datetime.datetime.strptime((publish_time), '%d/%m/%Y, %H:%M %p ')
                             publish_time = time.mktime(publish_time_4.timetuple())*1000
 			    if publish_time:
-                            	month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                                year = time.strftime("%Y", time.localtime(int(publish_time/1000)))
+                                if year > '2011':
+                                    month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                                else:
+                                    continue
                         except:
 			    try:
                                 publish_time_4 = datetime.datetime.strptime((publish_time), '%d-%m-%Y')
                                 publish_time = time.mktime(publish_time_4.timetuple())*1000
 				if publish_time:
-                                    month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                                    year = time.strftime("%Y", time.localtime(int(publish_time/1000)))
+                                    if year > '2011':
+                                        month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                                    else:
+                                        continue
 			    except:
 				try:
 				    if u'\u0645\u0646\u0630' in publish_time and u'\u062f\u0642\u0627\u0626\u0642 ' in publish_time:
 		                        publishtime = datetime.datetime.now() - timedelta(minutes=40)
                                         publish_time =  time.mktime(publishtime.timetuple())*1000
 					if publish_time:
-                                    	    month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
-
+                                            year = time.strftime("%Y", time.localtime(int(publish_time/1000)))
+                                            if year > '2011':
+                                                month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                                            else:
+                                                continue
            			    elif u'\u0645\u0646\u0630' in publish_time and u'\u0633\u0627\u0639\u0627\u062a ' in publish_time:
                                         publishtime = datetime.datetime.now() - timedelta(hours=4)
                                         publish_time =  time.mktime(publishtime.timetuple())*1000
 					if publish_time:
-                                            month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                                            year = time.strftime("%Y", time.localtime(int(publish_time/1000)))
+                                            if year > '2011':
+                                                month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                                            else:
+                                                continue
  			        except:
 				    import pdb;pdb.set_trace()
 	    if publish_time == '':
@@ -201,7 +229,7 @@ class formus(BaseSpider):
                     'original_url': post_url,
                     'fetch_time':fetch_time,
                     'publish_time': publish_time,
-                    'link_url':links,
+                    'link.url':links,
                     'post':{
                         'cache_link':'',
 			'author':json.dumps(author_data),

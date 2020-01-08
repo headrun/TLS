@@ -32,7 +32,7 @@ class formus(Spider):
 
     def __init__(self, *args, **kwargs):
 	self.es = Elasticsearch(['10.2.0.90:9342'])
-        self.conn = MySQLdb.connect(host="localhost", user="root", passwd="", db="0_daytoday", charset="utf8", use_unicode=True)
+        self.conn = MySQLdb.connect(host="localhost", user="root", passwd="qwe123", db="0_daytoday", charset="utf8", use_unicode=True)
         self.cursor = self.conn.cursor()
         dispatcher.connect(self.close_conn, signals.spider_closed)
 
@@ -98,12 +98,20 @@ class formus(Spider):
             publish_time_1 = ''.join(node.xpath(COMMENT_PUBLISH_TIME).extract())
             sk = hashlib.md5((comment_author_name + publish_time_1 + comment_text[:20]).encode())
             sk_id = sk.hexdigest()
-            comment_publish_time = datetime.datetime.strptime((publish_time_1), '%d-%m-%Y, %H:%M ')
+            try:
+		comment_publish_time = datetime.datetime.strptime((publish_time_1), '%d-%m-%Y, %H:%M ')
+	    except:
+		comment_publish_time = datetime.datetime.strptime((publish_time_1), '%d-%m--%Y, %H:%M ')
             comment_publish_time = time.mktime(comment_publish_time.timetuple())*1000
+	    if comment_publish_time:
+                 year = time.strftime("%Y", time.localtime(int(comment_publish_time/1000)))
+                 if year > '2011' :
+		     month_year = time.strftime("%m_%Y", time.localtime(int(comment_publish_time/1000)))
+                 else:
+                     continue
 	    fetch_time =  (round(time.time()*1000))
 	    json_posts = {}
             json_posts.update({'domain' : domain,
-                          'crawl_type' : crawl_type,
                           'category' : '',
                           'sub_category' : '',
                           'thread_title' : thread_title,
@@ -111,7 +119,7 @@ class formus(Spider):
                           'thread_url' : thread_url,
                           'post_id' : '',
                           'post_url' : '',
-                          'publish_epoch' :  '',
+                          'publish_time' :  '',
                           'fetch_time' : fetch_time,
                           'author_url' : '',
                           'text' : '', #text
@@ -121,7 +129,10 @@ class formus(Spider):
                           'reference_url' : response.url,
                           'sk_id' : sk_id
             })
-	    self.es.index(index="forum_posts", doc_type='post', id=sk_id, body=json_posts)
+	    #try:
+	    self.es.index(index="forum_posts_"+month_year, doc_type='post', id=sk_id, body=json_posts)
+	    #except:
+		#import pdb;pdb.set_trace()
 
             meta = json.dumps({'time' : comment_publish_time})
             json_author_meta = {}

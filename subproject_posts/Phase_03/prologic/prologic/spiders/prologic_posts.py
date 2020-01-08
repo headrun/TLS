@@ -86,7 +86,12 @@ class PrlogicSpider(scrapy.Spider):
             publish_time = datetime.datetime.strptime(publish_time, '%Y-%m-%dT%H:%M')
             publish_time = time.mktime(publish_time.timetuple())*1000
 	    if publish_time:
-		month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                year = time.strftime("%Y", time.localtime(int(publish_time/1000)))
+                if year > '2011':
+                    month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                else:
+                    continue
+
 	    else:
 		publish_time = 'Null'
             fetchtime = round(time.time()*1000)
@@ -121,7 +126,7 @@ class PrlogicSpider(scrapy.Spider):
                     'original_url':post_url,
                     'fetch_time': fetchtime,
                     'publish_time': publish_time,
-                    'link_url':links,
+                    'link.url':links,
                     'post':{
                         'cache_link':'',
                         'section':category,

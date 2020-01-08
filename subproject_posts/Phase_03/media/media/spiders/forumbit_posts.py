@@ -93,7 +93,11 @@ class Forumbit(scrapy.Spider):
             publishdate = datetime.datetime.strptime(publishtimes,'%m/%d/%y %I:%M:%S  %p')
             publish_epoch = time.mktime(publishdate.timetuple())*1000
 	    if publish_epoch:
-		 month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+               year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+               if year > '2011':
+                   month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+               else:
+                   continue
 	    else:
 		publish_epoch = 'Null'
             fetch_epoch = int(datetime.datetime.now().strftime("%s")) * 1000
@@ -171,7 +175,7 @@ class Forumbit(scrapy.Spider):
                     'original_url': post_url,
                     'fetch_time': fetch_epoch,
                     'publish_time': publish_epoch,
-                    'link_url':all_links,
+                    'link.url':all_links,
                     'post':{
                         'cache_link':'',
                         'author':json.dumps(author_data),

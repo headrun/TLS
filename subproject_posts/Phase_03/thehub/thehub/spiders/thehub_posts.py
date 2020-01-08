@@ -52,7 +52,7 @@ name : value,
 
 
     def after_login(self, response):
-        url_que = "select distinct(post_url) from thehub_status where crawl_status = 0"
+        url_que = "select distinct(post_url) from thehub_status where crawl_status = 0 or 1"
         self.cursor.execute(url_que)
         data = self.cursor.fetchall()
         for url in data:
@@ -85,10 +85,10 @@ name : value,
 	thread_url = response.url
 	thread_title = ''.join(response.xpath('//h3[@class="catbg"]/text()').extract()).split('(')[0].replace('\n','').replace('\t','') or 'Null'
 	nodes = sel.xpath('//div[@id="forumposts"]//div[contains(@class,"windowbg")]')
-	if nodes:
+	'''if nodes:
 	    up_que = 'update thehub_status set crawl_status = 1 where post_url = %(url)s'
 	    self.cursor.execute(up_que,{'url':response.request.url})
-	    self.conn.commit()
+	    self.conn.commit()'''
 
 	ord_in_thread = 0
 	for node in nodes:
@@ -111,7 +111,11 @@ name : value,
 	        publish_date = datetime.datetime.strptime(published,'%B %d, %Y, %H:%M:%S %p')
 	        publish_epoch = time.mktime(publish_date.timetuple())*1000
 	        if publish_epoch:
-		    month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                    year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                    if year > '2011':
+		        month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                    else:
+                        continue
 	    except:
 		publish_epoch = 0
 	    links = node.xpath('.//div[@class="post"]//div[contains(@class,"quote")]//a/@href').extract()
@@ -126,6 +130,7 @@ name : value,
 			}
 	    post = {
 		'cache_link':'',
+		'author':json.dumps(author_data),
 		'section':category,
 		'language':'english',
 		'require_login':'true',
@@ -151,13 +156,15 @@ name : value,
 			  'original_url':post_url,
 			  'fetch_time':int(datetime.datetime.now().strftime("%s")) * 1000,
 			  'publish_time':publish_epoch,
-			  'link_url':all_links,
+			  'link.url':all_links,
 			  'post':post
 			  }
 	    #yield obj
 	    sk = hashlib.md5(str(post_url)).hexdigest()
             self.es.index(index="forum_posts_"+month_year, doc_type='post', id=sk, body=json_posts) 
 	    #db data
+	    if author_url == 'Null':
+		continue
 	    meta = {'publish_epoch': publish_epoch}
             json_crawl = {
                     'post_id': post_id,

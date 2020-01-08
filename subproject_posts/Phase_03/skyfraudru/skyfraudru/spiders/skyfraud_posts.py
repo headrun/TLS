@@ -115,13 +115,14 @@ class skyfraudSpider(scrapy.Spider):
 	    ord_in_thread = ''.join(node.xpath('.//td[@class="thead"]//a[contains(@id,"postcount")]/@name').extract())
             post_id = ''.join(re.findall('\p=\d+',Post_url)).replace('p=','').strip() or 'Null'
 	    publish= ''.join(node.xpath(xpaths.PUBLISH).extract()).replace('\n','').replace('\r','').replace('\t','').replace(u'\u0412\u0447\u0435\u0440\u0430',(datetime.datetime.now() - timedelta(days=1)).strftime('%d.%m.%Y')).replace(u'\u0421\u0435\u0433\u043e\u0434\u043d\u044f',datetime.datetime.now().strftime('%d.%m.%Y'))
-            try:
-		publishdate = datetime.datetime.strptime(publish,'%d.%m.%Y, %H:%M')
-            	PublishTime =time.mktime(publishdate.timetuple())*1000
-		if PublishTime:
-		    month_year = time.strftime("%m_%Y", time.localtime(int(PublishTime/1000)))
-	    except:
-		PublishTime = 0
+	    publishdate = datetime.datetime.strptime(publish,'%d.%m.%Y, %H:%M')
+            PublishTime =time.mktime(publishdate.timetuple())*1000
+            if PublishTime:
+                year = time.strftime("%Y", time.localtime(int(PublishTime/1000)))
+                if year > '2011':
+                    month_year = time.strftime("%m_%Y", time.localtime(int(PublishTime/1000)))
+                else:
+                    continue
             FetchTime = int(datetime.datetime.now().strftime("%s")) * 1000
             Author =  ''.join(node.xpath(xpaths.AUTHOR).extract()) or 'Null'
             text = ' '.join(node.xpath(xpaths.TEXT).extract()).strip().replace(u'\u0426\u0438\u0442\u0430\u0442\u0430:',u'\u0426\u0438\u0442\u0430\u0442\u0430: %s'%'Quote') or 'Null'
@@ -186,7 +187,7 @@ class skyfraudSpider(scrapy.Spider):
 			  'original_url':post_url,
 			  'fetch_time':FetchTime,
 			  'publish_time':PublishTime,
-			  'link_url':all_links,
+			  'link.url':all_links,
 			  'post':post_data
             		}
 	    self.es.index(index="forum_posts_"+month_year, doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts)

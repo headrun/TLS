@@ -21,7 +21,7 @@ class formus(Spider):
     start_urls = ['http://mvfjfugdwgc5uwho.onion/']
 
     def __init__(self):
-        self.conn = MySQLdb.connect(host="localhost", user="root", passwd="", db="0_daytoday", charset="utf8", use_unicode=True)
+        self.conn = MySQLdb.connect(host="localhost", user="root", passwd="qwe123", db="0_daytoday", charset="utf8", use_unicode=True)
         self.cursor = self.conn.cursor()
         dispatcher.connect(self.close_conn, signals.spider_closed)
 

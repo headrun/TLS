@@ -31,7 +31,7 @@ class formus(scrapy.Spider):
 
     def __init__(self, *args, **kwargs):
 	self.es = Elasticsearch(['10.2.0.90:9342'])
-        self.conn = MySQLdb.connect(db="0_daytoday",host="localhost",user="root",passwd="hdrn59!",use_unicode=True,charset="utf8")
+        self.conn = MySQLdb.connect(db="0_daytoday",host="localhost",user="root",passwd="qwe123",use_unicode=True,charset="utf8")
         self.cursor = self.conn.cursor()
         select_query = 'select DISTINCT(links) from 0daytoday_data_crawl;'
         self.cursor.execute(select_query)
@@ -123,7 +123,6 @@ class formus(scrapy.Spider):
 	json_authors = {}
         json_authors.update({'username' : user_name,
                           'domain' : domain,
-                          'crawl_type' : "keepup",
                           'auth_sign': author_signature,
                           'join_date' : join_date,
                           'lastactive' : last_active,

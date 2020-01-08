@@ -120,9 +120,17 @@ class Raidforums(scrapy.Spider):
 		import pdb;pdb.set_trace()
 
 	    if commant_date:
-	        month_year = time.strftime("%m_%Y", time.localtime(int(commant_date/1000)))
+                year = time.strftime("%Y", time.localtime(int(commant_date/1000)))
+                if year > '2011':
+	            month_year = time.strftime("%m_%Y", time.localtime(int(commant_date/1000)))
+                else:
+                    continue
 	    if commantdate:
-	        month_year = time.strftime("%m_%Y", time.localtime(int(commantdate/1000)))
+                year = time.strftime("%Y", time.localtime(int(commantdate/1000)))
+                if year > '2011':
+	            month_year = time.strftime("%m_%Y", time.localtime(int(commantdate/1000)))
+                else:
+                    continue
 
             commant_author = ''.join(i.xpath('.//div[@class="post_author scaleimages"]//span[@class="owner-hex"]/text() | ./div//span[@class="largetext"]/a/span/text() | .//span[@class="largetext"]//img/@original-title | .//span[@class="sparkles-ani"]//text() | .//span[@class="largetext"]//span[@class="god-hex"]//text() | .//div[@class="post__user"]//span/text()').extract()) or 'Null'
             Post_Url_ = ''.join(i.xpath('.//div[@class="post_content"]//div[@class="float_right"]//a/@href').extract())
@@ -149,9 +157,10 @@ class Raidforums(scrapy.Spider):
 		links = 'Null'
 	    if links_ == []:
 		links = 'Null'
-            auth_url = ''.join(i.xpath('.//div[@class="author_avatar"]/a/@href | .//div[@class="post__user"]//a/@href' ).extract())
-            if 'https:/' not in auth_url:
-		auth_url = 'https://raidforums.com/' + auth_url
+            #auth_url = ''.join(i.xpath('.//div[@class="author_avatar"]/a/@href | .//div[@class="post__user"]//a/@href' ).extract())
+	    auth_url = ''.join(i.xpath('.//div[@class="post__user"]//div[@class="post__user-profile largetext"]/a/@href' ).extract())
+            #if 'https:/' not in auth_url:
+		#auth_url = 'https://raidforums.com/' + auth_url
 	    if auth_url == '':
 		auth_url = 'Null'
             meta = {'commant_date' : commantdate, 'thread_type' : thread_title.encode('utf8'), 'thread_Topics' : thread_Topics.encode('utf8')} 
@@ -162,6 +171,7 @@ class Raidforums(scrapy.Spider):
 		}
 	    post = {
 		'cache_link':'',
+		'author':json.dumps(author_data),
 		'section':Category,
 		'language':'english',
 		'require_login':'false',
@@ -188,13 +198,12 @@ class Raidforums(scrapy.Spider):
 			       'original_url':Post_url,
 			       'fetch_time':int(datetime.datetime.now().strftime("%s")) * 1000,
 			       'publish_time':commant_date,
-			       'link_url':links,
+			       'link.url':links,
 			       'post':post
 			       })
             self.es.index(index="forum_posts_"+month_year, doc_type='post', id=hashlib.md5(str(Post_url)).hexdigest(), body=json_posts)
-
-            #try:self.cursor.execute(d_que, json_posts)
-	    #except:pass#import pdb;pdb.set_trace()
+	    if auth_url == 'Null':
+		continue
             meta = {'publish_time': commant_date, 'thread_title': thread_title}
             json_crawl = {
                            'post_id': Post_id,

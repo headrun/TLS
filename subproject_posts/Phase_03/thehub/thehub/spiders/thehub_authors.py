@@ -57,7 +57,7 @@ name : value,
 
     def parse_authors(self, response):
         urls = []
-        que = "select DISTINCT(links) from thehub_author_crawl where crawl_status = 0 limit 300"
+        que = "select DISTINCT(links) from thehub_author_crawl where crawl_status = 0 or 1 limit 1000"
         self.cursor.execute(que)
         data = self.cursor.fetchall()
         for da in data:
@@ -83,10 +83,10 @@ name : value,
             json_data = {'url':response.request.url}
             self.cursor.execute(query,json_data)
             return 
-	if username:
+	'''if username:
             query = 'update thehub_author_crawl set crawl_status = 1 where links = %(url)s'
             json_data = {'url':response.request.url}
-            self.cursor.execute(query,json_data)
+            self.cursor.execute(query,json_data)'''
         groups = ''.join(response.xpath('//span[@class="position"]/text()').extract())
 	totalposts = ''.join(response.xpath('//dt[contains(text(),"Posts: ")]//following-sibling::dd/text()').extract()).split('(')[0]
 	last_active = ''.join(response.xpath('//dl[@class="noborder"]//dt[contains(text(),"Date Registered: ")]//following-sibling::dd[3]/text()').extract()) \

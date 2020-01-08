@@ -152,7 +152,11 @@ class Monopoly(scrapy.Spider):
 	    except:pass
             publish_time =time.mktime(publish_date.timetuple())*1000
 	    if publish_time:
-		month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                year = time.strftime("%Y", time.localtime(int(publish_time/1000)))
+                if year > '2011':
+                    month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                else:
+                    continue    
 	    else:
 		publish_time = 'Null'
             fetch_epoch = int(datetime.datetime.now().strftime("%s")) * 1000
@@ -198,7 +202,7 @@ class Monopoly(scrapy.Spider):
                     'original_url': post_url,
                     'fetch_time': fetch_epoch,
                     'publish_time': publish_time,
-                    'link_url':all_links,
+                    'link.url':all_links,
                     'post':{
                         'cache_link':'',
                         'author':json.dumps(author_data),

@@ -16,6 +16,9 @@ tables = {
     'darkmoney':{
         'post_crawl':'darkmoney_crawl',
     },
+    'bitshacking':{
+        'post_crawl':'bitshacking_post_crawl'
+    },
     'agartha':{
 	'post_crawl':'agartha_crawl',
      },

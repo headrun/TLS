@@ -9,6 +9,7 @@ import json
 import xpaths
 import MySQLdb
 import time
+import re
 from MySQLdb import OperationalError
 sys.path.append('/home/epictions/tls_scripts/tls_utils')
 import tls_utils as utils
@@ -104,7 +105,11 @@ class Hellbound(scrapy.Spider):
                 author = ''.join(author_name_mode.xpath('.//text()').extract()) or 'Null'
                 publish_epoch = utils.time_to_epoch(publish_time,"Posted on %d-%m-%y %H:%M" )
 		if publish_epoch:
-		    month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                    year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                    if year > '2011':
+		        month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                    else:
+                        continue
 		else:
 		    import pdb;pdb.set_trace()
 
@@ -133,6 +138,7 @@ class Hellbound(scrapy.Spider):
 		    all_links = 'Null'
 		post = {
 			'cache_link':'',
+			'author':json.dumps(author_data),
 			'section':category,
 			'language':'english',
 			'require_login':'false',
@@ -147,7 +153,7 @@ class Hellbound(scrapy.Spider):
 			'thread_url':thread_url
 			}
                 json_values.update({
-		 	    'id':'Null',
+		 	    'record_id' : 'Null',
 			    'hostname':"www.hellboundhackers.org",
                             'domain':"hellboundhackers.org",
                             'sub_type':'openweb',
@@ -159,7 +165,7 @@ class Hellbound(scrapy.Spider):
 			    'original_url':'Null',
 			    'fetch_time':fetch_epoch,
 			    'publish_time':publish_epoch,
-			    'link_url':all_links,
+			    'link.url':all_links,
 			    'post':post
                             })
 		#query={"query":{"match":{"_id":hashlib.md5(str(post_id)).hexdigest()}}}

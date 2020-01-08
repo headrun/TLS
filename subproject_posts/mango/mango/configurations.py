@@ -1,11 +1,39 @@
 tables = {
+    'defendtheweb':{
+	'post_crawl':'defendtheweb_post_crawl',
+        'author_crawl':'defendtheweb_authors_crawl'
+    },
+    'cracked':{
+    	'post_crawl':'cracked_post_crawl',
+    	'author_crawl':'cracked_authors_crawl'
+    },
+    'turkhackteam':{
+     	'post_crawl':'turkhackteam_post_crawl',
+     	'author_crawl':'turkhackteam_authors_crawl'
+    },
+    'xakepok':{
+     	'post_crawl':'xakepok_post_crawl',
+     	'author_crawl':'xakepok_authors_crawl'
+    },
+    'centerclub':{
+        'post_crawl':'centerclub_post_crawl'
+    },
+    'bitshacking':{
+        'post_crawl' : 'bitshacking_post_crawl'
+    },
+    'sinister':{
+    	'post_crawl':'sinister_post_crawl'
+    },
+    'csteam':{
+        'post_crawl':'csteam_post_crawl'
+    },
+    'boardbat':{
+    	'post_crawl':'boardbat_post_crawl',
+    	'author_crawl':'boardbat_authors_crawl'
+    },
     'fuckav':{
 	'post_crawl':'fuckav_post_crawl',
 	'author_crawl':'fuckav_authors_crawl'
-    },
-    'centerclub':{
-        'post_crawl':'centerclub_post_crawl',
-        'author_crawl':'centerclub_authors_crawl'
     },
     'crypto':{
         'post_crawl':'crypto_post_crawl'
@@ -15,9 +43,6 @@ tables = {
     },
     'darkmoney':{
         'post_crawl':'darkmoney_crawl',
-    },
-    'bitshacking':{
-        'post_crawl':'bitshacking_post_crawl'
     },
     'agartha':{
 	'post_crawl':'agartha_crawl',

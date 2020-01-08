@@ -48,7 +48,8 @@ class Fuckav_authors(Spider):
         if joindate == None:
             joindate = time_to_epoch(join_date,'%d/%m/%Y')
         if joindate == None:
-            import pdb;pdb.set_trace()
+            joindate = 0
+
         total = response.xpath('//span[contains(.,"%s")]/following-sibling::text()'%u'\u0412\u0441\u0435\u0433\u043e \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0439:').extract_first()
         totalposts = total.strip()
         groups = ''
@@ -91,6 +92,7 @@ class Fuckav_authors(Spider):
             last_activity = last_active
         else:
             import pdb;pdb.set_trace()
+
         activetimes_ = response.meta.get('publish_time')
         activetimes = []
         activetimes = activetime_str(activetimes_,totalposts)

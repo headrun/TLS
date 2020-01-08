@@ -59,7 +59,11 @@ class Virusinfo(Spider):
                 if publish_epoch ==None:
                     import pdb;pdb.set_trace()
 		if publish_epoch:
-                    month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                    year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                    if year > '2011':
+                        month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                    else:
+                        continue
                 else:
                     import pdb;pdb.set_trace()
 
@@ -76,6 +80,9 @@ class Virusinfo(Spider):
                 all_links = ', '.join(Link)
 		if all_links =='':
 		    all_links ='Null'
+		if Links == []:
+		    all_links = 'Null'
+
                 reference_url = response.url
                 if '&p=' in reference_url:
                     test = re.findall('(.*)&page',reference_url)
@@ -100,7 +107,7 @@ class Virusinfo(Spider):
                     'original_url':post_url,
                     'fetch_time': fetch_time(),
                     'publish_time': publish_epoch,
-                    'link_url': all_links,
+                    'link.url': all_links,
                     'post':{
                         'cache_link':'',
                         'author':json.dumps(author_data),

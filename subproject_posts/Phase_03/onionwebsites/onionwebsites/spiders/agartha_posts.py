@@ -50,7 +50,11 @@ class Agartha(scrapy.Spider):
 	    if publish_epoch == False:
 		import pdb;pdb.set_trace()
 	    if publish_epoch:
-		month_year = get_index(publish_epoch)
+                year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                if year > '2011':
+		    month_year = get_index(publish_epoch)
+                else:
+                    continue
 	    else:
 		import pdb;pdb.set_trace()
 

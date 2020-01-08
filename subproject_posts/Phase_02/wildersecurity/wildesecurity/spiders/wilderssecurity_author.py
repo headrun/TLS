@@ -37,10 +37,7 @@ class WilderAuthors(scrapy.Spider):
 
     def parse(self, response):
         select_query = 'select DISTINCT(links) from wilder_crawl where crawl_status = 0'
-	#import pdb;pdb.set_trace()
         self.cursor.execute(select_query)
-	self.conn.commit()
-
         self.data = self.cursor.fetchall()	
         for da in self.data:
             url = da[0]
@@ -48,9 +45,18 @@ class WilderAuthors(scrapy.Spider):
             self.cursor.execute(meta_query)
             meta_query = self.cursor.fetchall()
             activetime, join_date, total_posts, author,group_ = [], [], [], [], []
+            #activetime = []
+            #join_date = ''
+            #totla_posts = ''
+            #author = ''
+            #group_ = ''          
             for da1 in meta_query:
                 meta = json.loads(da1[0])
                 activetime.append(meta.get('publish_epoch', ''))
+                #join_date = meta.get('join_date','')
+                #total_posts = meta.get('total_posts','')
+                #author = meta.get('author','')
+                #group_ = meta.get('groups','')
                 join_date.append(meta.get('join_date', ''))
                 total_posts.append(meta.get('total_posts', ''))
                 author.append(meta.get('author', '')) 
@@ -58,11 +64,12 @@ class WilderAuthors(scrapy.Spider):
             publish_epoch = set(activetime)
             join_date = set(join_date)
             total_posts = set(total_posts)
-            author = set(author)
+            author = author
             groups_ = set(group_)
             meta = {'publish_epoch':publish_epoch, 'join_date':join_date, 'total_posts':total_posts, 'author':author, 'groups_':groups_}
             if url and meta:
-                self.parse_author(meta)
+                yield Request(url, callback=self.parse_author,meta = meta)
+
 
     def parse_author(self, meta):
         active_time = []
@@ -105,5 +112,4 @@ class WilderAuthors(scrapy.Spider):
                          'contact_info': '',
         })
         upsert_query_authors = utils.generate_upsert_query_authors('POSTS_WILDER')
-        #self.cursor.execute(upsert_query_authors, json_data)
 	self.es.index(index="forum_author", doc_type='post', id=hashlib.md5(str(user_name)).hexdigest(), body=json_data)

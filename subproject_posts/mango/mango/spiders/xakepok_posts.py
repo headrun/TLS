@@ -37,7 +37,11 @@ class xakepok(scrapy.Spider):
             date_=  ''.join(set(re.findall('\d+.\d+.\d+',date)))
             publish_epoch = time_to_epoch(date_,'%d.%m.%Y')
             if publish_epoch:
-                month_year =  time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                if year > '2011':
+                    month_year =  time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                else:
+                    continue
             else:
                 publish_epoch = 'Null'
             text = ''.join(node.xpath('.//div[contains(@id,"post_message_")]//td//text() | .//div[contains(@id,"post_message_")]//text() | .//div[contains(@id,"post_message_")]//@alt | .//div[contains(@id,"post_message_")]//div[contains(@class,"smallfont")]//@class | .//div[contains(@id,"post_message_")]//img//@alt | .//div[contains(@id,"post_message_")]//img//@title').extract()).replace('\n','').replace('smallfont','Quote ') or 'Null'

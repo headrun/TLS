@@ -62,7 +62,11 @@ class Defendtheweb(Spider):
             publish = node.xpath('.//div[@class="discussion-thread-message-meta"]//span/@title').extract_first().replace('(UTC)', '').strip()
             publish_time = time_to_epoch(publish, '%d/%m/%Y %H:%M')
             if publish_time:
-                month_year = time.strftime("%m_%Y", time.localtime(int(publish_time)/1000))
+                year = time.strftime("%Y", time.localtime(int(publish_time/1000)))
+                if year > '2011':
+                    month_year = time.strftime("%m_%Y", time.localtime(int(publish_time)/1000))
+                else:
+                    continue
             else:
                 pass
 
@@ -128,3 +132,4 @@ class Defendtheweb(Spider):
                 'links':author_url
                 }
             self.cursor.execute(self.query, json_author)
+	    self.conn.commit()

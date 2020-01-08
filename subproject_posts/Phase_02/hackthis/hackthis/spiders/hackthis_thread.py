@@ -100,7 +100,11 @@ class HackThis(scrapy.Spider):
             publish_time = ''.join(publishtime).strip()
             publish_epoch = utils.time_to_epoch(publish_time, '%a %b %d, %Y %H:%M %p')
 	    if publish_epoch:
-	        month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                if year > '2011':
+	            month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                else:
+                    continue
 	    else:
 		import pdb;pdb.set_trace()
 
@@ -131,8 +135,13 @@ class HackThis(scrapy.Spider):
 	    if links == []:
 	        links = 'Null'
 		all_links = links
+	    author_data = {
+                'name':author,
+                'url':author_url
+                }
 	    post = {
 		'cache_link':'',
+		'author':json.dumps(author_data),
 		'section':category,
 		'language':'english',
 		'require_login':'false',
@@ -152,7 +161,7 @@ class HackThis(scrapy.Spider):
 		}
             query_posts = utils.generate_upsert_query_posts('posts_hackthissite')
 	    json_posts = {
-			  'id':post_url,
+			  'record_id' : re.sub(r"\/$", "", post_url.replace(r"https", "http").replace(r"www.", "")),
 			  'hostname':"www.hackthissite.org",
 			  'domain': "hackthissite.org",
 			  'sub_type':'openweb',
@@ -164,7 +173,7 @@ class HackThis(scrapy.Spider):
 			  'original_url':post_url,
 			  'fetch_time':fetch_epoch,
 			  'publish_time':publish_epoch,
-			  'link_url':all_links,
+			  'link.url':all_links,
 			  'post':post
             }
 	    #query={"query":{"match":{"_id":hashlib.md5(str(post_url)).hexdigest()}}}

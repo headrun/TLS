@@ -36,15 +36,20 @@ class Fuckav1(Spider):
         post_url = self.cursor.fetchall()
         for url in post_url:
             #cookies= self.cook,dont_filter=True)
+	    #url = ['https://fuckav.ru/showthread.php?t=27325&cdn=1']
             yield Request(url[0], callback=self.parse_meta)
 
     def parse_meta(self, response):
         login = ''.join(response.xpath('//td[@align="right"]/input[contains(@accesskey,"r")]/@type').extract())
         if login:
             return
-        category = ''.join(response.xpath('//table[@class="tborder"]//td[@class="alt1"]//span[@itemprop="title"]/text()')[1].extract()) or 'Null'
-        sub_category = ''.join(response.xpath('//table[@class="tborder"]//td[@class="alt1"]//span[@itemprop="title"]/text()').extract()[2]).encode('utf8') or 'Null'
-	sub_category_url = response.xpath('//span[@class = "navbar"]//a//@href')[2].extract() or 'Null'
+        category = response.xpath('//table[@class="tborder"]//td[@class="alt1"]//span[@itemprop="title"]/text()').extract()[1] or 'Null'
+        sub_category = response.xpath('//table[@class="tborder"]//td[@class="alt1"]//span[@itemprop="title"]/text()').extract()[2].encode('utf8') or 'Null'
+	sub_categoryurl = response.xpath('//span[@class = "navbar"]//a//@href').extract()[2] 
+	sub_category_url = urljoin('https://fuckav.ru/', sub_categoryurl)
+	if sub_categoryurl == '':
+	    sub_category_url == 'Null'
+	
         thread_title = ''.join(response.xpath('//table[@class="tborder"]//td[@class="alt1"]//td[@class="navbar"]//text()').extract()).strip()or 'Null'
         thread_url = response.request.url.split('&')[0] or 'Null'
         nodes = response.xpath('//table[contains(@id,"post")]')
@@ -68,9 +73,13 @@ class Fuckav1(Spider):
             if publish_time == None:
                 pass
 	    if publish_time:
-                month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                year = time.strftime("%Y", time.localtime(int(publish_time/1000)))
+                if year > '2011':
+                    month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))       
+                else:
+                    continue
             else:
-                import pdb;pdb.set_trace()
+                pass
 
             author = ''.join(node.xpath('.//a[@class="bigusername"]//text()').extract()) or 'Null'
             auth_url = ''.join(node.xpath('.//a[@class="bigusername"]/@href').extract()) 
@@ -102,7 +111,7 @@ class Fuckav1(Spider):
                     'original_url': post_url,
                     'fetch_time': fetch_time(),
                     'publish_time': publish_time,
-                    'link_url':links,
+                    'link.url':links,
                     'post':{
                         'cache_link':'',
 			'author':json.dumps(author_data),
@@ -131,15 +140,15 @@ class Fuckav1(Spider):
 		    es.index(index="forum_posts", doc_type='post', id=sk, body=json_posts)'''
 
             meta = {'publish_time': publish_time}
-            if author_url:
-
-                json_crawl = {
+            if author_url =='Null':
+		continue
+            json_crawl = {
                     'post_id': post_id,
                     'auth_meta': json.dumps(meta),
                     'crawl_status':0,
                     'links': author_url
                     }
-                self.cursor.execute(self.author_crawl,json_crawl)
+            self.cursor.execute(self.author_crawl,json_crawl)
         next_page = response.xpath('//div[@class="pagenav"]//td[@class="alt1"]/a[@rel="next"]/@href').extract_first()
         if next_page:
             next_page = urljoin("https://fuckav.ru/", next_page)

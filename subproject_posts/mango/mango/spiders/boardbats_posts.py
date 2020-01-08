@@ -35,7 +35,7 @@ class Boardbats(Spider):
                 category = categories[1].strip()
                 sub_category = categories[2] +', '+categories[3].strip()
         except:
-            import pdb;pdb.set_trace()
+            pass
 
         sub_category_urls = response.xpath('//ul[@data-role="breadcrumbList"]//li//a/@href').extract()
         try:
@@ -44,7 +44,7 @@ class Boardbats(Spider):
             if len(sub_category_urls) == 8:
                 sub_category_url = sub_category_urls[2]+', '+sub_category_urls[3]
         except:
-            import pdb;pdb.set_trace()
+            pass
 
         thread_title = ''.join(response.xpath('//span[@class="ipsType_break ipsContained"]//span//text()').extract()).strip() or 'Null'
         nodes = response.xpath('//div[@id="elPostFeed"]//article[contains(@id,"elComment_")]')
@@ -58,13 +58,17 @@ class Boardbats(Spider):
             else:
                 post_id = ''.join(re.findall('topic/\d+',post_url)).replace('topic/','') or 'Null'
             date = ''.join(node.xpath('.//div[@class="ipsType_reset"]//a//time/@title').extract())
-            publish_epoch = time_to_epoch(date,'%m/%d/%Y %I:%M %p')
+            publish_epoch = time_to_epoch(date,'%m/%d/%y %I:%M  %p')
             if publish_epoch ==False:
 		import pdb;pdb.set_trace()
 	    if publish_epoch:
-                month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                if year > '2011':
+                    month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                else:
+                    continue
             else:
-                import pdb;pdb.set_trace()
+                pass 
 
             text = ' '.join(node.xpath('.//blockquote[@class="ipsQuote"]//@data-ipsquote-timestamp | .//blockquote[@class="ipsQuote"]//@data-ipsquote-username | .//div[@class="ipsType_normal ipsType_richText ipsContained"]//p//text() | .//div[@class="ipsType_normal ipsType_richText ipsContained"]//strong//text() | .//pre[@class="ipsCode ipsCode prettyprint linenums:0 prettyprinted"]//a//span//text() | .//blockquote[@class="ipsQuote"]/text() | .//div[@class="ipsType_normal ipsType_richText ipsContained"]//p//strong//text() | .//div[@class="ipsType_normal ipsType_richText ipsContained"]//p//text() | .//pre[@class ="ipsCode prettyprint"]//text() | .//img[@class = "ipsImage ipsImage_thumbnailed"]//@alt | //div[@class= "ipsType_normal ipsType_richText ipsContained"]//@alt | .//pre[@class= "ipsCode"]//text() | .//blockquote[@class="ipsQuote"]/@class | .//blockquote[@class="ipsQuote"]/div//text() | .//div[@class="ipsType_normal ipsType_richText ipsContained"]/div//text()').extract()).replace('\n','').replace('\t','').encode('ascii', 'ignore') or 'Null'
             t_datetime = node.xpath('.//blockquote[@class="ipsQuote"]//div[@class ="ipsQuote_citation"]//a//text()').extract()

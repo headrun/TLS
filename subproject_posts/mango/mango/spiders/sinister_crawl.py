@@ -32,6 +32,7 @@ class sinister(scrapy.Spider):
                           'reference_url':response.url
              }
             self.cursor.execute(self.query_status,json_posts)
+	    self.conn.commit()
         page_nav = response.xpath('//a[@class="pagination_next"]//@href').extract_first()
         if page_nav:
             page_navi = urljoin("https://sinister.ly/",page_nav)

@@ -47,18 +47,22 @@ class Rocksolid(Spider):
                 author = ''.join(node.xpath('.//text()[preceding-sibling::b[contains(text(),"From:")]][following-sibling::b[1][preceding-sibling::b[1][contains(text(),"From:")]]]').extract()).replace('(', '').replace(')', '').strip() or 'Null'
                 organization = ''.join(node.xpath('.//text()[preceding-sibling::b[contains(text(),"Organization:")]][following-sibling::b[1][preceding-sibling::b[1][contains(text(),"Organization:")]]]').extract()).strip() or 'Null'
                 try:
-                    date = ''.join(node.xpath('.//text()[preceding-sibling::b[contains(text(),"Date:")]]').extract()).replace('\n', '')
-                    publish = datetime.datetime.strptime(date.strip(), '%b %d %Y %H:%M:%S')
+                    date1 = ''.join(node.xpath('.//text()[preceding-sibling::b[contains(text(),"Date:")]]').extract()).replace('\n', '')
+                    date = ''.join(re.findall('\d+ \w+ \d+ \d+:\d+',date1))
+                    publish = datetime.datetime.strptime(date, '%d %b %Y %H:%M')
                     publish_epoch = time.mktime(publish.timetuple()) * 1000
                 except:
-                    try:
-                        date = ''.join(node.xpath('.//text()[preceding-sibling::b[contains(text(),"Date:")]][following-sibling::b[1][preceding-sibling::b[1][contains(text(),"Date:")]]]').extract()).replace('\n', '')
-                        publish = datetime.datetime.strptime(date.strip(), '%b %d %Y %H:%M:%S')
-                        publish_epoch = time.mktime(publish.timetuple()) * 1000
-                    except:
-                        import pdb;pdb.set_trace()
+                    date = ''.join(node.xpath('.//text()[preceding-sibling::b[contains(text(),"Date:")]][following-sibling::b[1][preceding-sibling::b[1][contains(text(),"Date:")]]]').extract()).replace('\n', '')
+                    publish = datetime.datetime.strptime(date.strip(), '%b %d %Y %H:%M:%S')
+                    publish_epoch = time.mktime(publish.timetuple()) * 1000
+                if publish_epoch == False:
+                   import pdb;pdb.set_trace()
 	        if publish_epoch:
-		    month_year = get_index(publish_epoch)
+                    year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                    if year > '2011':
+		        month_year = get_index(publish_epoch)
+                    else:
+                        continue
 		else:
 		    import pdb;pdb.set_trace()
 
@@ -70,6 +74,7 @@ class Rocksolid(Spider):
 			}
 		post = {
 			'cache_link':'',
+			'author':json.dumps(author_data),
 			'section':category,
 			'language':'english',
 			'require_login':'false',
@@ -95,7 +100,7 @@ class Rocksolid(Spider):
 			       'original_url':'Null',
 			       'fetch_time':fetch_time,
 			       'publish_time':publish_epoch,
-			       'link_url':'Null',
+			       'link.url':'Null',
 			       'post':post,
 			       'organization':organization
 			       }

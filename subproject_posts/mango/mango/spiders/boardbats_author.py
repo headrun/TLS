@@ -40,14 +40,14 @@ class Boardbats(scrapy.Spider):
         user_name = ''.join(response.xpath('//h1[@class="ipsType_reset ipsPageHead_barText"]//text()').extract()).replace('\n\t','').replace('\t','').replace('\n', '').strip()
         author_signature = ''
         join_date = ''.join(response.xpath('//ul[@class="ipsList_inline ipsPos_left"]//li/time/@title').extract())
-        join = datetime.datetime.strptime(join_date,'%m/%d/%Y %I:%M %p')
+        join = datetime.datetime.strptime(join_date,'%m/%d/%y %I:%M  %p')
         joindate = time.mktime(join.timetuple())*1000
         totalposts = ''.join(response.xpath('//li//h4[@class="ipsType_minorHeading"]/following-sibling::text()').extract()).strip()
         groups = ''.join(response.xpath('//span[@class="ipsPageHead_barText"]//span//text()').extract()).strip()
         reputation = ''.join(response.xpath('//span[@class="cProfileRepScore_points"]//text()').extract()).strip()
         last_active_ = ''.join(response.xpath('//li/span/time/@title').extract())
         try:
-            last = datetime.datetime.strptime(last_active_,'%m/%d/%Y %I:%M %p')
+            last = datetime.datetime.strptime(last_active_,'%m/%d/%y %I:%M  %p')
             last_active = time.mktime(last.timetuple())*1000
         except:
             pass

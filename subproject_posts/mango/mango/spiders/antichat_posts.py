@@ -1,4 +1,4 @@
-import cfscrape
+#import cfscrape
 from mango.utils import *
 
 class Antichat(scrapy.Spider):
@@ -15,9 +15,9 @@ class Antichat(scrapy.Spider):
     def start_requests(self):
        scraper = cfscrape.create_scraper()
        r = scraper.get('https://forum.antichat.ru/')
-       yield Request('https://forum.antichat.ru/',callback= self.parse_nxt)
+       yield Request('https://forum.antichat.ru/',callback= self.parse)
 
-    def parse_nxt(self,response):
+    def parse(self, response):
         url_que = "select distinct(post_url) from antichat_crawl where crawl_status = 0 "
         self.cursor.execute(url_que)
         data = self.cursor.fetchall()
@@ -54,7 +54,11 @@ class Antichat(scrapy.Spider):
             if publish_epoch ==False:
                 publish_epoch = time_to_epoch(date_,'%d %b %Y ')
             if publish_epoch:
-                month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                if year > '2011':
+                    month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                else:
+                    continue
             else:
 		import pdb;pdb.set_trace()
             
@@ -97,7 +101,7 @@ class Antichat(scrapy.Spider):
                     'original_url': post_url,
                     'fetch_time': fetch_time(),
                     'publish_time': publish_epoch,
-                    'link_url':links,
+                    'link.url':links,
                     'post':{
                         'cache_link':'',
                         'author': json.dumps(author_data),
@@ -118,15 +122,10 @@ class Antichat(scrapy.Spider):
 
             }
             sk = md5_val(post_url)
-	    #query={"query":{"match":{"_id":sk}}}
-            #res = es.search(body=query)
-            #if res['hits']['hits'] == []:		
             es.index(index="forum_posts_"+month_year, doc_type='post', id=sk, body=json_posts)
-	    '''else:
-		data_doc = res['hits']['hits'][0]
-		if (json_posts['links'] != data_doc['_source']['links']) or (json_posts['text'] != data_doc['_source']['text']):
-		    es.index(index="forum_posts", doc_type='post', id=sk, body=json_posts)'''
-
+	
+	    if author_url == 'Null':
+		continue
             auth_meta = {'publish_time': publish_epoch,'reputation':reputation}
             json_posts.update({
                     'post_id': post_id,

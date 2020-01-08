@@ -57,7 +57,11 @@ class CNW(scrapy.Spider):
             publish_date = datetime.datetime.strptime(date,'%m/%d/%y %I:%M  %p')
             publish_epoch = time.mktime(publish_date.timetuple())*1000
 	    if publish_epoch:
-		month_year = get_index(publish_epoch)
+                year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                if year > '2011':
+		    month_year = get_index(publish_epoch)
+                else:
+                    continue
 	    else:
 		import pdb;pdb.set_trace()
 

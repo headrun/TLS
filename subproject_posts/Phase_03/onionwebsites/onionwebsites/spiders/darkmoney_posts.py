@@ -48,7 +48,11 @@ class Darkmoney_posts(Spider):
             publish_date = ''.join(node.xpath('.//td[@style="font-weight:normal; border: 1px solid #000099; border-right: 0px"]//text()').extract()).strip()
             publish_epoch = time_to_epoch(publish_date,'%d.%m.%Y, %H:%M')
 	    if publish_epoch:
-		month_year = get_index(publish_epoch)
+                year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                if year > '2011':
+		    month_year = get_index(publish_epoch)
+                else:
+                    continue
 	    else:
 		import pdb;pdb.set_trace()
 
@@ -104,7 +108,7 @@ class Darkmoney_posts(Spider):
 		'original_url':post_url,
 		'fetch_time':fetch_time(),
 		'publish_time':publish_epoch,
-		'link_url':links_url,
+		'link.url':links_url,
 		'post':post
 		}
 	    sk = md5_val(post_url)

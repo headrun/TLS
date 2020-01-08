@@ -49,6 +49,7 @@ class BlackHat(scrapy.Spider):
             self.cursor.execute(que)
             data = self.cursor.fetchall()
             for url in data:
+		#url = ['https://www.blackhatworld.com/seo/link-redirection.353336/']
                 yield Request(url[0], callback = self.parse_thread)
 
     def parse_thread(self, response):
@@ -74,7 +75,7 @@ class BlackHat(scrapy.Spider):
 	sub_category_url = sel.xpath('//a[@itemprop="url"]/@href').extract()[2] or 'Null'
         post_title = 'Null'
         #nodes=sel.xpath(xpaths.NODES)
-	nodes = sel.xpath('//div[@class="pageContent"]//ol[@class="messageList"]//li[contains(@id,"post-")]')
+	nodes = sel.xpath('//ol[@class="messageList"]/li[contains(@id,"post-")]')
         if nodes:
             query = 'update blackhat_status set crawl_status = 1 where post_url = %(url)s'
             json_data={'url':response.url}
@@ -111,7 +112,11 @@ class BlackHat(scrapy.Spider):
             publish_epoch = utils.time_to_epoch(publishtimes, '%b %d, %Y')
 	    if publish_epoch:
 	        publish_time = int(publish_epoch)
-	        month_year = time.strftime("%m_%Y", time.localtime(publish_time/1000))
+                year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                if year > '2011':
+	            month_year = time.strftime("%m_%Y", time.localtime(publish_time/1000))
+                else :
+                    continue
 	    else:
 		import pdb;pdb.set_trace()
 
@@ -140,8 +145,14 @@ class BlackHat(scrapy.Spider):
 	    if Links == []:
 		Links = 'Null'
 		all_links = Links
+            author_data = {
+                'name':author,
+                'url':author_url
+                }
+
 	    post = {
 		'cache_link':'',
+		'author':json.dumps(author_data),
 		'section':category,
 		'language':'english',
 		'require_login':'false',
@@ -155,12 +166,8 @@ class BlackHat(scrapy.Spider):
 		'thread_title':thread_title,
 		'thread_url':thread_url
 		}
-	    author_data = {
-		'name':author,
-		'url':author_url
-		}
             json_posts = {
-			  'id':post_url,
+			  'record_id' : re.sub(r"\/$", "", post_url.replace(r"https", "http").replace(r"www.", "")),
 			  'hostname':'www.blackhatworld.com',
 			  'domain': domain,
 			  'sub_type':'openweb',
@@ -172,21 +179,18 @@ class BlackHat(scrapy.Spider):
 			  'original_url':post_url,
 			  'fetch_time':fetch_epoch,
 			  'publish_time':publish_epoch,
-			  'link_url':all_links,
+			  'link.url':all_links,
 			  'post':post
 			}
             
-	    #query={"query":{"match":{"_id":hashlib.md5(str(post_url)).hexdigest()}}}
-            #res = self.es.search(body=query)
-	    #if res['hits']['hits'] == []:
             self.es.index(index="forum_posts_" + month_year, doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts)
 	    #else:
 		#data_doc = res['hits']['hits'][0]
                 #if (json_posts['links'] != data_doc['_source']['links']) or (json_posts['text'] != data_doc['_source']['text']):
 		    #self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts)
-
+	    if author_url == 'Null':
+		continue
             meta = {'publish_epoch': publish_epoch, 'author_signature':utils.clean_text(author_signature)}
-            #json_crawl = {}
             json_crawl = {
                     'post_id': post_id,
                     'auth_meta': json.dumps(meta),

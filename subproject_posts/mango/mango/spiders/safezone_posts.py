@@ -39,12 +39,16 @@ class Safezone1(scrapy.Spider):
             json_values = {}
             post_title = ''  or 'Null'
             post_url = ''.join(node.xpath('.//ul[@class="message-attribution-opposite message-attribution-opposite--list"]//li[1]//a[@rel="nofollow"]//@href').extract()).strip()  or 'Null'
-	    ord_in_thread = ''.join(node.xpath('.//ul[@class="message-attribution-opposite message-attribution-opposite--list"]//a//text()').extract()).replace('\n\t','').replace('#','').replace('\t','') or 'Null'
+	    ord_in_thread = ''.join(node.xpath('.//ul[@class="message-attribution-opposite message-attribution-opposite--list"]//a//text()').extract()).replace('\n\t','').replace('#','').replace('\t','').replace('\n', '').strip() or 'Null'
             post_url = urljoin("https://safezone.cc/", post_url)  or 'Null'
             post_id=post_url.split('-')[-1]  or 'Null'
             publish_time = ''.join(node.xpath('.//div[@class="message-attribution-main"]//@data-time').extract()).strip()  or 'Null'
 	    if publish_time:
-                month_year = time.strftime("%m_%Y", time.localtime(int(publish_time)))
+                year = time.strftime("%Y", time.localtime(int(publish_time)))
+                if year > '2011':
+                    month_year = time.strftime("%m_%Y", time.localtime(int(publish_time)))
+                else:
+                    continue
             else:
                 import pdb;pdb.set_trace()
             author = ''.join(node.xpath('.//h4[@class = "message-name"]//a//text() | .//h4[@class="message-name"]//span[@class="username "]//text()').extract())  or 'Null'
@@ -83,7 +87,7 @@ class Safezone1(scrapy.Spider):
                     'original_url': post_url,
                     'fetch_time': fetch_time(),
                     'publish_time': publish_time,
-                    'link_url': ', '.join(links),
+                    'link.url': ', '.join(links),
                     'post':{
                         'cache_link':'',
 			'author':json.dumps(author_data),
@@ -102,9 +106,6 @@ class Safezone1(scrapy.Spider):
 		    },
             })
             sk = md5_val(post_url)
-	    #query={"query":{"match":{"_id":sk}}}
-            #res = es.search(body=query)
-            #if res['hits']['hits'] == []:
             es.index(index="forum_posts_"+month_year, doc_type='post', id=sk, body=json_posts,request_timeout=30)
             #doc_to_es(id=sk,doc_type='post',body=json_posts)
 	    #else:

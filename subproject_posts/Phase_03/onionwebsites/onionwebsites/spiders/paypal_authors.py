@@ -7,6 +7,7 @@ import requests
 import json
 import MySQLdb
 import time
+from onionwebsites import utils
 from scrapy import signals
 from scrapy.xlib.pydispatch import dispatcher
 import re

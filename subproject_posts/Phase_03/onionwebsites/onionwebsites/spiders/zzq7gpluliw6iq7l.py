@@ -44,7 +44,9 @@ class Zzq7gpluliw6iq7l(Spider):
             publish = datetime.datetime.now() - timedelta(days=int(x_days),hours=int(y_hours))
             publish_epoch = time.mktime(publish.timetuple())*1000
 	    if publish_epoch:
-		month_year = get_index(publish_epoch)
+                year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                if year > '2011':
+		    month_year = get_index(publish_epoch)
 	    else:
 		import pdb;pdb.set_trace()
 
@@ -59,6 +61,7 @@ class Zzq7gpluliw6iq7l(Spider):
 		}
 	    post = {
 		'cache_link':'',
+		'author':json.dumps(author_data),
 		'section':'Null',
 		'language':'english',
 		'require_login':'false',
@@ -85,7 +88,7 @@ class Zzq7gpluliw6iq7l(Spider):
 		'original_url':'Null',
 		'fetch_time':fetch_time,
 		'publish_time':publish_epoch,
-		'link_url':'Null',
+		'link.url':'Null',
 		'post':post
 		})
             sk = hashlib.md5(post_text).hexdigest() 

@@ -100,8 +100,13 @@ class HackThisiCo(Spider):
 	    if link_ == []:
 		links = 'Null'
             query_posts = utils.generate_upsert_query_posts('posts_hackthis_co')
+	    author_data = {
+                'name':author,
+                'url':authorurl
+                }
 	    post = {
 		'cache_link':'',
+		'author':json.dumps(author_data),
 		'section':category,
 		'language':'english',
 		'require_login':'false',
@@ -115,12 +120,8 @@ class HackThisiCo(Spider):
 		'thread_title':thread_title,
 		'thread_url':thread_url
 		}
-	    author_data = {
-		'name':author,
-		'url':authorurl
-		}
             json_posts = {
-			  'id':'Null',
+			  'record_id':'Null',
 			  'hostname':'www.hackthis.co.uk',
 			  'domain': domain,
 			  'sub_type':'openweb',
@@ -132,7 +133,7 @@ class HackThisiCo(Spider):
 			  'original_url':'Null',
 			  'fetch_time':fetch_epoch,
 			  'publish_time':publish_epoch,
-			  'link_url':links,
+			  'link.url':links,
 			  'post':post
             }
             #query={"query":{"match":{"_id":hashlib.md5(str(post_url)).hexdigest()}}}

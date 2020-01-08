@@ -47,7 +47,7 @@ class Avax(scrapy.Spider):
 		author_url = 'Null'
             title = ''.join(response.xpath('//div[@class="row"]//h1[@class="title-link"]//text()').extract()).strip() or 'Null'
             text = clean_text('\n'.join(node.xpath('.//div[@class="text"]//text() | //div[@class="text download_links"]//text()').extract()).replace("\n","").replace("\t","").strip().replace('     Close   ','').replace(u'\xd7','')) or 'Null'
-            image =   ''.join(node.xpath('.//div[@class="text-center"]//a//img//@src').extract_first())
+            image =   node.xpath('.//div[@class="text-center"]//a//img/@data-src').extract_first()
             links_ =  response.xpath('.//div[@class="text"]/a/@href | .//div[@class="text-center"]//a//img//@src | //div[@class="text"]//a[@target="_blank"]/@href | //div[@class="text"]//iframe[@class="embed-responsive-item"]/@src | //div[@class="text download_links"]//@href').extract()
             links = []
             for link in set(links_):
@@ -74,7 +74,11 @@ class Avax(scrapy.Spider):
                 publish_time = datetime.datetime.strptime(publish ,'%d %b %Y %H:%M:%S')
                 publish_epoch = time.mktime(publish_time.timetuple())*1000
 	    if publish_epoch:
-		month_year = get_index(publish_epoch)
+                year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                if year > '2011':
+		    month_year = get_index(publish_epoch)
+                else:
+                    continue
 	    else:
 		import pdb;pdb.set_trace()
 
@@ -86,6 +90,7 @@ class Avax(scrapy.Spider):
 	    post_url = response.request.url
 	    post = {
 		    'cache_link':'',
+		    'author':json.dumps(author_data),
 		    'section':'Null',
 		    'language':'english',
 		    'require_login':'false',
@@ -112,7 +117,7 @@ class Avax(scrapy.Spider):
 		    'original_url':post_url,
 		    'fetch_time':fetch_epoch,
 		    'publish_time':publish_epoch,
-		    'link_url':all_links,
+		    'link.url':all_links,
 		    'post':post
 		    }
 	    sk = hashlib.md5(post_url).hexdigest() 

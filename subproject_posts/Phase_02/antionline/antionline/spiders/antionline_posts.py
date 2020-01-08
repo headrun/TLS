@@ -25,6 +25,7 @@ auth_que = utils.generate_upsert_query_authors_crawl('antionline')
 
 class Formus(BaseSpider):
     name = 'antionline_posts'
+    start_urls = ['http://www.antionline.com/']
     handle_httpstatus_list = [403]
     
     def __init__(self):
@@ -46,7 +47,7 @@ class Formus(BaseSpider):
             url = 'http://www.antionline.com/%s'%url
         return url
 
-    def start_requests(self):
+    def parse(self,response):
         url_que = "select distinct(post_url) from antionline_status where crawl_status = 0 "
         self.cursor.execute(url_que)
         data = self.cursor.fetchall()
@@ -120,8 +121,11 @@ class Formus(BaseSpider):
             publish_time = datetime.datetime.strptime((publish_time), '%B %d %Y, %H:%M %p')
             publish_time = time.mktime(publish_time.timetuple())*1000
 	    if publish_time:
-		month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
-
+                year = time.strftime("%Y", time.localtime(int(publish_time/1000)))
+                if year > '2011':
+		    month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                else:
+                    continue
             fetch_time = (round(time.time()*1000))
 
             POST_TEXT = './/blockquote[@class="postcontent restore "]//text()|.//blockquote[@class="postcontent restore "]//img//@title | .//div[@class="bbcode_quote_container"]//@class' #|.//h2[@class="title icon"]//img//@alt ' #| .//div[@class="bbcode_postedby"]//img[not(contains (@alt , "View Post"))]//@alt'
@@ -145,8 +149,13 @@ class Formus(BaseSpider):
 		links = Links
             #links = str(Link)
             #if "[]" in links: links = ""
+	    author = {
+                'name':author_name,
+                'url':author_link
+                }
 	    post = {
                 'cache_link': '',
+		'author':json.dumps(author),
                 'section':category,
                 'language': "english",
                 'require_login':"false",
@@ -160,12 +169,8 @@ class Formus(BaseSpider):
                 'thread_title':thread_title,
                 'thread_url':thread_url
                 }
-            author = {
-                'name':author_name,
-                'url':author_link
-                }
 	    json_posts = {
-			'id':post_url,
+			'record_id' : re.sub(r"\/$", "", post_url.replace(r"https", "http").replace(r"www.", "")),
                         'hostname': 'www.antionline.com',
                         'domain' : domain,
                         'sub_type':'openweb',
@@ -177,7 +182,7 @@ class Formus(BaseSpider):
                         'original_url':post_url,
                         'fetch_time':fetch_time,
                         'publish_time' : publish_time,
-                        'link_url' : links,
+                        'link.url' : links,
                         'post':post
             }
 	    #query={"query":{"match":{"_id":hashlib.md5(str(post_url.encode('utf8'))).hexdigest()}}}
@@ -189,7 +194,8 @@ class Formus(BaseSpider):
 		#data_doc = res['hits']['hits'][0]
                 #if (json_posts['links'] != data_doc['_source']['links']) or (json_posts['text'] != data_doc['_source']['text']):
 		    #self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(post_url.encode('utf8'))).hexdigest(), body=json_posts)
-
+	    if author_link == 'Null':
+		continue
 	    meta = json.dumps({'time' : publish_time})
             json_author = {}
             json_author.update({

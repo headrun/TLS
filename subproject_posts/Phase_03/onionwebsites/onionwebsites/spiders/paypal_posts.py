@@ -94,7 +94,11 @@ class Paypal(scrapy.Spider):
             except:
 		pass
 	    if publish_epoch:
-		month_year = get_index(publish_epoch)
+                year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                if year > '2011':
+		    month_year = get_index(publish_epoch)
+                else:
+                    continue
 	    else:
 		import pdb;pdb.set_trace()
 
@@ -107,8 +111,13 @@ class Paypal(scrapy.Spider):
                 all_links = 'Null'
             if links == []:
                 all_links = 'Null'
+	    author_data = {
+                'name':author,
+                'url':author_url
+                }
             post = {
                 'cache_link':'',
+		'author':json.dumps(author_data),
                 'section':category,
                 'language':'english',
                 'require_login':'false',
@@ -121,10 +130,6 @@ class Paypal(scrapy.Spider):
                 'post_text':text.replace('\n',''),
                 'thread_title':thread_title,
                 'thread_url':thread_url
-                }
-            author_data = {
-                'name':author,
-                'url':author_url
                 }
             json_posts = {
                         'record_id':re.sub(r"\/$", "", post_url.replace(r"https", "http").replace(r"www.", "")),
@@ -139,7 +144,7 @@ class Paypal(scrapy.Spider):
                         'original_url':post_url,
                         'fetch_time':(round(time.time()*1000)),
                         'publish_time' : publish_epoch,
-                        'link_url' : links,
+                        'link.url' : links,
                         'post':post
             }
 	    sk = hashlib.md5(str(post_url.encode('utf8'))).hexdigest()

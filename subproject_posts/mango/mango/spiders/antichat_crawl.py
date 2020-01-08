@@ -1,8 +1,9 @@
-import cfscrape
+#import cfscrape
 from mango.utils import *
 
 class Antichat(scrapy.Spider):
     name = "antichat_crawl"
+    #start_urls = ["https://forum.antichat.ru/"]
 
     def __init__(self):
         self.conn = MySQLdb.connect(db="posts",host="localhost",user=DATABASE_USER, passwd=DATABASE_PASS, use_unicode = True , charset = 'utf8')
@@ -16,9 +17,9 @@ class Antichat(scrapy.Spider):
        scraper = cfscrape.create_scraper()
        r = scraper.get('https://forum.antichat.ru/')
        #print r.content
-       yield Request('https://forum.antichat.ru/',callback= self.parse_nxt) 
+       yield Request('https://forum.antichat.ru/',callback= self.parse)
 
-    def parse_nxt(self,response):
+    def parse(self,response):
         urls = response.xpath('//div[@class="nodelistBlock nodeText"]//h3[@class="nodeTitle"]//a//@href').extract()
         for url in urls:
             url = "https://forum.antichat.ru/" + url

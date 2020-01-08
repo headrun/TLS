@@ -22,13 +22,16 @@ from scrapy.selector import Selector
 from scrapy.http import Request
 from scrapy.http import FormRequest
 from urlparse import urljoin
+from user_agent import user_agents
+
+
 es = Elasticsearch(['10.2.0.90:9342'])
 FORUM_POST = 'forum_posts'
 DOC_TYPE = 'post'
 FORUM_AUTHOR = 'forum_author'
 DATABASE_ID = 'tls_dev'
 DATABASE_PASS = 'hdrn!'
-TOR_PASS = 'tls'
+TOR_PASS = 'tls@2020'
 
 def generate_upsert_query_posts_crawl(crawler):
     table_name = configurations.tables[crawler]['post_crawl']

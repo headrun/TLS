@@ -27,7 +27,6 @@ from scrapy.http import Request
 from urlparse import urljoin
 from user_agent import user_agent_list
 
-
 es = Elasticsearch(['10.2.0.90:9342'])
 FORUM_POST = 'forum_posts'
 DOC_TYPE = 'post'

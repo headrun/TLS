@@ -30,9 +30,8 @@ class bitshacking(scrapy.Spider):
                           'crawl_status':0,
                           'reference_url':response.url
             }
-            pprint(json_posts)
             self.cursor.execute(self.query_status,json_posts)
-        page_nav = response.xpath('//ul[@class="pageNav-main"]//a//@href').extract_first()
+        page_nav = response.xpath('//a[@class="pageNav-jump pageNav-jump--next"]//@href').extract_first()
         if page_nav:
             page_nav = urljoin("https://bitshacking.com/",page_nav)
             yield Request(page_nav, callback = self.parse_next)

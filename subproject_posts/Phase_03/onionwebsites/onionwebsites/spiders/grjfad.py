@@ -30,6 +30,7 @@ class Grjfad(scrapy.Spider):
         nodes = response.xpath('//label')
         nodes1 = response.xpath('//div[@class="message"]')
         nodes2 = response.xpath('//span[@class="reflink"]')
+        #num = response.xpath('//td//input[@value="Next"]//preceding-sibling::form[@method="get"]//@action').extract()
         num = ''.join(response.xpath('//table/tbody/tr/td[3]/form/@action').extract())
         if num:
             num_= "http://grjfadb7bweuyauw.onion/" + num
@@ -51,7 +52,11 @@ class Grjfad(scrapy.Spider):
             publishdate = datetime.datetime.strptime(publish,'%y/%m/%d')
             publish_epoch =time.mktime(publishdate.timetuple())*1000
             if publish_epoch:
-                month_year = get_index(publish_epoch)
+                year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                if year > '2011':
+                    month_year = get_index(publish_epoch)
+                else:
+                    continue
             else:
                 import pdb;pdb.set_trace()
             fetchTime = int(datetime.datetime.now().strftime("%s")) * 1000

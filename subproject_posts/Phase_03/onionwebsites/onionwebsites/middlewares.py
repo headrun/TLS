@@ -9,7 +9,7 @@ from scrapy import signals
 from stem import Signal
 from stem.control import Controller
 from utils import TOR_PASS
-
+import random
 
 class TorSpiderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,

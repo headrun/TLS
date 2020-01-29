@@ -102,7 +102,8 @@ class formus(scrapy.Spider):
                           'activetimes' : ''.join(activetimes),
                           'contact_info' : '',
             })
-	self.es.index(index="forum_author", doc_type='author', id=hashlib.md5(str(username)).hexdigest(), body=json_authors)
+	
+	self.es.index(index="forum_author", doc_type='post', id=hashlib.md5(str(username)).hexdigest(), body=json_authors)
 
 
 

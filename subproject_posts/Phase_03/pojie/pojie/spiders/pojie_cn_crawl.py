@@ -110,7 +110,11 @@ class Pojie_CN(scrapy.Spider):
                 publishtime_ = datetime.datetime.strptime((publish_time), '%Y-%m-%d %H:%M')
             publish_epoch = int(time.mktime(publishtime_.timetuple())*1000)
             if publish_epoch:
-                month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                if year > '2011':
+                    month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                else:
+                    continue
             else:
                 import pdb;pdb.set_trace()
             fetchtime = (round(time.time()*1000))

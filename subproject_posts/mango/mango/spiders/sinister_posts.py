@@ -44,7 +44,11 @@ class sinister(Spider):
             date_ = ''.join(set(re.findall('\d+-\d+-\d+',date)))
             publish_epoch = time_to_epoch(date_,'%m-%d-%Y')
             if publish_epoch:
-                month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                if year > '2011':
+                    month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                else:
+                    continue
             else:
                 publish_epoch = 'Null'
             text = ''.join(node.xpath('.//div[@class="post_body scaleimages"]//text() | .//img[contains(@class,"smilie smilie_")]//@alt |.//div[@class="post_body scaleimages"]/blockquote/cite/text() | .//div[@class="post_body scaleimages"]/blockquote[@class="mycode_quote"]//text() |.//div[@class="post_body scaleimages"]/blockquote/@class | .//div[@class="post_body scaleimages"]//img[@class="mycode_img"]//@alt').extract()).replace('\r','').replace('\n','  ').replace('\t','').replace('mycode_quote', 'Quote ') or 'Null'

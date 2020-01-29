@@ -64,7 +64,11 @@ class Virus(Spider):
             author_url = "https://www.virustotal.com/gui/user/" + author_name + "/comments"
             publish_time = data2.get('attributes',{}).get('date','')
             if publish_time:
-                month_year = time.strftime("%m_%Y", time.localtime(publish_time))
+                year = time.strftime("%Y", time.localtime(int(publish_time)))
+                if year > '2011':
+                    month_year = time.strftime("%m_%Y", time.localtime(publish_time))
+                else:
+                    continue
             else:
                 import pdb;pdb.set_trace()
             hashtags = ",".join(data2.get('attributes',{}).get('tags',''))
@@ -113,4 +117,5 @@ class Virus(Spider):
 
         next_page = da.get('links',{}).get('next','')
         if next_page:
+            time.sleep(15)
             yield Request(next_page,callback = self.parse_next)

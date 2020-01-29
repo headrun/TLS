@@ -41,6 +41,9 @@ class Bbs_posts(Spider):
             yield Request(url, callback = self.parse_meta, meta = {'crawl_type':'keep up','thread_url':url})
 
     def parse_meta(self, response):
+	total_posts = ''.join(response.xpath('//dl[@class="row"]//span[@class="posts"]/text()').extract())
+	if total_posts == '0':
+	    return 
         crawl_type = response.meta.get('crawl_type','')
         category = ''.join(response.xpath(xpaths.CATEGORY).extract()).strip()
         sub_category = ''.join(response.xpath(xpaths.SUB_CATEGORY).extract()).strip() or 'Null'
@@ -58,21 +61,32 @@ class Bbs_posts(Spider):
             ord_in_thread = ord_in_thread+1
             publish_epoch = utils.time_to_epoch(''.join(node.xpath(xpaths.PUBLISH_EPOCH).extract()).strip(),'%Y-%m-%d %H:%M')
             if publish_epoch:
-                month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                if year > '2011':
+                    month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                else:
+                    continue
             else:
-                import pdb;pdb.set_trace()
+                pass
             author_name = ''.join(node.xpath(xpaths.AUTHOR).extract())
             author_url = 'https://bbs.pediy.com/'+''.join(node.xpath(xpaths.AUTHOR_URL).extract())
             post_id = ''.join(node.xpath('.//@data-pid').extract())
             post_text = ' '.join(node.xpath(xpaths.POST_TEXT).extract()).strip() 
             posturl = ''.join(node.xpath(xpaths.POST_URL).extract())
             if "http" not in posturl: posturl = 'https://bbs.pediy.com/' + posturl
-            links = node.xpath(xpaths.ALL_LINKS).extract()
+            links_ = node.xpath(xpaths.ALL_LINKS).extract()
             fetch_epoch = utils.fetch_time()
             all_links = []
-            for i in links:
-                if 'http'not in i: i = 'https://bbs.pediy.com/'+i
+            for i in links_:
+                if 'http'not in i: 
+		    i = 'https://bbs.pediy.com/'+i
                 all_links.append(i)
+	    links = ', '.join(all_links)
+	    if links == '':
+		links = 'Null'
+	    if links_ == []:
+		links = 'Null'
+
             author_data = {
                 'name':author_name,
                 'url':author_url

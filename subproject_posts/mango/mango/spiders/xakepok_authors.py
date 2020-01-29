@@ -77,5 +77,4 @@ class xakepok(scrapy.Spider):
                      'contact_info':'',
         })
         sk = md5_val(json_posts['username'])
-        es.index(index="xakepok_author",doc_type='author',id=sk,body=json_posts)
-
+        doc_to_es(id=sk,body=json_posts,doc_type='author')

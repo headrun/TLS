@@ -9,6 +9,7 @@ import logging
 from time import strftime
 from pprint import pprint
 import datetime
+import dateutil.relativedelta
 import os,sys
 reload(sys)
 sys.setdefaultencoding('utf8')
@@ -33,7 +34,7 @@ DOC_TYPE = 'post'
 FORUM_AUTHOR = 'forum_author'
 DATABASE_USER = 'tls_dev'
 DATABASE_PASS = 'hdrn!'
-TOR_PASS = 'tls'
+TOR_PASS = 'tls@2019'
 
 
 def generate_upsert_query_posts_crawl(crawler):

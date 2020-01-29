@@ -62,15 +62,21 @@ class Bugtraq(Spider):
             views = num_of_views.replace(u'\u0427\u0438\u0441\u043b\u043e \u043f\u0440\u043e\u0441\u043c\u043e\u0442\u0440\u043e\u0432:', '').strip()
         else:
             import pdb;pdb.set_trace()
-
-        date = response.xpath('//td[@align="left"]//span[@class="ml"]/i/text()').extract_first() or 'Null'
-        publish_time = time_to_epoch(date, '%d.%m.%y %H:%M')
-        if publish_time == False:
+         
+        date = response.xpath('//td[@align="left"]//span[@class="ml"]/i/text() | //td[@align="left"]//span[@class="ml"]//font//text()').extract_first() or 'Null'
+        try:
+            publish_time = time_to_epoch(date, '%d.%m.%y %H:%M')
+        except:
             import pdb;pdb.set_trace()
+            publish_time = time_to_epoch(date, '%d.%y %H:%M')
         if publish_time:
-            month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+            year = time.strftime("%Y", time.localtime(int(publish_time/1000)))
+            if year > '2011':
+                month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+            else:
+                return None
         else:
-            import pdb;pdb.set_trace()
+	    import pdb;pdb.set_trace()
 
         text = ''.join(response.xpath('//td[contains(@bgcolor,"#FAFAFC") and contains(@align,"left")]//text() | //td[contains(@bgcolor,"#FAFAFC") and contains(@align,"left")]//a[@target="_blank"]//text() | //td[contains(@bgcolor,"#FAFAFC") and contains(@align,"left")]//u//text() |  //td[contains(@bgcolor,"#FAFAFC") and contains(@align,"left")]//u//a[@target="_blank"]//text()').extract()).strip().replace('\n','') or 'Null'
         links =', '.join(response.xpath('//td[contains(@bgcolor,"#FAFAFC") and contains(@align,"left")]//a[@target="_blank"]/@href | //td[contains(@bgcolor,"#FAFAFC") and contains(@align,"left")]//u//a[@target="_blank"]/@href').extract())
@@ -93,7 +99,7 @@ class Bugtraq(Spider):
                 'original_url': post_url,
                 'fetch_time': fetch_time(),
                 'publish_time': publish_time,
-                'link_url': links,
+                'link.url': links,
                 'post':{
                     'cache_link':'',
                     'author': json.dumps(author_data),

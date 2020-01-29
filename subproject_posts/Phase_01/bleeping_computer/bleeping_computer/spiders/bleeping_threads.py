@@ -120,7 +120,7 @@ class BleepingSpider(scrapy.Spider):
             post_url = ','.join(node.xpath(xpaths.POST_URL).extract()).strip() or 'Null'
             post_id = re.findall('entry(\d+)', post_url)[0] or 'Null'
             publish_time = ''.join(node.xpath(
-                xpaths.PUBLISH_TIME).extract()).strip().replace('Today,',datetime.datetime.now().strftime('%d %B %Y -'))\
+               xpaths.PUBLISH_TIME).extract()).strip().replace('Today,',datetime.datetime.now().strftime('%d %B %Y -'))\
 		.replace('Yesterday,',(datetime.datetime.now() - timedelta(days=1)).strftime('%d %B %Y -'))
             try:
                 publish_time = datetime.datetime.strptime(
@@ -129,9 +129,14 @@ class BleepingSpider(scrapy.Spider):
             except:
                 pass
             if publish_time:
-                month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                year = time.strftime("%Y", time.localtime(int(publish_time/1000)))
+                if year > '2011':
+                    month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                else:
+                    continue
             else:
                 import pdb;pdb.set_trace()
+
             x =''.join(node.xpath('.//div[@class="post_wrap"]//a[@itemprop="replyToUrl"]/@title').extract()) or 'Null'
             ord_in_thread =  x.split("#")[-1]
             links = node.xpath(xpaths.LINKS).extract()
@@ -278,8 +283,13 @@ class BleepingSpider(scrapy.Spider):
             text = text.replace('snapshot.png', "")
             text = text.replace("Quote Quote ", 'Quote ')
             text = utils.clean_text(text)
+	    author = {
+               'name':author,
+               'url':author_links
+                }
             post = {
                'cache_link': '',
+	       'author':json.dumps(author),
 	       'section':category,
                'language': 'english',
                'require_login':'false',
@@ -293,13 +303,9 @@ class BleepingSpider(scrapy.Spider):
                'thread_title':thread_title,
                'thread_url':thread_url,
                }
-            author = {
-               'name':author,
-               'url':author_links
-                }
 
             json_data.update({
-                       'id':post_url,
+                       'record_id':re.sub(r"\/$", "", post_url.replace(r"https", "http").replace(r"www.", "")),
 		       'hostname':'www.bleepingcomputer.com',
             	       'domain' : domain,
 		       'sub_type':'openweb',
@@ -311,7 +317,7 @@ class BleepingSpider(scrapy.Spider):
                        'original_url':post_url,
 		       "fetch_time": utils.fetch_time(),
 		       'publish_time':publish_time,
-		       'link_url':all_links,
+		       'link.url':all_links,
                        'post':post
                })
 	    #query={"query":{"match":{"_id":hashlib.md5(str(post_url)).hexdigest()}}}

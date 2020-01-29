@@ -102,7 +102,11 @@ class Turkhackteam(scrapy.Spider):
                     publishdate = datetime.datetime.strptime(publish,'%d-%m-%Y %H:%M')
                     publish_epoch =time.mktime(publishdate.timetuple())*1000
                 if publish_epoch:
-                    month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                    year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                    if year > '2011':
+                        month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                    else:
+                        continue
             except:
                 publish_epoch = 0
             FetchTime = int(datetime.datetime.now().strftime("%s")) * 1000
@@ -159,6 +163,8 @@ class Turkhackteam(scrapy.Spider):
                         }
             sk = md5_val(Post_url)
             es.index(index="forum_posts_"+month_year, doc_type='post', id=sk, body=json_posts)
+	    if author_url == 'Null':
+		continue
             meta = {'publish_epoch': publish_epoch}
             json_crawl = {}
             json_crawl = {

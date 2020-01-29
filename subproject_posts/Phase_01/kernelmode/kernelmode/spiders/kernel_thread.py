@@ -30,7 +30,8 @@ def extract_list_data(sel, xpath_):
 
 class KernelPost(scrapy.Spider):
     name = "kernel_thread"
-    start_urls = ["https://www.kernelmode.info/forum/index.php"]
+    #start_urls = ["https://www.kernelmode.info/forum/index.php"]
+    start_urls = ["https://www.kernelmode.info/forum/"]
     handle_httpstatus_list=[404]
 
     def __init__(self):
@@ -69,7 +70,7 @@ class KernelPost(scrapy.Spider):
         return url
 	'''
 
-    def parse(self, response):
+    '''def parse(self, response):
         sid = response.xpath('//input[@type="hidden"] [@name="sid"]/@value').extract()
         data = {'username': 'kerspdr',
                 'password': 'Inq2018.',
@@ -77,9 +78,9 @@ class KernelPost(scrapy.Spider):
                 'sid': sid,
                 'redirect': 'index.php',
                 'login': 'Login'}
-        yield FormRequest('https://www.kernelmode.info/forum/ucp.php?mode=login', callback=self.parse_login, formdata=data)
+        yield FormRequest('https://www.kernelmode.info/forum/ucp.php?mode=login', callback=self.parse_login, formdata=data)'''
 
-    def parse_login(self, response):
+    def parse(self, response):
         sel = Selector(response)
         urls = extract_list_data(sel, xpaths.URLS)
         for url in urls:
@@ -120,52 +121,41 @@ class KernelPost(scrapy.Spider):
 
         sel = Selector(response)
         links = []
-        thread_title = ''.join(response.xpath('//div[@class="side-segment"]//a[contains(@href,"./viewtopic.php")]/text()').extract()) or 'Null'
-        author_links = extract_list_data(sel, xpaths.AUTHOR_LINKS)
-        post_nodes = response.xpath('//div[@id="page-body"]//div[@class="clearfix"]//article')
-        json_posts.update({'domain': domain,
-                           #'crawl_type': crawl_type,
-                           'thread_url': thread_url,
-                           'thread_title': thread_title,
-                           'hostname': 'www.kernelmode.info',
-                           'sub_type':'openweb',
-                           'type':'forum'
-                       })
-        ''''next_page = ''.join(response.xpath('//div[@class="row"]//div[@class="pull-right"]//li/a[@rel="next"]/@href').extract())
-        if next_page:
-	     try:
-          	 last_post_id = ''.join(post_nodes[-1].xpath('.//div[@class="pull-left timepost"]//a[contains(@href,"./viewtopic.php?p=")]/text()').extract()) 
-		 post_url_ = response.url+last_post_id
-		 test_id = hashlib.md5(str(post_url_)).hexdigest()
-		 query = {'query_string': {'use_dis_max': 'true', 'query': '_id:{0}'.format(test_id)}}
-		 res = self.es.search(index="forum_posts", body={"query": query})
-		 if res['hits']['hits']==[]:
-		     next_page = urljoin('https://www.kernelmode.info/forum/',next_page)
-                     yield Request(self.add_http(next_page), callback=self.parse_thread)
-	     except:pass '''
-        category = response.xpath('//div[@class="crumbs"]//li[@class="active"]//a/text()').extract()[0] or 'Null'
+        thread_title = ''.join(response.xpath('//div[@class="side-segment"]//h3//a//text()').extract()) or 'Null'
+        #author_links = response.xpath('//div[@class="pull-left timepost"]//strong//a[@class="username-coloured"]//@href').extract()
+        post_nodes = response.xpath('//div[contains(@id,"p")]//article')
+
+        category = 'Null'
 	sub_category = ''.join(response.xpath('//div[@class="crumbs"]//li[@class="active"]//a/text()').extract()[1:]) or 'Null'
         sub_category_url = "Null"
         count = 0
         for node in post_nodes:
             #count = 0
             count +=1
-            post_title = extract_data(node, xpaths.POST_TITLE) or 'Null'
+            post_title = ''.join(node.xpath('.//div[@class="pull-left"]//h3//a//text()').extract()) or 'Null'
             ord_in_thread = count
-            post_id = ''.join(node.xpath('.//div[@class="pull-left timepost"]//a[contains(@href,"./viewtopic.php?p=")]/text()').extract())
-            post_url = '%s%s' %(response.url, post_id)
+            post_id = ''.join(node.xpath('.//div[@class="pull-left timepost"]//a[@title ="Post"]//text()').extract()).replace('#','')
+            post_url = ''.join(node.xpath('.//div[@class="pull-left timepost"]//a[@title ="Post"]//@href').extract())
+            if post_url:
+                post_url = "https://www.kernelmode.info/forum/" + post_url
             publish = ''.join(node.xpath('.//div[@class="pull-left timepost"]/text()').extract()).replace(u'\xa0','').replace('by','').strip()
 	    try:
                 publish_datetime = datetime.datetime.strptime(publish, '%a %b %d, %Y %I:%M %p')
 		publish_time = int(time.mktime(publish_datetime.timetuple())) * 1000
 	    except:pass
             if publish_time:
-                   month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                year = time.strftime("%Y", time.localtime(int(publish_time/1000)))
+                if year > '2011':
+                    month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                else:
+                    continue
             else:
                 import pdb;pdb.set_trace()
             fetch_time = int(datetime.datetime.now().strftime("%s")) * 1000
-            author_name = ''.join(node.xpath('.//div[@class="pull-left timepost"]//a[contains(@href,"./memberlist.php?mode=viewprofile&u")]/text()').extract())
-            author_link = ''.join(node.xpath('.//div[@class="pull-left timepost"]//a[contains(@href,"./memberlist.php?mode=viewprofile&u")]/@href').extract()).replace('./','http://www.kernelmode.info/forum/')
+            author_name = ''.join(node.xpath('.//div[@class="pull-left timepost"]//strong//a[@class="username-coloured"]//text()').extract())
+            author_link = ''.join(node.xpath('./div[@class="pull-left timepost"]//strong//a[@class="username-coloured"]//@href').extract())
+            if author_link:
+                author_link = "https://www.kernelmode.info/forum/" + author_link
             post_text_ = node.xpath('.//div[@class="content"]//text() | .//div[@class="content"]//img[@class="postimage"]//@alt |.//dl[@class="attachbox"]//img[@class="postimage"]//@alt | .//img[@class="smilies"]//@alt | .//div[@class="content"]//blockquote//cite | .//div[@class="content"]/following-sibling::div[@class="clearfix"]//text()').extract()
             post_text = []
             for i in post_text_:
@@ -183,8 +173,14 @@ class KernelPost(scrapy.Spider):
                 arrow = self.add_http(arrow)
             else:
                 arrow = 'Null'
+	    author_data= {
+                   'name':author_name,
+                   'url':author_link
+                   }
+
             post = {
                'cache_link': '',
+	       'author':json.dumps(author_data),
                'section':category,
                'language': "english",
                'require_login':"True",
@@ -198,20 +194,20 @@ class KernelPost(scrapy.Spider):
                'thread_title':thread_title,
                'thread_url':thread_url
                } 
-            author_data= {
-                   'name':author_name,
-                   'url':author_link
-                   }
             json_posts.update ({
-                       'id':post_url,
+		       'record_id':re.sub(r"\/$", "", post_url.replace(r"https", "http").replace(r"www.", "")),
+                       'hostname': 'kernelmode.info',
+                       'domain' : domain,
+                       'sub_type':'openweb',
+                       'type':'forum',
                        'author':json.dumps(author_data),
                        'title':thread_title,
                        'url':post_url,
                        'original_url':post_url,
                        'fetch_time':fetch_time,
-                       'publish_time' : publish_time,
+                       'publish_time':publish_time,
                        'post':post
-               })
+            })
             Link = []
             links = node.xpath('.//div[@class="content"]//a[@class="postlink"]/@href | .//div[@class="clearfix"]//a[@class="postlink"]//@href | .//dl[@class="attachbox"]//a[@class="postlink"]/@href | .//div[@class="content"]//img[@class="postimage"]//@src | .//dl[@class="attachbox"]//img[@class="postimage"]//@src').extract()
             for link in links:
@@ -224,7 +220,7 @@ class KernelPost(scrapy.Spider):
             json_posts.update({
                 #'author':author,
                 #'author_url': author_link,
-                'link_url': get_aggregated_links(Links)
+                'link.url': get_aggregated_links(Links)
             })
             #pprint(json_posts)
 	    #query={"query":{"match":{"_id":hashlib.md5(str(post_url)).hexdigest()}}}
@@ -233,7 +229,7 @@ class KernelPost(scrapy.Spider):
 	    self.es.index(index="forum_posts_"+month_year, doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts,request_timeout=30)
 	    #else:
 		#data_doc = res['hits']['hits'][0]
-		#if (json_posts['links'] != data_doc['_source']['links']) or (json_posts['text'] != data_doc['_source']['text']):
+		#if (json_posts['links'] != diata_doc['_source']['links']) or (json_posts['text'] != data_doc['_source']['text']):
 		    #self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts)
 	    if author_link:
                 meta = {'publish_time': publish_time, 'thread_title': thread_title}

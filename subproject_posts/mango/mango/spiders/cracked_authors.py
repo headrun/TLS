@@ -47,14 +47,14 @@ class Cracked(Spider):
     def parse_author(self, response):
         domain = 'cracked.to'
         publish_time = response.meta.get('publish_time', '')
-        username = ''.join(response.xpath('//div[@class="profile-cov"]//span[@class="x-largetext"]//text()').extract()).replace('\n', '').strip()
+        username = ''.join(response.xpath('//div[@style="margin-left: 1rem"]//span[@class="x-largetext d-flex align-items-center mobile-noflex"]//text()').extract()).replace('\n', '').strip()
         if u'[email\xa0protected]' in username:
             mails = response.xpath('//a[@class="__cf_email__"]/@data-cfemail').extract_first()
             email = decode_cloudflareEmail(mails)
             username = username.replace(u'[email\xa0protected]', email)
-        join_date = ''.join(response.xpath('//td[contains(text(),"Registration Date:")]//following-sibling::span/text()').extract())
+        join_date = ''.join(response.xpath('//div[@class="trow1 x-smalltext d-flex align-items-center"][contains(text(),"Registration Date:")]//following-sibling::span/text()').extract())
         joindate = time_to_epoch(join_date, '%d %B, %Y')
-        last_visit = ''.join(response.xpath('//td[contains(text(),"Last Visit:")]//following-sibling::span/text()').extract())
+        last_visit = ''.join(response.xpath('//div[@class="trow1 x-smalltext d-flex align-items-center"][contains(text(),"Last Visit:")]//following-sibling::span/text()').extract())
         try:
             if 'minute' in last_visit:
                 date_time = ''.join(re.findall('\d+', last_visit))
@@ -88,12 +88,11 @@ class Cracked(Spider):
                 lastactive = time.mktime(last.timetuple())*1000
         except:
             pass
-
-        totalposts = ''.join(response.xpath('//tr[@class="d-flex flex-wrap text-center"]//td[@class="trow1 flex-one"]/a[contains(@href, "finduser&uid")]/text()').extract())
-	credits = ''.join(response.xpath('//tr[@class="d-flex flex-wrap text-center"]//td[@class="trow1 flex-one"]/a[contains(@href, "/newpoints.php")]/text()').extract()).encode('ascii', 'ignore').strip()
+        totalposts = ''.join(response.xpath('//div[@class="trow1 flex-one"]/a[contains(@href, "finduser&uid")]/text()').extract())
+	credits = ''.join(response.xpath('//div[@class="trow1 flex-one"]/a[contains(@href, "/credits.php")]/text()').extract()).encode('ascii', 'ignore').strip()
         activetimes = activetime_str(publish_time, totalposts)
         fetchtime = fetch_time()
-        reputation = ''.join(response.xpath('//div[@class="flex-one profile-stats"]/div[@class="profile-top"]/span[@class="x-largetext"]//following-sibling::strong//text()').extract())
+        reputation = ''.join(response.xpath('//div[@class="profile-top"]//strong[@class="reputation_neutral"]//text()').extract())
         groups = ', '.join(response.xpath('//div[@class="grpimg"]/img/@title').extract())
         awards = ', '.join(response.xpath('//td[@class="thead"]/strong[contains(text(),"Awards")]//..//..//..//following-sibling::td[@class="trow1"]/a/@title').extract())
         auth_sig = ' '.join(response.xpath('//td[@class="trow1 scaleimages"]//text() | //td[@class="trow1 scaleimages"]//a/@href').extract()).replace('\n', '').strip().encode('ascii', 'ignore')

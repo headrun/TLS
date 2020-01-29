@@ -53,7 +53,11 @@ class Altcoin(scrapy.Spider):
             publish = ''.join(node.xpath('./@data-timestamp').extract())
 	    if publish:
 	        publish_epoch = int(publish)
-	        month_year = time.strftime("%m_%Y", time.localtime(publish_epoch/1000))
+                year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                if year > '2011':
+	            month_year = time.strftime("%m_%Y", time.localtime(publish_epoch/1000))
+                else:
+                    continue
 	    else:
 		import pdb;pdb.set_trace()
 
@@ -83,6 +87,7 @@ class Altcoin(scrapy.Spider):
 			}
 	    post = {
 		'cache_link':'',
+		'author':json.dumps(author_data),
 		'section':catagery,
 		'language':'english',
 		'require_login':'false',
@@ -109,7 +114,7 @@ class Altcoin(scrapy.Spider):
 		    'original_url':'Null',
 		    'fetch_time':fetch_time,
 		    'publish_time':publish_epoch,
-		    'link_url':links_url,
+		    'link.url':links_url,
 		    'post':post
 		    }
             sk = hashlib.md5('altcoinexpx3on26hpsbu4b5ipojqetyla677xva66jnidyxhrxrizqd.onion.ws'+post_id).hexdigest()

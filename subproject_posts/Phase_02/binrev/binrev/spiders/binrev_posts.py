@@ -116,7 +116,11 @@ class formus(BaseSpider):
             publish_time = datetime.datetime.strptime((publish_time), '%m/%d/%Y %H:%M %p') ## need to check later
             publish_time = time.mktime(publish_time.timetuple())*1000
 	    if publish_time:
-		month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                year = time.strftime("%Y", time.localtime(int(publish_time/1000)))
+                if year > '2011':
+		    month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
+                else:
+                    continue
 	    else:
 		import pdb;pdb.set_trace()
 
@@ -162,8 +166,14 @@ class formus(BaseSpider):
 	        Links = 'Null'
 		links = Links
             #links = str(Link)
+	    author_data = {
+                'name':author_name,
+                'url':author_link
+                }
+              
 	    post = {
 		'cache_link':'',
+		'author':json.dumps(author_data),
 		'section':category,
 		'language':'english',
 		'require_login':'false',
@@ -177,11 +187,8 @@ class formus(BaseSpider):
 		'thread_title':thread_title,
 		'thread_url':thread_url
 		}
-	    author_data = {
-		'name':author_name,
-		'url':author_link
-		}
   	    json_posts = {
+			  'record_id' : re.sub(r"\/$", "", post_url.replace(r"https", "http").replace(r"www.", "")),
 			  'hostname':'www.binrev.com',
 			  'domain' : domain,
 			  'sub_type':'openweb',
@@ -193,7 +200,7 @@ class formus(BaseSpider):
 			  'original_url':post_url,
 			  'fetch_time':fetch_time,
                           'publish_time' : publish_time,
-                          'link_url' : links,
+                          'link.url' : links,
 			  'post':post
             }
 	    #query={"query":{"match":{"_id":hashlib.md5(str(post_url)).hexdigest()}}}

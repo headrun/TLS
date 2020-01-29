@@ -54,7 +54,11 @@ class Cryptopro(Spider):
                 if publish_epoch ==None:
                     pass
 		if publish_epoch:
-                    month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                    year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                    if year > '2011':
+                        month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                    else:
+                        continue
                 else:
                     import pdb;pdb.set_trace()
 		text = ' '.join(node.xpath('.//div[@class="selectionQuoteable"]/text() | .//div[@class="spoilertitle"]//input//@value | .//div[@class="innerquote"]//strong//text() | .//div[@class="innerquote"]//text() | .//div[@class="spoilerbox"]//text() | .//div[@class="postdiv"]//img//@alt | .//span[@class="quotetitle"]//text() | .//a[@rel="nofollow"]//strong//text() | .//p[@class="MessageDetails"]//em//a//text() | .//p[@class="MessageDetails"]//abbr[@class="timeago"]//text() | .//span[@class="editedinfo"]//text() | .//div[@class="quote"]//span//@class | .//div[@class="innercode"]//text() | .//div[@class="code"]//strong//text() | .//div[@style="margin-left:40px"]//text() | .//div[@style="margin-left:40px"]//strong//text() | .//div[@class="postdiv"]//a[@rel="nofollow"]/text() | .//div[@class="selectionQuoteable"]//li//text() | .//div[@class="selectionQuoteable"]//strong//text()').extract()).replace('quotetitle','Quote').strip() or 'Null'
@@ -96,7 +100,7 @@ class Cryptopro(Spider):
                         'original_url': post_url,
                         'fetch_time': fetch_time(),
                         'publish_time': publish_epoch,
-                        'link_url':all_links,
+                        'link.url':all_links,
                         'post':{
                             'cache_link':'',
                             'author': json.dumps(author_data),

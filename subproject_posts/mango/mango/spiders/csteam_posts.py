@@ -18,16 +18,26 @@ class csteam(scrapy.Spider):
         self.cursor.execute(url_que)
         data = self.cursor.fetchall()
         for url in data:
+            #url = ["https://cs-team.ir/forums/topic/8238-%DA%86%D8%B1%D8%A7-%D8%B3%D8%A7%DB%8C%D8%AA-%D8%A7%D8%B2-%DA%A9%D8%A7%D8%B1-%D8%A7%D9%81%D8%AA%D8%A7%D8%AF%D9%87-%D9%88-%D9%87%DB%8C%DA%86%DB%8C-%DA%A9%D8%A7%D8%B1-%D9%86%D9%85%DB%8C%DA%A9%D9%86%D9%87-%D9%86%D9%87-%D8%B3%D8%B1%DB%8C%D8%A7%D9%84-%D9%86%D9%87-%D8%A7%DA%A9%D8%A7%D9%86%D8%AA/?tab=comments#comment-107126"]
             yield Request(url[0], callback = self.parse_next)
 
     def parse_next(self,response):
-        category = response.xpath('//nav[@class="ipsBreadcrumb ipsBreadcrumb_1 ipsFaded_withHover"]//ul[contains(@data-role,"breadcrumbList")]//span//text()').extract()[1] or 'Null'
-        sub_category = response.xpath('//nav[@class="ipsBreadcrumb ipsBreadcrumb_1 ipsFaded_withHover"]//ul[contains(@data-role,"breadcrumbList")]//span//text()').extract()[2] or 'Null'
-        sub_category_url = response.xpath('//nav[@class="ipsBreadcrumb ipsBreadcrumb_1 ipsFaded_withHover"]//ul[contains(@data-role,"breadcrumbList")]/li/a/@href').extract()[2] or 'Null'
+	try:
+            category = response.xpath('//nav[@class="ipsBreadcrumb ipsBreadcrumb_1 ipsFaded_withHover"]//ul[contains(@data-role,"breadcrumbList")]//span//text()').extract()[1] or 'Null'
+	except:import pdb;pdb.set_trace()
+	try:
+            sub_category = response.xpath('//nav[@class="ipsBreadcrumb ipsBreadcrumb_1 ipsFaded_withHover"]//ul[contains(@data-role,"breadcrumbList")]//span//text()').extract()[2] or 'Null'
+	except:import pdb;pdb.set_trace()
+	try:
+            sub_category_url = response.xpath('//nav[@class="ipsBreadcrumb ipsBreadcrumb_1 ipsFaded_withHover"]//ul[contains(@data-role,"breadcrumbList")]/li/a/@href').extract()[2] or 'Null'
+	except:import pdb;pdb.set_trace()
+
         thread_title = ''.join(response.xpath('//nav[@class="ipsBreadcrumb ipsBreadcrumb_1 ipsFaded_withHover"]/ul[contains(@data-role,"breadcrumbList")]/li/text()').extract()).replace('\r','').replace('\n','').replace('\t' ,'') or 'Null'
+
         inner_nav = response.xpath('//li[contains(@class,"ipsPagination_page")]/a/@href').extract_first()
         if inner_nav:
             yield Request(inner_nav,callback=self.parse_next)
+
         nodes = response.xpath('//article[contains(@id,"elComment_")]')
         for node in nodes:
             author = ''.join(node.xpath('.//strong[@itemprop="name"]//span[contains(@class,"userM")]/text()').extract()) or 'Null'
@@ -40,12 +50,17 @@ class csteam(scrapy.Spider):
             date_ = ''.join(set(re.findall('\d+/\d+/\d+',date)))
             publish_epoch = time_to_epoch(date_,'%d/%m/%y') 
             if publish_epoch:
-                month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                if year > '2011':
+                    month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                else:
+                    continue
             else:
-                publish_epoch = 'Null'
+                publish_epoch = 'Null' 
             text = ''.join(node.xpath('.//div[@class="ipsType_normal ipsType_richText ipsContained"]//p//text() | .//div[@class="ipsType_normal ipsType_richText ipsContained"]//p//img//@alt | .//div[@class="ipsQuote_citation"]//text() | .//div[@class="cPost_contentWrap ipsPad"]//blockquote/@class | .//div[@class="ipsQuote_contents ipsClearfix"]//p//text() | .//blockquote[@class="ipsQuote"]//p//text()').extract()).replace('\n','').replace('\t','').replace('ipsQuote', 'Quote ') or 'Null'
             links = '' or 'Null'
             reference_url = response.url
+            print month_year
             if '?' in reference_url:
                 test = re.findall('(.*)?page=',reference_url)
                 thread_url = ''.join(test)
@@ -88,6 +103,6 @@ class csteam(scrapy.Spider):
                     },
             }
             sk = md5_val(post_url)
-            es.index(index="forum_posts_"+month_year,doc_type = "post",id=sk, body = json_posts,request_timeout=1)
+            es.index(index="forum_posts_"+month_year,doc_type = "post",id=sk, body = json_posts,request_timeout=30)
 
 

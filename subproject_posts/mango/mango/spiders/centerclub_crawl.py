@@ -5,7 +5,7 @@ class Centerclub(scrapy.Spider):
     start_urls = ["https://center-club.ws/"]
 
     def __init__(self):
-        self.conn = MySQLdb.connect(host="localhost", user="root", passwd="qwerty123", db="posts", charset="utf8", use_unicode=True)
+        self.conn = MySQLdb.connect(db="posts",host="localhost",user=DATABASE_USER, passwd=DATABASE_PASS, use_unicode = True , charset = 'utf8') 
         self.cursor = self.conn.cursor()
 
     def close_conn(self, spider):
@@ -33,6 +33,5 @@ class Centerclub(scrapy.Spider):
             self.cursor.execute(query_status, json_posts)
         page_navs = response.xpath('//div[@class="pageNav"]//a[@class="pageNav-jump pageNav-jump--next"]//@href').extract()
         if page_navs:
-            import pdb;pdb.set_trace()
             page_navs = "https://center-club.ws" + page_navs
             yield Request(page_navs, callback=self.parse_next)

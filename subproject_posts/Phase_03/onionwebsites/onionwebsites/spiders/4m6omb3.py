@@ -65,7 +65,11 @@ class M6om(scrapy.Spider):
         if publish_epoch ==False:
             import pdb;pdb.set_trace()
 	if publish_epoch:
-	    month_year = get_index(publish_epoch)
+            year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+            if year > '2011':
+	        month_year = get_index(publish_epoch)
+            else:
+                return None
 	else:
 	    import pdb;pdb.set_trace()
 
@@ -108,6 +112,7 @@ class M6om(scrapy.Spider):
 		}
 	post = {
 		'cache_link':'',
+		'author':json.dumps(author_data),
 		'section':'Null',
 		'language':'english',
 		'require_login':'false',
@@ -134,7 +139,7 @@ class M6om(scrapy.Spider):
 		'original_url':post_url,
 	 	'fetch_time':round((time.time()- time.timezone)*1000),
 		'publish_time':publish_epoch,
-		'link_url':all_links,
+		'link.url':all_links,
 		'post':post,
 		'comment':json.dumps(commants)
 		}

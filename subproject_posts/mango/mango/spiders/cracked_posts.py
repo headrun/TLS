@@ -91,7 +91,11 @@ class Cracked(Spider):
                 pass
 
 	    if publish_time:
-		month_year = time.strftime("%m_%Y", time.localtime(int(publish_time)/1000))
+                year = time.strftime("%Y", time.localtime(int(publish_time/1000)))
+                if year > '2011':
+		    month_year = time.strftime("%m_%Y", time.localtime(int(publish_time)/1000))
+                else:
+                    continue
 	    else:
 		pass
 	    

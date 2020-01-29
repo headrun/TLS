@@ -95,7 +95,11 @@ class Exetool(Spider):
             posted_time = ''.join(sel.xpath(xpaths.POST_TIME).extract()).replace('\n', '').replace('\t', '').replace('\r', '').strip()
             publish_epoch = int(calendar.timegm(time.strptime(posted_time, '%m-%d-%Y, %H:%M')) * 1000)
             if publish_epoch:
-                   month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                   year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                   if year > '2011':
+                       month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                   else:
+                       continue
             else:
                 import pdb;pdb.set_trace()
             fetch_time = int(calendar.timegm(time.gmtime()) * 1000)
@@ -173,8 +177,13 @@ class Exetool(Spider):
                 activetime.append(activetime_)
             activetime = ',  '.join(activetime)
             fetch_time = int(datetime.datetime.now().strftime("%s")) * 1000
+	    author = {
+               'name':author,
+               'url':author_url
+               }
             post = {
                'cache_link': '',
+	       'author':json.dumps(author),
                'section':category,
                'language': "english",
                'require_login':"false",
@@ -188,12 +197,8 @@ class Exetool(Spider):
                'thread_title':thread_title,
                'thread_url':thread_url
                }
-            author = {
-               'name':author,
-               'url':author_url
-               }
             json_posts = {
-                       'id':post_url,
+                       'record_id':re.sub(r"\/$", "", post_url.replace(r"https", "http").replace(r"www.", "")),
                        'hostname': 'forum.exetools.com',
                        'domain' : domain,
                        'sub_type':'openweb',
@@ -204,7 +209,7 @@ class Exetool(Spider):
                        'original_url':post_url,
                        'fetch_time':fetch_time,
                        'publish_time' : publish_epoch,
-                       'link_url' : all_links,
+                       'link.url' : all_links,
                        'post':post
                }
             #query={"query":{"match":{"_id":hashlib.md5(str(post_url)).hexdigest()}}}

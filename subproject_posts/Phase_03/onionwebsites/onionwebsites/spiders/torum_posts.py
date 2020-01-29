@@ -10,7 +10,7 @@ class Torum(Spider):
     def __init__(self):
         self.conn = MySQLdb.connect(host="localhost", user=DATABASE_ID, passwd=DATABASE_PASS, db="posts", charset="utf8", use_unicode=True)
         self.cursor = self.conn.cursor()
-	dispatcher.connect(self.close_conn, signals.spider_closed)
+ 	dispatcher.connect(self.close_conn, signals.spider_closed)
 
     def close_conn(self, spider):
         self.conn.commit()
@@ -19,7 +19,7 @@ class Torum(Spider):
     def parse(self,response):
         key = response.headers.get('Set-Cookie','').replace('; path=/','')
         cook = response.headers.get('Set-Cookie','').replace('; path=/','').replace('PHPSESSID=','')
-        cookies = {'PHPSESSID': cook}
+	cookies = {'PHPSESSID': cook}
         headers = {
     'Host': 'torum6uvof666pzw.onion',
     'User-Agent': response.request.headers['User-Agent'],
@@ -194,11 +194,15 @@ class Torum(Spider):
             publish_epoch = time.mktime(publish_time.timetuple())*1000
             #publish_epoch = time.mktime(publish_time.timetuple())*1000
 	    if publish_epoch:
-		month_year = get_index(publish_epoch)
+                year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                if year > '2011':
+		    month_year = get_index(publish_epoch)
+                else:
+                    continue
 	    else:
-		import pdb;pdb.set_trace()
-
-            fetch_time = int(datetime.datetime.now().strftime("%s")) * 1000
+	        pass
+	    
+	    fetch_time = int(datetime.datetime.now().strftime("%s")) * 1000
             reference_url = response.url
             thread_url = response.url
             if 'start' in reference_url:
@@ -213,6 +217,7 @@ class Torum(Spider):
 		}
 	    post = {
 		'cache_link':'',
+		'author':json.dumps(author_data),
 		'section':category,
 		'language':'english',
 		'require_login':'true',
@@ -239,7 +244,7 @@ class Torum(Spider):
 		    'original_url':post_url,
 		    'fetch_time':fetch_time,
 		    'publish_time':publish_epoch,
-		    'link_url':all_links,
+		    'link.url':all_links,
 		    'post':post
 		    }
             sk = md5_val(post_url)

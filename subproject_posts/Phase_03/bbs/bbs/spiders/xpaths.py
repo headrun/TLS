@@ -14,7 +14,7 @@ POST_TEXT = './/div[@class="message mt-1 break-all"]//text() | \
         .//div[@class="message mt-1 break-all"]//blockquote[@class="blockquote"]/@class | \
         .//div[@class="message mt-1 break-all"]//blockquote[@class="blockquote"]//text()'
 NODES = '//div[@class="card p-1"]//div[@class="card-body"]//tr[@class="post"]'
-PUBLISH_EPOCH = './/span[@class="date text-grey ml-2"]//text() | .//div[@class="card"]//div[@class="card-body"]//dl[@class="row small"]//span[@class="date text-grey ml-1"]//text() | .//span[@class="date text-grey small ml-1"]//text()'
+PUBLISH_EPOCH = './/span[@class="date text-grey ml-2"]//text() | .//div[@class="card"]//div[@class="card-body"]//dl[@class="row small"]//span[@class="date text-grey ml-1"]//text() | .//span[@class="date text-grey small ml-1"]//text() | .//dd[@class="text-right"]/span[contains(@class,"date text-grey ml-1")]/text()'
 AUTHOR = './/span[@class="username font-weight-bold"]/a/text()'
 POST_URL = './/dd[@class="text-right text-grey py-1"]//a[@class="text-grey mr-3"]//@href'
 AUTHOR_URL = './/span[@class="username font-weight-bold"]/a/@href'

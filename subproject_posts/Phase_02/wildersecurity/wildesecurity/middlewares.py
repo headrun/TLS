@@ -12,7 +12,7 @@ class CustomProxyMiddleware(object):
         port = 22225
         session_id = random.random() #choice(range(1,31))
         super_proxy_url = 'http://%s-country-us-session-%s:%s@zproxy.lum-superproxy.io:%d' % (username, session_id, password, port)
-        proxy = random.choice(['fl.east.usa.torguardvpnaccess.com', 'atl.east.usa.torguardvpnaccess.com', 'ny.east.usa.torguardvpnaccess.com', 'chi.central.usa.torguardvpnaccess.com', 'dal.central.usa.torguardvpnaccess.com', 'la.west.usa.torguardvpnaccess.com', 'lv.west.usa.torguardvpnaccess.com', 'sa.west.usa.torguardvpnaccess.com', 'nj.east.usa.torguardvpnaccess.com', 'central.usa.torguardvpnaccess.com','centralusa.torguardvpnaccess.com','west.usa.torguardvpnaccess.com','westusa.torguardvpnaccess.com','east.usa.torguardvpnaccess.com','eastusa.torguardvpnaccess.com'])
+        proxy = random.choice(['fl.east.usa.torguardvpnaccess.com', 'atl.east.usa.torguardvpnaccess.com', 'ny.east.usa.torguardvpnaccess.com', 'chi.central.usa.torguardvpnaccess.com', 'dal.central.usa.torguardvpnaccess.com', 'la.west.usa.torguardvpnaccess.com', 'lv.west.usa.torguardvpnaccess.com', 'sa.west.usa.torguardvpnaccess.com', 'nj.east.usa.torguardvpnaccess.com'])
         request.meta['proxy'] = 'http://'+ proxy+':6060'# 'http://fl.east.usa.torguardvpnaccess.com:6060'#super_proxy_url 
         request.headers['Proxy-Authorization'] = basic_auth_header('vinuthna@headrun.com','Hotthdrn591!')
 	ua = random.choice(user_agent_list)

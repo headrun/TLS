@@ -6,6 +6,7 @@ import  tls_utils as utils
 import datetime
 import time
 import json
+import re
 import hashlib
 from pprint import pprint
 from urlparse import urljoin
@@ -28,12 +29,10 @@ class TheGub(scrapy.Spider):
         self.conn.close()
 
     def start_requests(self):
-        que = 'select distinct(post_url) from bhf_status where crawl_status = 0 '
+        que = 'select distinct(post_url) from bhf_status where crawl_status = 0'
         self.cursor.execute(que)
         data = self.cursor.fetchall()
         for url in data:
-            #url = ["https://bhf.io/forums/23/page-768"]
-	    url = ['https://bhf.io/threads/10015/']
             yield Request(url[0], callback = self.parse_thread)
 
     def parse_thread(self,response):
@@ -87,10 +86,11 @@ class TheGub(scrapy.Spider):
 		    try:'''
 	    if publish:
 	        #month_year = time.strftime("%m_%Y", time.localtime(int(publish)))
-		month_year = utils.get_index(publish)
-		    #except:
-			#pass
-
+                year = time.strftime("%Y", time.localtime(int(publish)))
+                if year > '2011':
+		    month_year = utils.get_index(publish)
+                else:
+                    continue
 	    if publish == '':
 		publish_time = 'Null'
             author = ''.join(node.xpath('.//h4[@class="message-name"]//a//span//text()').extract()).replace('\n','').replace('#','') or 'Null'
@@ -136,7 +136,7 @@ class TheGub(scrapy.Spider):
                         'url':author_url
                         }
             doc = {
-			'id' : post_url,
+			'record_id' : re.sub(r"\/$", "", post_url.replace(r"https", "http").replace(r"www.", "")),
                     	'hostname': 'bhf.io',
                     	'domain': "bhf.io",
                     	'sub_type':'openweb',
@@ -144,28 +144,28 @@ class TheGub(scrapy.Spider):
 			'author':json.dumps(author_data),
 			'title':thread_title,
                     	'text': post_text,
-                    	'url': response.url,
-                    	'original_url': response.url,
+                    	'url': post_url,
+                    	'original_url': post_url,
                     	'fetch_time': utils.fetch_time(),
                     	'publish_time': publish,
-                    	'link_url': all_links,
+                    	'link.url': all_links,
 			'post':{
-                        'cache_link':'',
-			'author':json.dumps(author_data),
-			'section':category,
-                        'language':'russian',
-                    	'require_login':'false',
-                    	'sub_section':sub_category,
-                    	'sub_section_url':sub_category_url,
-                    	'post_id': post_id,
-                    	'post_title':post_title,
-                    	'ord_in_thread': ord_in_thread,
-                    	'post_url': post_url,
-                    	'post_text':post_text,
-                    	'thread_title':thread_title,
-                    	'thread_url': thread_url
-                        },
-	    }
+                        	'cache_link':'',
+				'author':json.dumps(author_data),
+				'section':category,
+                        	'language':'russian',
+                    		'require_login':'false',
+                    		'sub_section':sub_category,
+                    		'sub_section_url':sub_category_url,
+                    		'post_id': post_id,
+                    		'post_title':post_title,
+                    		'ord_in_thread': ord_in_thread,
+                    		'post_url': post_url,
+                    		'post_text':post_text,
+                    		'thread_title':thread_title,
+                    		'thread_url': thread_url
+                        	},
+	    	}	
             #query={"query":{"match":{"_id":hashlib.md5(post_url).hexdigest()}}}
             #res_ = self.es.search(body=query)
             #if res_['hits']['hits'] == []:

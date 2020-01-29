@@ -23,16 +23,16 @@ class csteam(scrapy.Spider):
 
     def parse_next(self,response):
 	try:
-            category = response.xpath('//nav[@class="ipsBreadcrumb ipsBreadcrumb_1 ipsFaded_withHover"]//ul[contains(@data-role,"breadcrumbList")]//span//text()').extract()[1] or 'Null'
+            category = response.xpath('//nav[@class="ipsBreadcrumb ipsBreadcrumb_top ipsFaded_withHover"]//ul[contains(@data-role,"breadcrumbList")]//span//text()').extract()[1] or 'Null'
 	except:import pdb;pdb.set_trace()
 	try:
-            sub_category = response.xpath('//nav[@class="ipsBreadcrumb ipsBreadcrumb_1 ipsFaded_withHover"]//ul[contains(@data-role,"breadcrumbList")]//span//text()').extract()[2] or 'Null'
+            sub_category = response.xpath('//nav[@class="ipsBreadcrumb ipsBreadcrumb_top ipsFaded_withHover"]//ul[contains(@data-role,"breadcrumbList")]//span//text()').extract()[2] or 'Null'
 	except:import pdb;pdb.set_trace()
 	try:
-            sub_category_url = response.xpath('//nav[@class="ipsBreadcrumb ipsBreadcrumb_1 ipsFaded_withHover"]//ul[contains(@data-role,"breadcrumbList")]/li/a/@href').extract()[2] or 'Null'
+            sub_category_url = response.xpath('//nav[@class="ipsBreadcrumb ipsBreadcrumb_top ipsFaded_withHover"]//ul[contains(@data-role,"breadcrumbList")]/li/a/@href').extract()[2] or 'Null'
 	except:import pdb;pdb.set_trace()
 
-        thread_title = ''.join(response.xpath('//nav[@class="ipsBreadcrumb ipsBreadcrumb_1 ipsFaded_withHover"]/ul[contains(@data-role,"breadcrumbList")]/li/text()').extract()).replace('\r','').replace('\n','').replace('\t' ,'') or 'Null'
+        thread_title = ''.join(response.xpath('//nav[@class="ipsBreadcrumb ipsBreadcrumb_top ipsFaded_withHover"]/ul[contains(@data-role,"breadcrumbList")]/li/text()').extract()).replace('\r','').replace('\n','').replace('\t' ,'') or 'Null'
 
         inner_nav = response.xpath('//li[contains(@class,"ipsPagination_page")]/a/@href').extract_first()
         if inner_nav:

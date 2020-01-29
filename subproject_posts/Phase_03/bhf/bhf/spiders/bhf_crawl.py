@@ -25,7 +25,6 @@ class TheGub(scrapy.Spider):
 
     def parse(self,response):
         sel = Selector(response)
-        import pdb;pdb.set_trace()
         main_urls = sel.xpath('//h3[@class="node-title"]/a/@href').extract()
         for url in main_urls:
             url = "https://bhf.io" + url

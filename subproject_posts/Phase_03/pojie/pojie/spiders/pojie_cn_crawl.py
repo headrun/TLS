@@ -62,10 +62,13 @@ class Pojie_CN(scrapy.Spider):
         domain = "52pojie.cn"
         url = response.url
         url = url.split('-')
-        if url[2] == '1':
-            crawl_type = "keepup"
-        else:
-            crawl_type = "catchup"
+        try:
+            if url[2] == '1':
+                crawl_type = "keepup"
+            else:
+                crawl_type = "catchup"
+        except:
+             pass
         subcategory = ''.join(sel.xpath(SUB_CATE).extract()) or 'Null'
         sub_categoryurl = ''.join(sel.xpath('//div[@class="z"]//em[2]//following-sibling::a[2]//@href').extract()) 
         if sub_categoryurl:

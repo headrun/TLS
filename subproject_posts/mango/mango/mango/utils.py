@@ -9,7 +9,6 @@ import logging
 from time import strftime
 from pprint import pprint
 import datetime
-import dateutil.relativedelta
 import os,sys
 reload(sys)
 sys.setdefaultencoding('utf8')
@@ -27,13 +26,14 @@ from scrapy.http import Request
 from urlparse import urljoin
 from user_agent import user_agent_list
 
+
 es = Elasticsearch(['10.2.0.90:9342'])
 FORUM_POST = 'forum_posts'
 DOC_TYPE = 'post'
 FORUM_AUTHOR = 'forum_author'
 DATABASE_USER = 'tls_dev'
 DATABASE_PASS = 'hdrn!'
-TOR_PASS = 'tls@2019'
+TOR_PASS = 'tls'
 
 
 def generate_upsert_query_posts_crawl(crawler):
@@ -107,11 +107,6 @@ def time_to_epoch(str_of_time, str_of_patter):
     try:time_in_epoch = (int(time.mktime(time.strptime(str_of_time, str_of_patter))) - time.timezone) * 1000
     except:time_in_epoch = None
     return time_in_epoch
-
-def get_index(time_in_epoch):
-    try:indices = time.strftime("%m_%Y", time.localtime(int(time_in_epoch/1000)))
-    except:indices = time.strftime("%m_%Y", time.localtime(int(time_in_epoch)))
-    return 'forum_posts_'+indices
 
 def activetime_str(activetime_,totalposts):
     activetime = []

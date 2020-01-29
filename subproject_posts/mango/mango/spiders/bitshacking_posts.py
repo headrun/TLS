@@ -13,7 +13,7 @@ class bitshacking(scrapy.Spider):
         self.conn.close()
 
     def parse(self,response):
-        url_que = "select distinct(post_url) from bitshacking_crawl where crawl_status = 0 "
+        url_que = "select distinct(post_url) from bitshacking_post_crawl where crawl_status = 0 "
         self.cursor.execute(url_que)
         data = self.cursor.fetchall()
         for url in data:
@@ -38,9 +38,9 @@ class bitshacking(scrapy.Spider):
             post_title = '' or 'Null'
             publish_epoch = node.xpath('.//time[@class="u-dt"]//@data-time').extract()[0]
             if publish_epoch:
-                year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                year = time.strftime("%Y", time.localtime(int(publish_epoch)))
                 if year > '2011':
-                    month_year = time.strftime("%m-%Y", time.localtime(int(publish_epoch)))
+                    month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch)))
                 else:
                     continue
             else:

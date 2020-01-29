@@ -34,6 +34,7 @@ class Turkhackteam(scrapy.Spider):
         domain = 'turkhackteam.org'
         user_name = ''.join(response.xpath('//h1[@class="member-h1"]//span//text()').extract())
         author_signature = ''.join(response.xpath('//dl[@class="list_no_decoration profilefield_list"]//dd[@id="signature"]//div//text() | //dl[@class="list_no_decoration profilefield_list"]//dd[@id="signature"]//text()').extract())
+        import pdb;pdb.set_trace()
         join_date = ''.join(response.xpath('//div[@class="min-st-col"]//text()').extract()[-3])
         join = datetime.datetime.strptime(join_date,'%d-%m-%Y %H:%M')
         joindate = time.mktime(join.timetuple())*1000

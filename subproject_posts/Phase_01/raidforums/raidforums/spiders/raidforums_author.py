@@ -142,64 +142,31 @@ class Raidforums(scrapy.Spider):
             group = 'Top donator'
         elif group == '':
             group = 'Member'
+        username = ''.join(response.xpath('//div[@class="profile__user-basic-info"]//span//text()').extract())
 
-        username = ''.join(response.xpath('//span[@class="largetext protitlemain"]//span/text()').extract()) or \
-                   ''.join(response.xpath('//span[@class="largetext protitlemain"]//strong/img/@original-title').extract())or \
-                   ''.join(response.xpath(
-                       '//span[@class="largetext protitlemain"]//span//text()').extract())
-
-        join_date_xpath = '//div[@id="3-content"]//td[@class="trow1"]/strong[contains(text(),"Joined:")]//../..//preceding-sibling::td/text()'
-        join_date = ''.join(response.xpath(join_date_xpath).extract())
+        join = ''.join(response.xpath('//div[@class="profile__short-info"]//td[@class="trow1"]/span[contains(text(),"Joined:")]//../..//preceding-sibling::td/text()').extract())
 
         # Join date to epoch time convertion
-        try:
-            join_date = datetime.datetime.strptime(join_date, '%m-%d-%Y')
-            join_date = time.mktime(join_date.timetuple()) * 1000
-        except:
-            try:
-                join_date = datetime.datetime.strptime(join_date, '%d-%m-%Y')
-                join_date = time.mktime(join_date.timetuple()) * 1000
-            except:
-                pass
-        last_active_xpath = '//div[@id="3-content"]//td[contains(@class,"trow")]/strong[contains(text(),"Last Visit")]//../..//preceding-sibling::td//text()'
-        last_active = ''.join(response.xpath('//div[@id="3-content"]//td[contains(@class,"trow")]/strong[contains(text(),"Last Visit")]//../..//preceding-sibling::td//span//@title').extract(
-        )) or ''.join(response.xpath(last_active_xpath).extract())
-        last_active = ''.join(re.findall(
-            '\d+-\d+-\d+, \d+:\d+ \w+', last_active))
-        reputation_xpath = '//div[@id="3-content"]//td[contains(@class,"trow")]/strong[contains(text(),"Reputation:")]//../..//preceding-sibling::td//strong//text()'
-        try:
-            reputation = response.xpath(reputation_xpath).extract()[-1]
-        except:
-            reputation = ''.join(response.xpath(reputation_xpath).extract())
+        join_datee = datetime.datetime.strptime(join, '%B %d, %Y')
+        join_date = time.mktime(join_datee.timetuple()) * 1000
+        reputation = ''.join(response.xpath('//div[@class="d-table-cell w-100"]//span[contains(text(),"Reputation")]//../strong[@class="reputation_positive"]//text()').extract()) or 'Null'
 
         # last active into epoch time convertion
         try:
-            last_active = datetime.datetime.strptime(
-                last_active, '%m-%d-%Y, %I:%M %p')
-            last_active = (time.mktime(last_active.timetuple()) * 1000)
+            last_active_xpath = response.xpath('//div[@class="profile__online-status"]//span//@title').extract()
+            last_activee = datetime.datetime.strptime(last_active_xpath, '%B %d, %Y')
+            last_active = (time.mktime(last_activee.timetuple()) * 1000)
         except:
             try:
-                last_active = datetime.datetime.strptime(
-                    last_active, '%d-%m-%Y, %I:%M %p') or datetime.datetime.strptime(last_active, '%m-%d-%Y')
-                last_active = time.mktime(last_active.timetuple()) * 1000
+                last_active_xpath = response.xpath('//div[@class="profile__online-status"]/text()').extract()[1]
+                last_active = re.findall('(.*)Visit:', last_active_xpath)
+                last = datetime.datetime.strptime(last_active, '%B %d, %Y')
+                last_active = time.mktime(last.timetuple()) * 1000
             except:
-                last_active = ''.join(response.xpath(
-                    last_active_xpath).extract())
-                if 'Hidden' not in last_active:
-                    last_active = ''.join(response.xpath(
-                        '//div[@id="3-content"]//td[contains(@class,"trow")]/strong[contains(text(),"Last Visit")]//../..//preceding-sibling::td//span/@title').extract())
-                    if last_active:
-                        try:
-                            date_ = datetime.datetime.strptime(last_active, '%d-%m-%Y, %I:%M %p')  
-                        except:
-                            date_ =  datetime.datetime.strptime(last_active, '%m-%d-%Y')
-                        last_active = time.mktime(date_.timetuple()) * 1000
-                else:
-                    last_active = 0
-        total_posts_xpath = '//div[@id="3-content"]//td[contains(@class,"trow")]/strong[contains(text(),"Total Posts:")]//../..//preceding-sibling::td/text()'
-        total_posts = ''.join(response.xpath(total_posts_xpath).extract())
-        credits = ''.join(response.xpath(
-            '//div[@id="3-content"]//td[contains(@class,"trow")]/strong[contains(text(),"Credits")]//../..//preceding-sibling::td/a/text()').extract())
+                last_active = 0
+        total_posts_xpath = response.xpath('//div[@class="d-table-cell w-100"]/span[contains(text(),"Total Posts:")]/../text()').extract()[1]
+        total_posts = re.findall('\d+',total_posts_xpath)[0]
+        credits = ''
 
         rank = ''.join(response.xpath(
             '//div[@class="proboxes"]/span/img/@src').extract()) or 'none'
@@ -364,22 +331,9 @@ class Raidforums(scrapy.Spider):
                 activetime = ''
         # writing data to DB
         Fetch_Time = int(round(time.time() * 1000))
-        author_signature = ""
-        author_signature = ' '.join(response.xpath('//td/strong[contains(text(), "Signature")]/../../following-sibling::tr//td//img//@src | //td/strong[contains(text(), "Signature")]/../../following-sibling::tr//td//text() | //td/strong[contains(text(), "Signature")]/../../following-sibling::tr//td//a/@href').extract())
-        if """protected]""" in author_signature:
-            mails  = response.xpath('//td/strong[contains(text(), "Signature")]/../../following-sibling::tr//td//@data-cfemail').extract()
-            email_id=[utils.decode_cloudflareEmail(id_) for id_ in mails]
-            if len(mails) > 1:
-                author_signature =  author_signature.split(u'[email\xc2\xa0protected]')[0] + email_id[0] + ' ' + author_signature.split(u'[email\xc2\xa0protected]')[1] + ' ' + email_id[1] + ' ' + author_signature.split(u'[email\xc2\xa0protected]')[2]
-            else:
-                autho_signature = author_signature.split(u'[email\xc2\xa0protected]')
-                if len(autho_signature) >1:
-                    author_signature =  author_signature.split(u'[email\xc2\xa0protected]')[0] + email_id[0]  + " " + author_signature.split(u'[email\xc2\xa0protected]')[1]
-                else:
-                    author_signature =   author_signature.split(u'[email\xc2\xa0protected]')[0] + email_id[0] + ' '
+        author_signature = ''
 
-        awards = ', '.join([e.replace('>>', '').replace('\n', '').strip() for e in response.xpath(
-            '//strong[contains(text(), "awards")]/..//../../tr//td[contains(@class, "trow")]//following-sibling::span/../text()').extract() if e.replace('>>', '').replace('\n', '').strip()])
+        awards = ', '.join([e.replace('>>', '').replace('\n', '').strip() for e in response.xpath('//tr//td[@class="trow1"]//div//a//img//@src | //tr//td[@class="trow2"]//div//a//img//@src').extract() if e.replace('>>', '').replace('\n', '').strip()])
         json_data.update({'username': username,
                 'domain': 'www.raidforums.com',
                 'auth_sign': author_signature,
@@ -396,7 +350,5 @@ class Raidforums(scrapy.Spider):
                 'contact_info':contact_info,
         })
 	self.es.index(index="forum_author", doc_type='post', id=hashlib.md5(username).hexdigest(), body=json_data)
-        #upsert_query_authors = utils.generate_upsert_query_authors('raidforums')
-        #self.cursor.execute(upsert_query_authors, json_data)
 	
 

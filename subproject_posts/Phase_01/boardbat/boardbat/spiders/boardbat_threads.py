@@ -5,7 +5,6 @@ import json
 import MySQLdb
 import re
 import scrapy
-from scrapy.spider import Spider
 from scrapy.selector import Selector
 from scrapy.http import Request
 from scrapy import signals

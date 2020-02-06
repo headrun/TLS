@@ -6,12 +6,9 @@
 # https://doc.scrapy.org/en/latest/topics/spider-middleware.html
 
 from scrapy import signals
-from w3lib.http import basic_auth_header
-import random
-proxy_list = ['fl.east.usa.torguardvpnaccess.com', 'atl.east.usa.torguardvpnaccess.com', 'ny.east.usa.torguardvpnaccess.com', 'chi.central.usa.torguardvpnaccess.com', 'dal.central.usa.torguardvpnaccess.com', 'la.west.usa.torguardvpnaccess.com', 'lv.west.usa.torguardvpnaccess.com', 'sa.west.usa.torguardvpnaccess.com', 'nj.east.usa.torguardvpnaccess.com', 'central.usa.torguardvpnaccess.com','centralusa.torguardvpnaccess.com','west.usa.torguardvpnaccess.com','westusa.torguardvpnaccess.com','east.usa.torguardvpnaccess.com','eastusa.torguardvpnaccess.com']+ ['au.torguardvpnaccess.com', 'melb.au.torguardvpnaccess.com', 'bul.torguardvpnaccess.com', 'cp.torguardvpnaccess.com', 'egy.torguardvpnaccess.com', 'iom.torguardvpnaccess.com', 'isr.torguardvpnaccess.com', 'fin.torguardvpnaccess.com', 'br.torguardvpnaccess.com', 'ca.torguardvpnaccess.com', 'vanc.ca.west.torguardvpnaccess.com', 'frank.gr.torguardvpnaccess.com', 'ice.torguardvpnaccess.com', 'ire.torguardvpnaccess.com', 'in.torguardvpnaccess.com', 'jp.torguardvpnaccess.com', 'nl.torguardvpnaccess.com', 'lon.uk.torguardvpnaccess.com', 'ro.torguardvpnaccess.com', 'ru.torguardvpnaccess.com', 'mos.ru.torguardvpnaccess.com', 'swe.torguardvpnaccess.com', 'swiss.torguardvpnaccess.com', 'bg.torguardvpnaccess.com', 'hk.torguardvpnaccess.com', 'cr.torguardvpnaccess.com', 'hg.torguardvpnaccess.com', 'my.torguardvpnaccess.com', 'thai.torguardvpnaccess.com', 'turk.torguardvpnaccess.com', 'tun.torguardvpnaccess.com', 'mx.torguardvpnaccess.com', 'singp.torguardvpnaccess.com', 'saudi.torguardvpnaccess.com', 'fr.torguardvpnaccess.com', 'pl.torguardvpnaccess.com', 'czech.torguardvpnaccess.com', 'gre.torguardvpnaccess.com', 'it.torguardvpnaccess.com', 'sp.torguardvpnaccess.com', 'no.torguardvpnaccess.com', 'por.torguardvpnaccess.com', 'za.torguardvpnaccess.com', 'den.torguardvpnaccess.com', 'vn.torguardvpnaccess.com', 'sk.torguardvpnaccess.com', 'lv.torguardvpnaccess.com', 'lux.torguardvpnaccess.com', 'nz.torguardvpnaccess.com', 'md.torguardvpnaccess.com', 'uae.torguardvpnaccess.com', 'slk.torguardvpnaccess.com', 'fl.east.usa.torguardvpnaccess.com', 'atl.east.usa.torguardvpnaccess.com', 'ny.east.usa.torguardvpnaccess.com', 'chi.central.usa.torguardvpnaccess.com', 'dal.central.usa.torguardvpnaccess.com', 'la.west.usa.torguardvpnaccess.com', 'lv.west.usa.torguardvpnaccess.com', 'sa.west.usa.torguardvpnaccess.com', 'nj.east.usa.torguardvpnaccess.com']
 
 
-class BleepingComputerSpiderMiddleware(object):
+class ExeToolsSpiderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,
     # scrapy acts as if the spider middleware does not modify the
     # passed objects.
@@ -59,11 +56,11 @@ class BleepingComputerSpiderMiddleware(object):
         spider.logger.info('Spider opened: %s' % spider.name)
 
 
-class BleepingComputerDownloaderMiddleware(object):
+class ExeToolsDownloaderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,
     # scrapy acts as if the downloader middleware does not modify the
     # passed objects.
-    proxy = random.choice(proxy_list)
+
     @classmethod
     def from_crawler(cls, crawler):
         # This method is used by Scrapy to create your spiders.
@@ -81,9 +78,7 @@ class BleepingComputerDownloaderMiddleware(object):
         # - or return a Request object
         # - or raise IgnoreRequest: process_exception() methods of
         #   installed downloader middleware will be called
-        request.meta['proxy'] = 'http://'+ self.proxy+':6060'
-        request.headers['Proxy-Authorization'] = basic_auth_header('vinuthna@headrun.com','Hotthdrn591!')
-
+        return None
 
     def process_response(self, request, response, spider):
         # Called with the response returned from the downloader.

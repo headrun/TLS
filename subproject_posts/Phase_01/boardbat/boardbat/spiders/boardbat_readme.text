@@ -1,0 +1,32 @@
+#BOARDBAT
+
+
+boardbat_thread_v2.py    ---> main crawler
+xpaths.py                 ---> contains all the xpaths for hackforum_crawler
+utils.py               ---> some functions in my_utils file
+configuration.py          ---> DB configurations
+
+
+ CREATE DATABASE `posts_bb` /*!40100 DEFAULT CHARACTER SET latin1 */
+
+CREATE TABLE `boardbat_posts` (
+  `domain` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+  `crawl_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
+  `category` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+  `sub_category` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+  `thread_title` text CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
+  `thread_url` text CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
+  `post_title` text CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
+  `post_id` int(32) NOT NULL,
+  `post_url` text CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
+  `publish_epoch` bigint(20) DEFAULT NULL,
+  `fetch_epoch` bigint(20) DEFAULT NULL,
+  `author` text CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
+  `author_url` text CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
+  `post_text` text CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
+  `all_links` text CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
+  `reference_url` text CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `modified_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`post_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci ;

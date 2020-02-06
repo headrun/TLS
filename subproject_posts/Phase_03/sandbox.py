@@ -2,12 +2,12 @@ import time
 from selenium import webdriver
 from pprint import pprint
 from elasticsearch import Elasticsearch
-#es = Elasticsearch(['10.2.0.90:9342'])
 es = Elasticsearch(['http://maldoc.tlssec.net/'])
-#es = Elasticsearch(['http://maldoc.tlssec.net/'],http_auth=('headrun','@He@drun$'))
 import hashlib
 import datetime
+from selenium.webdriver.support.ui import WebDriverWait
 import scrapy
+from pprint import pprint
 from scrapy.selector import Selector
 import json
 import MySQLdb
@@ -18,6 +18,7 @@ from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from tbselenium.tbdriver import TorBrowserDriver
 from tbselenium.utils import start_xvfb, stop_xvfb
 from base64 import b64encode
+
 
 class SandBox(): 
     name = 'vulnerbility'
@@ -32,20 +33,25 @@ class SandBox():
         self.conn.close()
 
 
-    def get_driver(self):
-        options = webdriver.ChromeOptions()
-        options.add_argument('--no-sandbox')
-        options.add_argument("--disable-extensions")
-        options.add_argument('--headless')
-        options.add_argument('--proxy-server={}'.format('socks5://localhost:9050'))
-        options.add_argument("--incognito")
-        driver = webdriver.Chrome(chrome_options=options)
+    def open_driver(ip):
+        proxy = 'zproxy.lum-superproxy.io:22225'
+        service_args = [ "--ignore-ssl-errors=true",
+                         "--ssl-protocol=any",
+                         "--proxy={}".format('hostname + ":" + port'),
+                         "--proxy-type=http",
+                         ]
+        caps = DesiredCapabilities.PHANTOMJS
+        authentication_token = basic_auth_header('lum-customer-netenrich-zone-zone_external_use','0wzr0s7zsdn3')
+        caps['phantomjs.page.customHeaders.Proxy-Authorization'] = authentication_token
+        webdriver.DesiredCapabilities.PHANTOMJS[
+                'phantomjs.page.settings.userAgent'] = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.116 Safari/537.36'
+        driver = webdriver.PhantomJS(service_args=service_args, desired_capabilities=caps)
         return driver
 
     def start_requests(self):
-        self.driver = self.get_driver()
+        self.driver = self.open_driver()
         time.sleep(1)
-        key_que = 'select Distinct(cve_id) from skybox_new_cve where crawl_status = 1 limit 500'
+        key_que = 'select Distinct(cve_id) from skybox_new_cve where crawl_status = 0 limit 5;'
         self.cursor.execute(key_que)
         keys = self.cursor.fetchall()
         skybox_urls = []
@@ -57,10 +63,16 @@ class SandBox():
             self.driver.get('https://www.vulnerabilitycenter.com/svc/SVC.html#search=%s'%(key))
             time.sleep(5)
             sel = Selector(text = self.driver.page_source)
-            nodes = sel.xpath('//div[@class="GMMNKTXCNDC"]//tr[@class="GMMNKTXCAEC GMMNKTXCHYC GMMNKTXCAL svc-TableRow"] | //div[@class="GMMNKTXCNDC"]//tr[@class="GMMNKTXCAEC GMMNKTXCHYC GMMNKTXCAL GMMNKTXCBEC svc-TableRow"]')
-            for node in nodes:
-                skybox_url = ''.join(node.xpath('.//td[@cellindex="0"]//a[@target="_top"]/@href').extract())
-                skybox_urls.append((skybox_url,key))
+            if "No matching records found" in self.driver.page_source :
+                upd_qry = 'update sandbox.skybox_new_cve set crawl_status = 3 where cve_id = "%s"'
+                values = key
+                self.cursor.execute(upd_qry%values)
+                self.conn.commit()
+            else:
+                nodes = sel.xpath('//div[@class="GMMNKTXCNDC"]//tr[@class="GMMNKTXCAEC GMMNKTXCHYC GMMNKTXCAL svc-TableRow"] | //div[@class="GMMNKTXCNDC"]//tr[@class="GMMNKTXCAEC GMMNKTXCHYC GMMNKTXCAL GMMNKTXCBEC svc-TableRow"] | //div[@class="GMMNKTXCHEC"]//tr[@class="GMMNKTXCAEC GMMNKTXCHYC GMMNKTXCAL svc-TableRow GMMNKTXCEEC GMMNKTXCKYC"] | //div[@class="GMMNKTXCNDC"]//tr[contains(@class,"GMMNKTXCAEC")]')
+                for node in nodes:
+                    skybox_url = ''.join(node.xpath('.//td[@cellindex="0"]//a[@target="_top"]/@href').extract())
+                    skybox_urls.append((skybox_url,key))
 
         for data in skybox_urls:
             skybox_url,serach_key = data
@@ -74,10 +86,15 @@ class SandBox():
         self.driver.get(skybox_url)
         time.sleep(5)
         sel = Selector(text = self.driver.page_source)
-        vendors = ''.join(sel.xpath('//table[@class="svc-VulDetailsLeft"]//div[contains(text(),"Vendor")]/../../td[2]//text()').extract())
+        vendors = sel.xpath('//table[@class="svc-VulDetailsLeft"]//div[contains(text(),"Vendor")]/../../td[2]//text()').extract()
         skybox_id = ''.join(sel.xpath('//table[@class="svc-VulDetailsLeft"]//div[contains(text(),"Skybox Id")]/../../td[2]//text()').extract())
-        cve_id = ''.join(sel.xpath('//table[@class="svc-VulDetailsLeft"]//div[contains(text(),"CVE Id")]/../../td[2]//text()').extract())
-        Scanners_and_Other_Sources = ''.join(sel.xpath('//table[@class="svc-VulDetailsLeft"]//div[contains(text(),"Scanners and Other Sources")]/../../td[2]//text()').extract())
+        cveid = ''.join(sel.xpath('//table[@class="svc-VulDetailsLeft"]//div[contains(text(),"CVE Id")]/../../td[2]//text()').extract())
+        try:
+            Scanners_and_Other_Sources = sel.xpath('//table[@class="svc-VulDetailsLeft"]//div[contains(text(),"Scanners and Other Sources")]/../../td[2]//text()').extract()
+            Scanners_and_Other = Scanners_and_Other_Sources[0].replace('and','').split(',')
+        except:
+            Scanners_and_Other_Sources = sel.xpath('//table[@class="svc-VulDetailsLeft"]//div[contains(text(),"Scanners and Other Sources")]/../../td[2]//text()').extract()
+            Scanners_and_Other = ''
         security =  ''.join(sel.xpath('//table[@class="svc-VulDetailsRight"]//div[contains(text(),"Severity")]/../../td[2]//text()').extract())
         cvss_base = ''.join(sel.xpath('//table[@class="svc-VulDetailsRight"]//div[contains(text(),"CVSS Base")]/../../td[2]//text()').extract())
 	cvss_temporal = ''.join(sel.xpath('//table[@class="svc-VulDetailsRight"]//div[contains(text(),"CVSS Temporal")]/../../td[2]//text()').extract())
@@ -94,31 +111,51 @@ class SandBox():
         effected_products = []
         products = sel.xpath('//div[@class="GMMNKTXCJ3 GMMNKTXCPK"]//span[@class="gwt-InlineHTML" and contains(text(),"Product")]/../../../../../../../..//div[@class="GMMNKTXCHEC"]//tr[@class="GMMNKTXCAEC GMMNKTXCHYC GMMNKTXCAL GMMNKTXCBEC svc-TableRow GMMNKTXCEEC GMMNKTXCKYC"] | //div[@class="GMMNKTXCJ3 GMMNKTXCPK"]//span[@class="gwt-InlineHTML" and contains(text(),"Product")]/../../../../../../../..//div[@class="GMMNKTXCHEC"]//tr[@class="GMMNKTXCAEC GMMNKTXCHYC GMMNKTXCAL svc-TableRow"]  | //div[@class="GMMNKTXCJ3 GMMNKTXCPK"]//span[@class="gwt-InlineHTML" and contains(text(),"Product")]/../../../../../../../..//div[@class="GMMNKTXCHEC"]//tr[@class="GMMNKTXCAEC GMMNKTXCHYC GMMNKTXCAL GMMNKTXCBEC svc-TableRow"] ')
         for prod in products:
-            prod_doc = {
-                        'Product' : ''.join(prod.xpath('.//td[@cellindex="0"]//text()').extract()),
-                        'Vendor' : ''.join(prod.xpath('.//td[@cellindex="1"]//text()').extract()),
-                        'Category' : ''.join(prod.xpath('.//td[@cellindex="2"]//text()').extract()),
-                        'Affected Versions' : ''.join(prod.xpath('.//td[@cellindex="3"]//text()').extract())
+            affected =  ''.join(prod.xpath('.//td[@cellindex="3"]//text()').extract())
+            if '*' in affected:
+                prod_doc = {
+                        'product' : ''.join(prod.xpath('.//td[@cellindex="0"]//text()').extract()),
+                        'vendor' : ''.join(prod.xpath('.//td[@cellindex="1"]//text()').extract()),
+                        'category' : ''.join(prod.xpath('.//td[@cellindex="2"]//text()').extract()),
+                        'affected_version' : affected
+                        
                 }
-            effected_products.append(prod_doc)
+                effected_products.append(prod_doc)
+            elif '[]' in affected:
+                prod_doc = {
+                        'product' : ''.join(prod.xpath('.//td[@cellindex="0"]//text()').extract()),
+                        'vendor' : ''.join(prod.xpath('.//td[@cellindex="1"]//text()').extract()),
+                        'category' : ''.join(prod.xpath('.//td[@cellindex="2"]//text()').extract()),
+                        'affected_version' : affected
+               
+                }
+                effected_products.append(prod_doc)
+            else:
+               prod_doc = {
+                        'product' : ''.join(prod.xpath('.//td[@cellindex="0"]//text()').extract()),
+                        'vendor' : ''.join(prod.xpath('.//td[@cellindex="1"]//text()').extract()),
+                        'category' : ''.join(prod.xpath('.//td[@cellindex="2"]//text()').extract()),
+                        'affected_version' : affected.split(',')
+               }
+               effected_products.append(prod_doc)
         solutions = []
         external_reff = []
         reff  = sel.xpath('//tr[@class="GMMNKTXCI3"]/td[@class="GMMNKTXCJ3 GMMNKTXCD3"]//span[contains(text(),"Source")]/../../../../../../../..//div[@class="GMMNKTXCHEC"]//tr[@class="GMMNKTXCAEC GMMNKTXCHYC GMMNKTXCAL svc-TableRow"] | //tr[@class="GMMNKTXCI3"]/td[@class="GMMNKTXCJ3 GMMNKTXCD3"]//span[contains(text(),"Source")]/../../../../../../../..//div[@class="GMMNKTXCHEC"]//tr[@class="GMMNKTXCAEC GMMNKTXCHYC GMMNKTXCAL GMMNKTXCBEC svc-TableRow"]')
 	for r in reff:
             nef_vals = {
-                        'Source':''.join(r.xpath('.//td[@cellindex="0"]//text()').extract()),
-                        'Title':''.join(r.xpath('.//td[@cellindex="1"]//text()').extract()),
-                        'URL': ''.join(r.xpath('.//td[@cellindex="2"]//text()').extract())
+                        'source':''.join(r.xpath('.//td[@cellindex="0"]//text()').extract()),
+                        'title':''.join(r.xpath('.//td[@cellindex="1"]//text()').extract()),
+                        'url': ''.join(r.xpath('.//td[@cellindex="2"]//text()').extract())
                         }
             external_reff.append(nef_vals)
         solutions = []
         data = sel.xpath('//span[@class="gwt-InlineHTML" and contains(text(),"Name")]/../../../../../../../..//div[@class="GMMNKTXCJ3 GMMNKTXCPK"]/../div[@class="GMMNKTXCHEC"]//table[@class="GMMNKTXCKDC"]//tr[@class="GMMNKTXCAEC GMMNKTXCHYC GMMNKTXCAL GMMNKTXCBEC svc-TableRow"] | //span[@class="gwt-InlineHTML" and contains(text(),"Name")]/../../../../../../../..//div[@class="GMMNKTXCJ3 GMMNKTXCPK"]/../div[@class="GMMNKTXCHEC"]//table[@class="GMMNKTXCKDC"]//tr[@class="GMMNKTXCAEC GMMNKTXCHYC GMMNKTXCAL svc-TableRow"] | //span[@class="gwt-InlineHTML" and contains(text(),"Name")]/../../../../../../../..//div[@class="GMMNKTXCJ3 GMMNKTXCPK"]/../div[@class="GMMNKTXCHEC"]//table[@class="GMMNKTXCKDC"]//tr[@class="GMMNKTXCAEC GMMNKTXCHYC GMMNKTXCAL svc-TableRow GMMNKTXCEEC GMMNKTXCKYC"]')
         for la in data:
             sol = {
-                        'Name': ''.join(la.xpath('.//td[@cellindex="0"]//text()').extract()),
-                        'Type': ''.join(la.xpath('.//td[@cellindex="1"]//text()').extract()),
-                        'Description':''.join(la.xpath('.//td[@cellindex="2"]//text()').extract()),
-                        'Links':', '.join(la.xpath('.//td[@cellindex="2"]//a[@target="top"]/@href').extract())
+                        'name': ''.join(la.xpath('.//td[@cellindex="0"]//text()').extract()),
+                        'type': ''.join(la.xpath('.//td[@cellindex="1"]//text()').extract()),
+                        'description':''.join(la.xpath('.//td[@cellindex="2"]//text()').extract()).replace('\n', '').replace('\t', '').strip(),
+                        'links':', '.join(la.xpath('.//td[@cellindex="2"]//a[@target="top"]/@href').extract())
                         }
             solutions.append(sol)
         fetch_time =  int(datetime.datetime.now().strftime("%s")) * 1000
@@ -126,8 +163,8 @@ class SandBox():
                 'fetch_time': fetch_time,
                 'vendors':vendors,
                 'skybox_id' :skybox_id,
-                'cve_id' :cve_id,
-                'Scanners and Other Sources':  Scanners_and_Other_Sources,
+                'cve_id' :cveid,
+                'scanners_other_sources':Scanners_and_Other,
                 'severity':security,
                 'cvss_base':cvss_base ,
                 'cvss_temporal':cvss_temporal,
@@ -135,11 +172,18 @@ class SandBox():
                 'modified_date':last_modification_date,
                 'affected_products': effected_products,
 		'solutions': solutions,
-                'external_preferences': external_reff,
+                'external_references': external_reff,
                 'skybox_url': skybox_url,
-                'search key_word': serach_key,
+                'search_key_word': serach_key,
+                'original_url' : skybox_url,
                 'domain':'vulnerabilitycenter.com'
                 }
+        pprint(sky_doc)
+        if cveid:
+            upd_qry = 'update sandbox.skybox_new_cve set crawl_status = 1 where cve_id = "%s"'
+            values = cveid
+            self.cursor.execute(upd_qry%values)
+            self.conn.commit()
         sk = hashlib.md5(skybox_url).hexdigest()
         index = 'skybox_posts'
         doc_type = '/post'
@@ -162,6 +206,8 @@ class SandBox():
         for i in range(0, len(l), n):
             yield l[i:i + n]
 
+
 if __name__ == '__main__':
     obj = SandBox()
     obj.start_requests()
+    #obj.open_driver()

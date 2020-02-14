@@ -13,7 +13,7 @@ class Rocksolid(Spider):
         }
 
     def parse(self, response):
-        urls = response.xpath('//div[@class="np_index_group"]//a[@target="content"]/@href').extract() 
+        urls = response.xpath('//div[@class="np_index_groups"]//td//span[@class="np_group_line_text"]//a[@target="_self"]/@href').extract() 
         for url in urls:
 	    #i 'nodes.help' not in url:
             url = "http://bchz4vggexx63qvy.onion/rocksolid/" + url

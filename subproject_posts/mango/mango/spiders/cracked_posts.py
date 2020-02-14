@@ -59,7 +59,7 @@ class Cracked(Spider):
                 post_url = 'Null'
             post_id = re.sub('(.*)#pid', '', post_url) or 'Null'
             record_id = re.sub(r"\/$", "", post_url.replace(r"https", "http").replace(r"www.", ""))
-            ord_in_thread = ''.join(node.xpath('.//div[@class="right postbit-number"]//strong/a/text()').extract()).replace('#', '')
+            ord_in_thread = ''.join(node.xpath('.//div[@class="float_right inline-block"]//span[@class="posturl"]//strong//a//text()').extract()).replace('#', '')
             author = ''.join(node.xpath('.//div[@class="post-username"]//a//text()').extract()) or 'Null'
             author_url = ''.join(node.xpath('.//div[@class="post-username"]//a/@href').extract()) or 'Null'
             fetchtime = fetch_time()
@@ -129,7 +129,7 @@ class Cracked(Spider):
                     'sub_section_url':sub_category_url,
                     'post_id':post_id,
                     'post_title':post_title,
-                    'ord_in_thread':int(ord_in_thread),
+                    'ord_in_thread':ord_in_thread,
                     'post_url':post_url,
                     'post_text':text,
                     'thread_title':thread_title,

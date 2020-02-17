@@ -51,7 +51,7 @@ class SandBox():
     def start_requests(self):
         self.driver = self.open_driver()
         time.sleep(1)
-        key_que = 'select Distinct(cve_id) from skybox_new_cve where crawl_status = 0 limit 5;'
+        key_que = 'select Distinct(cve_id) from skybox_new_cve where crawl_status = 0 limit 10;'
         self.cursor.execute(key_que)
         keys = self.cursor.fetchall()
         skybox_urls = []
@@ -178,8 +178,7 @@ class SandBox():
                 'original_url' : skybox_url,
                 'domain':'vulnerabilitycenter.com'
                 }
-        pprint(sky_doc)
-        if cveid:
+        if skybox_id:
             upd_qry = 'update sandbox.skybox_new_cve set crawl_status = 1 where cve_id = "%s"'
             values = cveid
             self.cursor.execute(upd_qry%values)

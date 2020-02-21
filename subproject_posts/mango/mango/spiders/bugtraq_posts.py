@@ -62,21 +62,18 @@ class Bugtraq(Spider):
             views = num_of_views.replace(u'\u0427\u0438\u0441\u043b\u043e \u043f\u0440\u043e\u0441\u043c\u043e\u0442\u0440\u043e\u0432:', '').strip()
         else:
             import pdb;pdb.set_trace()
-         
-        date = response.xpath('//td[@align="left"]//span[@class="ml"]/i/text() | //td[@align="left"]//span[@class="ml"]//font//text()').extract_first() or 'Null'
+        date = response.xpath('//td[@align="left"]//span[@class="ml"]/i/text() | //td[@align="left"]//span[@class="ml"]//font//text()').extract_first() 
         try:
             publish_time = time_to_epoch(date, '%d.%m.%y %H:%M')
-        except:
-            import pdb;pdb.set_trace()
-            publish_time = time_to_epoch(date, '%d.%y %H:%M')
-        if publish_time:
             year = time.strftime("%Y", time.localtime(int(publish_time/1000)))
             if year > '2011':
                 month_year = time.strftime("%m_%Y", time.localtime(int(publish_time/1000)))
             else:
                 return None
-        else:
-	    import pdb;pdb.set_trace()
+        except:
+            publish_time = time_to_epoch(date, '%d.%m %H:%M')
+            month = time.strftime("%m", time.localtime(int(publish_time/1000)))
+            month_year = month + "_" + '2020'
 
         text = ''.join(response.xpath('//td[contains(@bgcolor,"#FAFAFC") and contains(@align,"left")]//text() | //td[contains(@bgcolor,"#FAFAFC") and contains(@align,"left")]//a[@target="_blank"]//text() | //td[contains(@bgcolor,"#FAFAFC") and contains(@align,"left")]//u//text() |  //td[contains(@bgcolor,"#FAFAFC") and contains(@align,"left")]//u//a[@target="_blank"]//text()').extract()).strip().replace('\n','') or 'Null'
         links =', '.join(response.xpath('//td[contains(@bgcolor,"#FAFAFC") and contains(@align,"left")]//a[@target="_blank"]/@href | //td[contains(@bgcolor,"#FAFAFC") and contains(@align,"left")]//u//a[@target="_blank"]/@href').extract())
@@ -119,9 +116,6 @@ class Bugtraq(Spider):
 		},
 	}
         sk = md5_val(post_id + domain)
-	#query={"query":{"match":{"_id":sk}}}
-        #res = es.search(body=query)
-        #if res['hits']['hits'] == []:
         es.index(index="forum_posts_"+month_year, doc_type='post', id=sk, body=json_posts,request_timeout=30)
 	'''else:
 	    data_doc = res['hits']['hits'][0]

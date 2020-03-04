@@ -1,5 +1,6 @@
 import scrapy
 import MySQLdb
+import re
 
 from scrapy.selector import Selector
 from scrapy.spider import BaseSpider
@@ -16,9 +17,9 @@ class Threats_kaspersky(BaseSpider):
 
 
     def __init__(self,*args, **kwargs):
-        self.conn   = MySQLdb.connect(host="localhost", user="root", passwd="", db="crawling_sources", charset="utf8", use_unicode=True)
+        self.conn   = MySQLdb.connect(host="localhost", user="root", passwd="qwe123", db="crawling_sources", charset="utf8", use_unicode=True)
         self.cursor = self.conn.cursor()
-        self.insert_query = "insert into threats_kaspersky(data_links,page_numbers,reference_url,crawl_type,created_at,modified_at) values(%s,%s, %s,%s,now(),now()) on duplicate key update modified_at = now()"
+        self.insert_query = "insert into threats_kaspersky(sk,data_links,reference_url,created_at,modified_at,crawl_status) values('%s','%s','%s',now(),now(),0) on duplicate key update modified_at = now()"
         self.crawl_type = kwargs.get('crawl_type')
 
         
@@ -26,35 +27,24 @@ class Threats_kaspersky(BaseSpider):
 
     def parse(self,response):
         sel = Selector(response)
-
         all_datalinks =  sel.xpath('//tr//td[@class="cell_one column_one"]//a//@href').extract()
         for data_links_1 in all_datalinks:
-            if self.crawl_type == 'keepup':
-                print data_links_1
-                listing_data = (data_links_1,self.i-1,response.url,'keepup')
-                self.cursor.execute(self.insert_query,listing_data)
-                self.conn.commit()
-        if (self.crawl_type == 'catchup'):
+            sk = ''.join(re.findall('threat/(.*)',data_links_1))
+            listing_data = (sk,data_links_1,response.url)
+	    self.cursor.execute(self.insert_query%listing_data)
+            self.conn.commit()
             yield FormRequest(self.url,self.parse_nextpages, formdata=self.data)
 
     def parse_nextpages(self,response):
         sel = Selector(response)
         all_pages_links = sel.xpath('//tr//td//a//@href').extract()
-        print len(all_pages_links)
         for pages_datalinks in all_pages_links:
-            listing_data = (pages_datalinks,self.i,self.start_urls[0],'catchup')
-            self.cursor.execute(self.insert_query, listing_data)
+            sk = ''.join(re.findall('threat/(.*)',pages_datalinks))
+            listing_data = (sk,pages_datalinks,self.start_urls[0])
+            self.cursor.execute(self.insert_query%listing_data)
 
         if response.status == 200 and self.i < 50:
             self.i = self.i+1
             self.data['page_no'] = str(self.i)
-            print self.data
             yield FormRequest(self.url,self.parse_nextpages,formdata=self.data)
-            self.conn.commit()
-
-		
-
-		
-
-
-			
+            self.conn.commit()			

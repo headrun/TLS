@@ -51,7 +51,6 @@ def start_process(crawl_type):
     start_url = ['https://www.symantec.com/security-center/threats','https://www.symantec.com/security-center/risks', a_to_z_listing] + a_z_links
     for i in start_url:
         driver.get(i)
-	#import pdb;pdb.set_trace()
 	driver_data(driver, connection, cursor, i, crawl_type)
         if (crawl_type != 'keepup') and (crawl_type == 'catchup'):
             try:
@@ -137,5 +136,3 @@ if __name__ =="__main__":
     (options, args) = parser.parse_args()
     crawl_type = options.crawl_type.strip()
     result = start_process(crawl_type)
-    
-

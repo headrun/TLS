@@ -23,12 +23,12 @@ upsert_query_authors = utils.generate_upsert_query_authors('posts_forumbit')
 
 class Forummedia(scrapy.Spider):
     name="forumbit_author"
-    start_urls=["https://forum.bits.media/index.php"]
+    start_urls=["https://forum.bits.media/"]
 
     def __init__(self):
 	self.es = Elasticsearch(['10.2.0.90:9342'])
         self.conn,self.cursor = self.mysql_conn()
-        select_query = 'select DISTINCT(links) from forumbit_author_crawl;'
+        select_query = 'select DISTINCT(links) from forumbit_author_crawl'
         self.cursor.execute(select_query)
         self.data = self.cursor.fetchall()
 
@@ -54,7 +54,7 @@ class Forummedia(scrapy.Spider):
         for da in self.data:
             urls.append(da[0])
         for url in urls:
-            meta_query = 'select DISTINCT(auth_meta) from forumbit_author_crawl where links = "%s"'%url.encode('utf8')
+            meta_query = 'select DISTINCT(auth_meta) from forumbit_author_crawl where links = "%s"'%url.encode("utf8")
             self.cursor.execute(meta_query)
             meta_query = self.cursor.fetchall()
             activetime=[]
@@ -65,7 +65,10 @@ class Forummedia(scrapy.Spider):
             publish_epoch = set(activetime)
             meta = {'publish_epoch':publish_epoch}
             if url and meta:
-                yield Request(url, callback=self.parse_author,meta = meta)
+                try:
+                    yield Request(url, callback=self.parse_author,meta = meta)
+                except:
+                    pass
 
     def parse_author(self, response):
         sel = Selector(response)
@@ -74,9 +77,9 @@ class Forummedia(scrapy.Spider):
         user_name = ''.join(sel.xpath(xpaths.USERNAME).extract())
         username = re.sub('\s\s+', ' ', user_name)
         if user_name:
-            query = 'update forumbit_status set crawl_status = 1 where reference_url = %(url)s'
+            query = 'update forumbit_author_crawl set crawl_status = 1 where reference_url = %(url)s'
             json_data = {'url':response.url}
-            self.cursor.execute(query,json_data)
+            self.cursor.execute(query,json_data) 
 
         totalpost = ''.join(sel.xpath(xpaths.TOTALPOSTS).extract())
         totalposts = re.sub('\s\s+', ' ', totalpost)
@@ -93,8 +96,11 @@ class Forummedia(scrapy.Spider):
             join_date = time.mktime(joindate.timetuple())*1000
 
         lastactives = ''.join(sel.xpath(xpaths.LASTACTIVE).extract()).replace('\n','').replace('\t','')
-        lastactive = datetime.datetime.strptime(lastactives, '%Y-%m-%dT%H:%M:%SZ')
-        last_active = time.mktime(lastactive.timetuple())*1000
+        try:
+            lastactive = datetime.datetime.strptime(lastactives, '%Y-%m-%dT%H:%M:%SZ')
+            last_active = time.mktime(lastactive.timetuple())*1000
+        except:
+            last_active = 0
 
         groups = ''.join(sel.xpath(xpaths.GROUPS).extract())
         reputation = ''.join(sel.xpath(xpaths.REPUTATIONS).extract())

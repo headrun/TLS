@@ -1,25 +1,24 @@
-import sys
-from elasticsearch import Elasticsearch
-sys.path.append('/home/epictions/tls_scripts/tls_utils')
-import tls_utils as utils
-import hashlib
 import scrapy
+from scrapy.spider import Spider
 from scrapy.selector import Selector
 from scrapy.http import Request
 from scrapy import signals
-from scrapy import Spider
 from scrapy.xlib.pydispatch import dispatcher
 from scrapy.selector import Selector
+import sys
+import hashlib
+sys.path.append('/home/epictions/tls_scripts/tls_utils')
 import json
+import tls_utils as utils
 import xpaths
 import MySQLdb
 import os
 import logging
 from scrapy.utils.log import configure_logging
 from time import strftime
+from elasticsearch import Elasticsearch
 import time
-#A_QUE = utils.generate_upsert_query_authors("bbs")
-
+A_QUE = utils.generate_upsert_query_authors("bbs")
 import requests
 import re
 
@@ -32,18 +31,18 @@ HEADERS = {
 class Bbs_authors(Spider):
     name = "bbs_authors"
 
-    def __init__(self,*args, **kwargs2):
-        self.conn = MySQLdb.connect(db= "posts", host = "localhost", user="tls_dev", passwd = "hdrn!", use_unicode=True, charset="utf8mb4")
-        self.cursor = self.conn.cursor()
+    def __init__(self):
         self.es = Elasticsearch(['10.2.0.90:9342'])
+        self.conn = MySQLdb.connect(db= "posts", host = "localhost", user="root", passwd = "qwe123", use_unicode=True, charset="utf8mb4")
+        self.cursor = self.conn.cursor()
         dispatcher.connect(self.mysql_conn_close, signals.spider_closed)
+
     def mysql_conn_close(self, spider):
         self.conn.commit()
         self.conn.close()
 
-
     def start_requests(self):
-        select_que = "select distinct(links) from bbs_authors_crawl where crawl_status = 0 "
+        select_que = "select distinct(links) from bbs_authors_crawl "
         self.cursor.execute(select_que)
         data = self.cursor.fetchall()
         for url in data:
@@ -71,38 +70,37 @@ class Bbs_authors(Spider):
     def get_gid(self,response):
         group_data = json.loads(response.text)
         res = response.meta.get('res')
-	username = res.get('message').get('username')
         last_active_ = res.get('message').get('login_date_fmt')
         join_date_ = res.get('message').get('create_date_fmt')
         join_date = utils.time_to_epoch(join_date_,"%Y-%m-%d %H:%M")
-        if join_date == False: 
-	    join_date = 0
+        if join_date == False: join_date = 0
         last_active = utils.time_to_epoch(last_active_,"%Y-%m-%d %H:%M")
-        if last_active == False: 
-	    last_active = 0
+        if last_active == False: last_active = 0
         total_posts = res.get('message').get('posts')
         rank = res.get('message').get('rank')
+        #groups
         group = group_data.get('message').get('level')
         reputation = re.sub('stars','',''.join(re.findall('stars\d+',group_data.get('message').get('stars'))))
         active_time = utils.activetime_str(response.meta.get('active_times'),total_posts)
+        username = res.get('message').get('username')
+        json_val = {}
         reference_url = 'https://bbs.pediy.com/user-'+response.meta.get('uno')
-        json_author = {
-                        'crawl_type':"keep up",
+        json_val.update({
                         'reputation':reputation,
                         'domain':"bbs.pediy.com",
-                        'user_name': username,
-                        'author_signature': '',
+                        'username': username,
+                        'auth_sign': '',
                         'join_date':join_date,
-                        'last_active':last_active,
+                        'lastactive':last_active,
                         'total_posts': total_posts,
                         'credits':" ",
                         'awards': " ",
                         'rank':rank ,
                         'groups' : group,
-                        'active_time': active_time,
+                        'activetimes': active_time,
                         'contact_info': ' ',
-                        'reference_url': reference_url
-                        }
-	#sk = hashlib.md5(json_author['domain']+username).hexdigest() 
-        #sk = hashlib.md5(str(username)).hexdigest()
-        self.es.index(index="forum_author", doc_type='post', id=hashlib.md5(str(username.encode("utf-8"))).hexdigest(), body=json_author)
+                        })
+        self.es.index(index="forum_author", doc_type='post', id=hashlib.md5(str(username)).hexdigest(), body=json_val)
+
+
+    

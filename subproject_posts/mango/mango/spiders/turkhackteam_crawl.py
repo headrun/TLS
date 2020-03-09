@@ -32,6 +32,4 @@ class Turkhackteam(scrapy.Spider):
             self.cursor.execute(query_status, json_posts)
         page_navs = response.xpath('//div[@class="pagenav"]//a[@rel="next"]//@href').extract_first()
         if page_navs:
-            page_navs = "https://www.turkhackteam.org/" + page_navs
-            page_nav = ''.join(re.findall('(.*)" title',page_navs))
-            yield Request(page_nav, callback=self.parse_next)
+            yield Request(page_navs, callback=self.parse_next)

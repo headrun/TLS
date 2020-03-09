@@ -3,6 +3,10 @@ from mango.utils import *
 class Turkhackteam(scrapy.Spider):
     name = "turkhackteam_posts"
     start_urls = ["https://www.turkhackteam.org/"] 
+    custom_settings = {
+         'USER_AGENT':{'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2049.0 Safari/537.36'
+                                }
+                }
 
     def __init__(self):
         self.conn =MySQLdb.connect(db="posts",host="localhost",user=DATABASE_USER, passwd=DATABASE_PASS, use_unicode=True, charset='utf8')
@@ -47,9 +51,7 @@ class Turkhackteam(scrapy.Spider):
         nodes = sel.xpath('//div[@class="container"]//div[contains(@id,"edit")]')
         page = sel.xpath('//div[@class="pagenav"]//a[@rel="next"]//@href').extract_first()
         if page:
-            page = "https://www.turkhackteam.org/" + page
-            page_nav = ''.join(re.findall('(.*)" title',page))
-            yield Request(page_nav, callback = self.parse_ann)
+            yield Request(page, callback = self.parse_ann)
         if page:
            pno = ''.join(re.findall('(.*)&page',page))
            if crawl_type == 'keep_up':

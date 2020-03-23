@@ -30,5 +30,3 @@ A_NAME = '//div[@class="card"]//div[@class="card-body"]//dl[@class="row small"]/
 TEXT = '//div[@class="card"]//div[@class="card-body"]//div[@class="message break-all"]//text() | \
         //div[@class="card"]//div[@class="card-body"]//div[@class="message break-all"]//a[@target="_blank"]/@href '
 P_EPOCH = '//div[@class="card"]//div[@class="card-body"]//dl[@class="row small"]//span[@class="date text-grey ml-1"]//text()'
-
-

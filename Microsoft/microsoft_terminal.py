@@ -5,8 +5,6 @@ import os, sys
 import csv
 import logging
 import logging.handlers
-#sys.path.append('/root/madhav/madhav/spiders/scrapely-master')
-#from scrapely import Scraper
 from pyvirtualdisplay import Display
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -16,7 +14,7 @@ from selenium.webdriver.common.keys import Keys
 import time
 import traceback
 from datetime import datetime
-#from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch
 
 from optparse import OptionParser
 
@@ -44,13 +42,12 @@ def close_driver(display, driver):
 
 
 def start_process(crawl_type):
-    #es = Elasticsearch(['10.2.0.90:9342'])
+    es = Elasticsearch(['10.2.0.90:9342'])
     global connection
     global cursor
     connection, cursor = open_mysql_connection()
-    
     try:
-        cursor.execute('select distinct(Title) from crawling_sources.Microsoft_Title_table where crawl_status = 0 limit 5')
+        cursor.execute('select distinct(Title) from crawling_sources.Microsoft_Title_table')
         db_data = cursor.fetchall()
         connection.commit()
     except Exception as exe:
@@ -60,7 +57,7 @@ def start_process(crawl_type):
     close_mysql_connection(connection, cursor)
     connection, cursor = open_mysql_connection()
     for title in db_data:
-        print title
+        #print title
         update_query  = 'update crawling_sources.Microsoft_Title_table set crawl_status=1 where title = "%s"'
         values = title[0]
         cursor.execute(update_query%values)
@@ -100,7 +97,8 @@ def get_links(link, crawl_type):
     display, driver = open_driver()
     old_link = link
     driver.get(link)
-    sub_links = driver.find_elements_by_xpath('//div[@class="NormalResult pad-40"]//div[@id="threatLink"]//a')
+    #sub_links = driver.find_elements_by_xpath('//div[@class="NormalResult pad-40"]//div[@id="threatLink"]//a')
+    sub_links = driver.find_elements_by_xpath('//h2[@id="threatLink"]//a')
     for sub_link in sub_links :
         data(sub_link)
     
@@ -108,17 +106,18 @@ def get_links(link, crawl_type):
         print "Done keepup for %s"%link
     else:
         try:
-           driver.find_element_by_xpath('//div[@id="paging"]//ul[@class="m-pagination"]//li[@id="pgn"]//a[@class="c-glyph"]').click()
-           new_url = driver.current_url
-           if old_link != new_url:
-               close_driver(display, driver)
-               get_links(new_url,crawl_type)
-           else:
-               close_driver(display, driver)
-               print 'Page Finished %s' %link
+            #driver.find_element_by_xpath('//div[@id="paging"]//ul[@class="m-pagination"]//li[@id="pgn"]//a[@class="c-glyph"]').click()
+  	    next_page = driver.find_element_by_xpath('//div[@id="paging"]//ul[@class="m-pagination"]//li[@id="pgn"]//a[@class="c-glyph"]')
+            new_url = next_page.get_attribute('href')
+            if old_link != new_url:
+                close_driver(display, driver)
+                get_links(new_url,crawl_type)
+            else:
+                close_driver(display, driver)
+                #print 'Page Finished %s' %link
         except:
             close_driver(display, driver)
-            print 'Page Finished %s' %link
+            #print 'Page Finished %s' %link
 
 def data(ref_links):
     connection, cursor = open_mysql_connection()
@@ -127,9 +126,8 @@ def data(ref_links):
     except:
         asd = ''
     all_datalinks = asd
-    print all_datalinks
+    #print all_datalinks
     insert_query = "insert into Microsoft_terminal_table(url, crawl_status, created_at, modified_at, crawl_type) values(%s, 0, now(), now(), %s) on duplicate key update modified_at = now()"
-           
     listing_data = (all_datalinks,crawl_type)
     cursor.execute(insert_query, listing_data)
     connection.commit()
@@ -168,7 +166,7 @@ def myLogger(name):
 process_logger = myLogger('process')
 
 def open_mysql_connection():
-    connection = MySQLdb.connect(host = 'localhost', user = 'root', passwd = '' ,db = 'crawling_sources')#(host='176.9.181.61', user='root', passwd='')
+    connection = MySQLdb.connect(host = 'localhost', user = 'root', passwd = 'qwe123' ,db = 'crawling_sources')#(host='176.9.181.61', user='root', passwd='')
     connection.set_character_set('utf8')
     cursor = connection.cursor()
     process_logger.debug("MySQL connection established.")

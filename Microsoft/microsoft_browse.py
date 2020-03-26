@@ -14,7 +14,7 @@ from selenium.webdriver.common.keys import Keys
 import time
 import traceback
 from datetime import datetime
-#from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch
 
 from optparse import OptionParser
 
@@ -40,7 +40,7 @@ def close_driver(display, driver):
         pass
 
 def start_process():
-    #es = Elasticsearch(['10.2.0.90:9342'])
+    es = Elasticsearch(['10.2.0.90:9342'])
     global connection
     global cursor
     connection, cursor = open_mysql_connection()
@@ -59,16 +59,15 @@ def start_process():
     start_url = 'https://www.f-secure.com/en/web/labs_global/descriptions-index'
     driver.get(start_url)
     time.sleep(5)
-    f_secure_az_pagetabs = driver.find_elements_by_xpath('//div[@class="col-xs-12 col-md-10 m-t-2 m-b-4 tab-content fsg-animate-tab-content"]//p//a')
+    f_secure_az_pagetabs = driver.find_elements_by_xpath('//div[contains(@class,"col-xs-12")]//p//a')
     
     for i in f_secure_az_pagetabs:
         all_datalinks = i.get_attribute('href')
         Title = i.text
         if not Title:
             Title = i.get_attribute('text')
-        print Title
         listing_data = Title
-        insert_query = "insert into Microsoft_Title_table(Title ,created_at ,modified_at) values(%s,now(),now()) on duplicate key update modified_at = now()"
+        insert_query = "insert into Microsoft_Title_table(Title ,created_at ,modified_at,crawl_status) values(%s,now(),now(),0) on duplicate key update modified_at = now()"
         cursor.execute(insert_query,(listing_data, ))
     connection.commit()
     close_driver(display, driver)    
@@ -105,7 +104,7 @@ def myLogger(name):
 process_logger = myLogger('process')
 
 def open_mysql_connection():
-    connection = MySQLdb.connect(host = 'localhost', user = 'root', passwd = 'qwerty123' ,db = 'microsoft_browse')#(host='176.9.181.61', user='root', passwd='')
+    connection = MySQLdb.connect(host = 'localhost', user = 'root', passwd = 'qwe123' ,db = 'crawling_sources')#(host='176.9.181.61', user='root', passwd='')
     connection.set_character_set('utf8')
     cursor = connection.cursor()
     process_logger.debug("MySQL connection established.")

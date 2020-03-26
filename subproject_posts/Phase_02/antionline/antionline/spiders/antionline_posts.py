@@ -72,9 +72,11 @@ class Formus(BaseSpider):
         except:pass
         try:subcategory = ''.join(sel.xpath('//li[@class="navbit"]//a//text()').extract()[2]) or 'Null'
         except:pass
-	sub_category_url = sel.xpath('//li[@class="navbit"]//a/@href').extract()[2] or 'Null'
-	if sub_category_url:
-	    sub_section_url = 'http://www.antionline.com/' + sub_category_url
+        try:
+	    sub_category_url = sel.xpath('//li[@class="navbit"]//a/@href').extract()[2] or 'Null'
+	    if sub_category_url:
+	        sub_section_url = 'http://www.antionline.com/' + sub_category_url
+        except:pass
         thread_title = ''.join(sel.xpath(THREAD_TITLE).extract()) or 'Null'
         crawl_type = ''
         nodes = sel.xpath(NODES)
@@ -82,18 +84,6 @@ class Formus(BaseSpider):
             query = 'update antionline_status set crawl_status = 1 where post_url = %(url)s'
             json_data={'url':response.url}
             self.cursor.execute(query,json_data)
-        '''nav_click = set(sel.xpath('//span//a[@rel="next"]//@href').extract())
-        for post_nav_click in nav_click:
-            if post_nav_click:
-		try:
-		    post_url_ = ''.join(nodes[-1].xpath(POST_URL).extract())
-                    test_id = hashlib.md5(str(post_url_.encode('utf8'))).hexdigest()
-		    query = {'query_string': {'use_dis_max': 'true', 'query': '_id:{0}'.format(test_id)}}
-		    res = es.search(index="forum_posts", body={"query": query})
-		    if res['hits']['hits']==[]:
-			post_nav_click = self.add_http(post_nav_click)
-                	yield Request(post_nav_click, callback=self.parse_all_pages_links)
-		except:pass'''
 
         for node in nodes:
             if "-email-account" in response.url:
@@ -115,11 +105,14 @@ class Formus(BaseSpider):
             postid = ''.join(re.findall(r'#post\d+', post_url)).replace('#post', '') or 'Null'
 
             post_title = ''.join(node.xpath(POST_TITLE).extract()).replace('\n', '').replace('\t', '').replace('\r', '') or 'Null'
-
             publish_time = ' '.join(node.xpath(PUBLISH_TIME).extract()).encode('ascii', 'ignore') or 'Null'
             publish_time = re.sub(r'\w+ \d+\w+,', ''.join(re.findall(r'\w+ \d+', publish_time)), publish_time).replace('Yesterday,',(datetime.datetime.now() - timedelta(days=1)).strftime('%d %B %Y -')).replace('Today,',datetime.datetime.now().strftime('%d %B %Y -'))
-            publish_time = datetime.datetime.strptime((publish_time), '%B %d %Y, %H:%M %p')
-            publish_time = time.mktime(publish_time.timetuple())*1000
+            try:
+                publish_time = datetime.datetime.strptime((publish_time), '%B %d %Y, %H:%M %p')
+                publish_time = time.mktime(publish_time.timetuple())*1000
+            except:
+                publish_time = datetime.datetime.strptime((publish_time), '%d %B %Y - %H:%M %p')
+                publish_time = time.mktime(publish_time.timetuple())*1000
 	    if publish_time:
                 year = time.strftime("%Y", time.localtime(int(publish_time/1000)))
                 if year > '2011':
@@ -147,8 +140,6 @@ class Formus(BaseSpider):
 	    if Links == []:
 		Links = 'Null'
 		links = Links
-            #links = str(Link)
-            #if "[]" in links: links = ""
 	    author = {
                 'name':author_name,
                 'url':author_link

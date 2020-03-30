@@ -27,7 +27,7 @@ class nulled(scrapy.Spider):
     handle_httpstatus_list = [403,503]
 
     def __init__(self):
-        self.conn = MySQLdb.connect(db= "nulled", host = "localhost", user="", passwd = "", charset="utf8mb4")
+        self.conn = MySQLdb.connect(db= "nulled", host = "localhost", user="root", passwd = "qwe123", charset="utf8mb4")
         self.cursor = self.conn.cursor()
 	self.es = Elasticsearch(['10.2.0.90:9342'])
         dispatcher.connect(self.mysql_conn_close, signals.spider_closed)
@@ -70,24 +70,22 @@ class nulled(scrapy.Spider):
     def parse_next(self,response):
         headers = response.meta.get('headers')
     	sel = Selector(response)
-    	user_login = 'jkhfkshfsd'#''.join(sel.xpath('//a[@id="user_link"]/@href').extract())
-        if user_login:
-            urls = self.urls_in_db()
-            for url in urls:
-                meta_query = 'select DISTINCT(auth_meta) from nulled_author_crawl where links like "%s" '%url
-                self.cursor.execute(meta_query)
-		self.conn.commit()
-                meta_query = self.cursor.fetchall()
-                PublishTime = []
-                ThreadTitle = []
-                for da1 in meta_query:
-                    meta = json.loads(da1[0].replace("'",''))
-                    PublishTime.append(meta.get('PublishTime',''))
-                    ThreadTitle.append(meta.get('ThreadTitle',''))
-                PublishTime  = set(PublishTime)
-                ThreadTitle= set(ThreadTitle)
-                author_meta = {'PublishTime':PublishTime, 'ThreadTitle':', '.join(ThreadTitle)}
-                yield Request(url.replace("'",''),callback = self.parse_author,headers=headers,meta = author_meta)
+        urls = self.urls_in_db()
+        for url in urls:
+            meta_query = 'select DISTINCT(auth_meta) from nulled_author_crawl where links like "%s" '%url
+            self.cursor.execute(meta_query) 
+            self.conn.commit()
+            meta_query = self.cursor.fetchall()
+            PublishTime = []
+            ThreadTitle = []
+            for da1 in meta_query:
+                meta = json.loads(da1[0].replace("'",''))
+                PublishTime.append(meta.get('PublishTime',''))
+                ThreadTitle.append(meta.get('ThreadTitle',''))
+            PublishTime  = set(PublishTime)
+            ThreadTitle= set(ThreadTitle)
+            author_meta = {'PublishTime':PublishTime, 'ThreadTitle':', '.join(ThreadTitle)}
+            yield Request(url.replace("'",''),callback = self.parse_author,headers=headers, meta = author_meta)
 
     def parse_author(self,response):
         reference_url = response.url
@@ -119,7 +117,7 @@ class nulled(scrapy.Spider):
             lastactive = datetime.datetime.strptime(lastactive, '%b %d %Y  %H:%M %p')
             lastactive = time.mktime(lastactive.timetuple())*1000
         except:lastactive= 0
-        groups = re.sub('UID:(.*)','', ' '.join(response.xpath('//div[@class="profile_usertitle"]//text() | //div[@class="profile_usertitle"]//@alt').extract()))
+        groups = response.xpath(nulled_xpath.groups_xpath).extract()
         reputation = ''.join(response.xpath(nulled_xpath.reputation_xpath).extract()).encode('utf8')
         credits = ''.join(response.xpath(nulled_xpath.credits_xpath).extract()).replace('\n','').replace(' ','').encode('utf8')
         awards = ', '.join(response.xpath(nulled_xpath.awards_xpath).extract())
@@ -134,7 +132,7 @@ class nulled(scrapy.Spider):
         json_val = {}
         json_val.update({
                'username':username,
-               'domain': "www.nulled.to",
+               'domain': "nulled.to",
                'auth_sign': utils.clean_text(author_signature),
                'join_date': join_date,
                'lastactive': lastactive,
@@ -145,7 +143,7 @@ class nulled(scrapy.Spider):
                'credits': credits,
                'awards': awards,
                'rank': rank,
-               'activetimes': activetime,
-               'contact_info': "",
+               'activetimeis': activetime,
+               'contactinfo': "",
                })
 	self.es.index(index="forum_author", doc_type='post', id=hashlib.md5(username).hexdigest(), body=json_val)

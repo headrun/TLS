@@ -16,12 +16,13 @@ Threads_crawl_que = 'insert into nulled_threads_crawl(sk,url,status_code,crawl_t
 #Nulled_threas_meta
 # @def parse_thread
 FetchTime = int(datetime.datetime.now().strftime("%s")) * 1000
-node_xpath = '//div[@class="post_block hentry clear clearfix column_view  "]'
+node_xpath = '//div[@class="post_block hentry clear clearfix column_view  "]//div[@class="post_wrap"]'
 category_xpath = '//ol[@class="breadcrumb top ipsList_inline left"]//span[@itemprop="title"]//text()'
 subcategory_xpath = '//ol[@class="breadcrumb top ipsList_inline left"]//span[@itemprop="title"]//text()'
 threadtitle_xpath = '//div[@class="maintitle clear clearfix"]//span//text()'
 postid_xpath = './/a[@itemprop="replyToUrl"]/@data-entry-pid'
 posturl_xpath = './/a[@itemprop="replyToUrl"]/@href'
+ord_in_thread = './/a[@itemprop="replyToUrl"]/text()'
 publishtime_xpath = './/abbr[@class="published"]//text()'
 author_xpath = './/div[@class="post_username"]//span[@itemprop="name"]//text() | .//div[@class="post_username"]//span[@class="author vcard"]//text()'
 text_xpath = './/div[@itemprop="commentText"]//blockquote/@data-author | .//div[@itemprop="commentText"]//blockquote/@data-time | .//div[@itemprop="commentText"]//a[@hovercard-ref="member"]//@alt | .//div[@itemprop="commentText"]//text() | .//div[@itemprop="commentText"]//img[@class="bbc_img"]/@alt | .//div[@itemprop="commentText"]//a[style="text-decoration:none;"]//@alt | .//div[@itemprop="commentText"]//img[@class="bbc_emoticon"]/@alt | .//div[@itemprop="commentText"]//p[@class="citation"]/@class '
@@ -33,16 +34,16 @@ links_xpath = './/div[@itemprop="commentText"]//a[@hovercard-ref="member"]//@hre
 
 #author meta xpath
 
-username_xpath = '//div[@class="profile_username"]//span//text()'
+username_xpath = '//span[@class="cover-username"]//span//text()'
 totalposts_xpath = '//div[@class="profile-bit-inner"]//td[contains(.,"Posts:")]/..//td[@style="text-align:right;"]/text()'
 author_signature_xpath = '//div[@class="signature"]//@href | //div[@class="signature"]//text() | //div[@class="signature"]//@src | .//div[@class="signature"]//text() | .//div[@class="signature"]//img[@class="bbc_emoticon"]/@alt | .//div[@class="signature"]//a[@class="bbc_url"]/@href | .//div[@class="signature"]//img[class="bbc_img"]/@src | .//div[@class="signature"]//img[@class="bbc_img"]/@src '
 join_date_xpath = '//td[contains(text(),"Joined:")]/../td[@style="text-align:right"]//text()'
 lastactive_xpath = '//td[contains(text(),"Last Visit:")]/../td[@style="text-align:right"]//text()'
 reputation_xpath = '//div[@class="profile-bit-inner"]//td[contains(.,"Reputation:")]/../td//strong//text()'
 credits_xpath = '//div[@class="profile-bit-inner"]//td[contains(.,"Credits:")]/..//td[@style="text-align:right;"]/text()'
-awards_xpath = '//div[@class="small-awards"]//img/@title'
+awards_xpath = '//div[@class="profile-bit-inner"]//div[@style="display:block;margin:auto;"]//div[@style="padding-left:5px;text-align:left;"]//a//img/@title'
 rank_xpath = '//div[@class="col-md-2"]//div[@class="profile-bit"]/div[@class="profile-bit-inner"]//img/@src'
-
+groups_xpath = '//div[@class="profile-bit-inner"]//div[@style="text-align:center;"]//img//@src'
 
 def activetime_str(activetime_,totalposts):
     activetime = []

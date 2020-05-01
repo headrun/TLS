@@ -28,7 +28,7 @@ class nulled(scrapy.Spider):
 
     def __init__(self):
 	self.es = Elasticsearch(['10.2.0.90:9342'])
-        self.conn = MySQLdb.connect(db= "nulled", host ="localhost", user="tls_dev",passwd="hdrn!",use_unicode=True,  charset="utf8mb4")
+        self.conn = MySQLdb.connect(db= "nulled", host ="localhost", user="root", passwd="qwe123", use_unicode=True,  charset="utf8mb4")
         self.cursor = self.conn.cursor()
         dispatcher.connect(self.mysql_conn_close, signals.spider_closed)
 
@@ -38,34 +38,12 @@ class nulled(scrapy.Spider):
 
     def start_requests(self):
         scraper = cfscrape.create_scraper()
-	import pdb;pdb.set_trace()
-        r = scraper.get("https://www.nulled.to")
+        r = scraper.get("https://www.nulled.to/")#index.php?app=core&module=global&section=login")
         request_cookies = r.request._cookies.get_dict()
         response_cookies = r.cookies.get_dict()
         cookies = {}
         cookies.update(request_cookies)
         cookies.update(response_cookies)
-        '''sel = Selector(text=r.text)
-        auth_key = ''.join(set(sel.xpath('//form//input[@name="auth_key"]/@value').extract()))
-        google_captcha = ''.join(set(sel.xpath('//div[@class="g-recaptcha"]/@data-sitekey').extract()))
-        g_captcha = get_googlecaptcha('https://www.nulled.to/index.php?app=core&module=global&section=login', google_captcha)
-        data = {
-          'auth_key': auth_key,
-          'referer': 'https://www.nulled.to/index.php?app=core&module=global&section=login',
-          'ips_username': 'inqspdr2',
-          'ips_password': 'lolw4@123~',
-          'g-recaptcha-response': g_captcha,
-          'rememberMe': '1'
-        }
-        if g_captcha and len(g_captcha)>5:
-            login_url = 'https://www.nulled.to/index.php?app=core&module=global&section=login&do=process'
-            r2 = scraper.post(login_url,data = data)
-            request_cookies_ = r2.request._cookies.get_dict()
-            response_cookies_ = r2.cookies.get_dict()
-            cookies_ = {}
-            cookies_.update(request_cookies_)
-            cookies_.update(response_cookies_)
-	'''
         headers = {
     'authority': 'www.nulled.to',
     'pragma': 'no-cache',
@@ -75,10 +53,8 @@ class nulled(scrapy.Spider):
     'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
     'referer': 'https://www.nulled.to/forum/110-feedback-and-suggestions/',
 }
-    	#    sel =  Selector(text=r2.text)
-    	#    user_login = ''.join(sel.xpath('//a[@id="user_link"]/@href').extract())
 
-        user_login = 'no need log in'
+    	user_login = '123'  #.join(sel.xpath('//a[@id="user_link"]/@href').extract())
 	if user_login:
 		len_que = 'select count(*) from nulled_threads_crawl'
 	        self.cursor.execute(len_que)
@@ -90,20 +66,21 @@ class nulled(scrapy.Spider):
                     self.cursor.execute(select_que)
 		    self.conn.commit()
                     data = self.cursor.fetchall()
-                    meta = {'Crawl_type':'keep up','headers':headers}
                     for url in data:
-                        yield Request(url[0].replace("'",''),callback = self.parse_thread,headers=headers,cookies = cookies, meta=meta)
+			meta = {'Crawl_type':'keep up','headers':headers,'update url':url[0]}
+                        yield Request(url[0].replace("'",''),callback = self.parse_thread,headers=headers,meta = meta)#cookies = cookies, meta=meta)
 
     def parse_thread(self,response):
 	fetch_time = int(datetime.datetime.now().strftime("%s")) * 1000
-        reference_url = response.url
+        reference_url = response.request.url
         headers = response.meta.get('headers')
-        json_posts = {}
         a_val = {}
         nodes = response.xpath(nulled_xpath.node_xpath)
         try:category = response.xpath(nulled_xpath.category_xpath).extract()[1].encode('utf8')
         except:pass
         try:subcategory = '#<>#'.join(response.xpath(nulled_xpath.subcategory_xpath).extract()[1:]).encode('utf8').split('#<>#')
+        except:pass
+        try:sub_category_url = response.xpath('//ol[@class="breadcrumb top ipsList_inline left"]//a//@href').extract()[1:]
         except:pass
         threadtitle = ''.join(response.xpath(nulled_xpath.threadtitle_xpath).extract()).replace('\n','').replace('\t','')
         thread_url = ''.join(re.findall('(.*)page-\d+',reference_url)) or reference_url
@@ -113,7 +90,7 @@ class nulled(scrapy.Spider):
         if next_page:
 	    try:
 		post_url_ = ''.join(set(nodes[-1].xpath(nulled_xpath.posturl_xpath).extract()))
-		test_id = hashlib.md5(str(post_url_)).hexdigest()
+		test_id = hashlib.md5(post_url_.encode('utf8')).hexdigest()
 		query = {'query_string': {'use_dis_max': 'true', 'query': '_id:{0}'.format(test_id)}}
 		res = es.search(index="forum_posts", body={"query": query})
 		if res['hits']['hits']==[]:
@@ -124,14 +101,15 @@ class nulled(scrapy.Spider):
         for node in nodes:
             postid = ''.join(set(node.xpath(nulled_xpath.postid_xpath).extract()))
             post_url = ''.join(set(node.xpath(nulled_xpath.posturl_xpath).extract()))
+            ord_in_thread = ''.join(set(node.xpath(nulled_xpath.ord_in_thread).extract())).replace('#','').strip()
             publish_time_ = ''.join(set(node.xpath(nulled_xpath.publishtime_xpath).extract()))\
                     .replace('Today,',datetime.datetime.now().strftime('%d %B %Y -'))\
                     .replace('Yesterday,',(datetime.datetime.now() - timedelta(days=1)).strftime('%d %B %Y -'))
             try:publish_time_ = datetime.datetime.strptime(publish_time_, '%d %B %Y - %I:%M %p')
             except:pass
-            publishtime =time.mktime(publish_time_.timetuple())*1000
-            if publishtime:
-                month_year = time.strftime("%m_%Y", time.localtime(int(publishtime/1000)))
+            publish_epoch =time.mktime(publish_time_.timetuple())*1000
+	    if publish_epoch:
+		month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
             author  = ''.join(set(node.xpath(nulled_xpath.author_xpath).extract()))
             text = ' '.join(node.xpath(nulled_xpath.text_xpath).extract()).replace('citation',' Quote ')
             t_text = node.xpath('.//div[@itemprop="commentText"]//blockquote/@data-time').extract()
@@ -145,30 +123,61 @@ class nulled(scrapy.Spider):
             links = '#<>#'.join(node.xpath(nulled_xpath.links_xpath).extract()).encode('utf8').split('#<>#')
             author_link = ''.join(set(node.xpath('.//div[@class="post_username"]//span[@itemprop="name"]//../@href').extract() or node.xpath('.//div[@class="author_info clearfix"]//ul[@class="basic_info"]//a[@itemprop="url"]/@href').extract()))
             all_links = '"'+str(links).replace('/gateway.php','https://www.nulled.to/gateway.php')+'"'
+            author_data= {
+                   'name':author,
+                   'url':author_link
+                   }
+            post_data = {
+			'cache_link':'',
+			'author': json.dumps(author_data),
+			'section':category,
+			'language':'english',
+			'require_login':'false',
+			'sub_section':subcategory,
+			'sub_section_url':sub_category_url,
+			'post_id':postid,
+			'post_title':'',
+			'ord_in_thread':int(ord_in_thread),
+			'post_url':post_url,
+			'post_text':utils.clean_text(text).replace('\n', ''),
+			'thread_title':threadtitle,
+			'thread_url':thread_url
+			} 
+            json_posts = {
+			  'record_id':re.sub(r"\/$", "", post_url.replace(r"https", "http").replace(r"www.", "")),
+			  'hostname':'nulled.to',
+			  'domain': 'nulled.to',
+			  'sub_type':'openweb',
+			  'type':'forum',
+			  'author':json.dumps(author_data),
+			  'title':threadtitle,
+			  'text':utils.clean_text(text).replace('\n', ''),
+			  'url':post_url,
+			  'original_url':post_url,
+			  'fetch_time':fetch_time,
+			  'publish_time':publish_epoch,
+			  'link.url':all_links,
+			  'post':post_data
+            		}
             json_posts.update({
-                          'domain': 'www.nulled.to',
+                          'domain': 'nulled.to',
                           'thread_url': thread_url,
                           'category': category,
                           'sub_category': str(subcategory),
                           'thread_title': threadtitle,
                           'post_title': '',
                           'author_url': author_link,
-                          'links':  all_links,
+                          'all_links':  all_links,
                           'post_id': postid,
                           'post_url': post_url,
-                          'publish_time': publishtime,
+                          'publish_time': publish_epoch,
                           'fetch_time': fetch_time,
                           'author': author,
                           'text': utils.clean_text(text),
                           })
-            #query={"query":{"match":{"_id":hashlib.md5(post_url.encode('utf8')).hexdigest()}}}
-            #res = self.es.search(body=query)
-            #if res['hits']['hits'] == []:
-		#self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(post_url.encode('utf8')).hexdigest(), body=json_posts)
-            index = "forum_posts_" + month_year
-            self.es.index(index=index, doc_type='post', id=hashlib.md5(str(post_url.encode('utf8'))).hexdigest(), body=json_posts)
+	    self.es.index(index="forum_posts_"+month_year, doc_type='post', id=hashlib.md5(post_url.encode('utf8')).hexdigest(), body=json_posts)
             a_meta = json.dumps({
-                'PublishTime': publishtime,
+                'PublishTime': publish_epoch,
                 'ThreadTitle': threadtitle
                 })
             if author_link:
@@ -180,7 +189,8 @@ class nulled(scrapy.Spider):
                 self.cursor.execute(a_que,a_val)
 		self.conn.commit()
 
-        status_code_update = 'update nulled_threads_crawl set crawl_status = 1 where post_url like "%{}%"'.format(reference_url)
+        #status_code_update = 'update nulled_threads_crawl set crawl_status = 1 where post_url like "%{}%"'.format(reference_url)
         if nodes and crawl_type == 'keep up':
+	    status_code_update = 'update nulled_threads_crawl set crawl_status = 1 where post_url like "%{}%"'.format(response.meta.get('update url').encode('utf8'))
             self.cursor.execute(status_code_update)
 	    self.conn.commit()

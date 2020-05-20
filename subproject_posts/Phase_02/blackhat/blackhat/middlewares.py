@@ -84,7 +84,7 @@ class BlackhatDownloaderMiddleware(object):
         request.headers['Proxy-Authorization'] = basic_auth_header('hr@headrun.com','hdrn^123!')'''
         #request.meta['proxy'] =  'https://lum-customer-headrunp3-zone-tls-route_err-pass_dyn-country-us-session-0.87108139331:f3h6o6ru8beq@zproxy.lum-superproxy.io:22225'
         from w3lib.http import basic_auth_header
-        proxy = random.choice(['fl.east.usa.torguardvpnaccess.com', 'atl.east.usa.torguardvpnaccess.com', 'ny.east.usa.torguardvpnaccess.com', 'chi.central.usa.torguardvpnaccess.com', 'dal.central.usa.torguardvpnaccess.com', 'la.west.usa.torguardvpnaccess.com', 'lv.west.usa.torguardvpnaccess.com', 'sa.west.usa.torguardvpnaccess.com', 'nj.east.usa.torguardvpnaccess.com'])
+        proxy = random.choice(['atl.east.usa.torguardvpnaccess.com', 'ny.east.usa.torguardvpnaccess.com', 'chi.central.usa.torguardvpnaccess.com', 'lv.west.usa.torguardvpnaccess.com', 'sa.west.usa.torguardvpnaccess.com', 'nj.east.usa.torguardvpnaccess.com'])
         request.meta['proxy'] = 'http://'+ proxy+':6060'
         request.headers['Proxy-Authorization'] = basic_auth_header('vinuthna@headrun.com','Hotthdrn591!')
         request.headers['User-Agent'] = random.choice(ua_list)

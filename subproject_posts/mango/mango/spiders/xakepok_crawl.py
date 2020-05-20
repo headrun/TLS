@@ -15,7 +15,7 @@ class xakepok(scrapy.Spider):
         self.conn.close()
 
     def parse(self,response):
-        urls = response.xpath('//td[contains(@align,"left")]//following-sibling::div/a/@href').extract()
+        urls = response.xpath('//td[contains(@align,"left")]//following-sibling::div/a/@href | //div[@class="smallfont"]//tr//a/@href').extract()
         for url in urls:
             url = urljoin("https://forum.xakepok.net/",url)
             yield Request(url,callback=self.parse_next)

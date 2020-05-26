@@ -52,7 +52,7 @@ class Cracked(Spider):
         nodes = response.xpath('//div[contains(@class,"post-set")]')
         for node in nodes:
             post_title = 'Null'
-            posturl = ''.join(node.xpath('.//div[@class="right postbit-number"]//strong/a/@href').extract())
+            posturl = ''.join(node.xpath('.//div[@class="float_right inline-block"]//span[@class="posturl"]//strong/a/@href').extract())
             if posturl:
                 post_url = urljoin('https://cracked.to/', posturl)
             if posturl == '':
@@ -63,7 +63,7 @@ class Cracked(Spider):
             author = ''.join(node.xpath('.//div[@class="post-username"]//a//text()').extract()) or 'Null'
             author_url = ''.join(node.xpath('.//div[@class="post-username"]//a/@href').extract()) or 'Null'
             fetchtime = fetch_time()
-            date = ''.join(node.xpath('.//span[contains(@class,"post_date")]/span[@class="post-op"]/following-sibling::text() | .//span[contains(@class,"post_date")]/text()').extract()).strip()
+            date = ''.join(node.xpath('.//span[contains(@class,"post_date")]/span[@class="post-op"]/following-sibling::text() | .//span[contains(@class,"post_date")]/span/text()').extract()).strip()
 	    try:
                 if 'hour' in date:
                     date_time = ''.join(re.findall('\d+', date))

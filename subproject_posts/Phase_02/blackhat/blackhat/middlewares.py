@@ -77,14 +77,8 @@ class BlackhatDownloaderMiddleware(object):
     def process_request(self, request, spider):
         # Called for each request that goes through the downloader
         # middleware.
-	'''ua = random.choice(ua_list)
-        request.headers.setdefault('User-Agent', ua)
-        proxy_list = ['96.44.147.34','96.44.147.122','96.44.147.138','96.44.146.106','96.47.226.98']
-        request.meta['proxy'] = 'https://{0}:6060'.format(random.choice(proxy_list))
-        request.headers['Proxy-Authorization'] = basic_auth_header('hr@headrun.com','hdrn^123!')'''
-        #request.meta['proxy'] =  'https://lum-customer-headrunp3-zone-tls-route_err-pass_dyn-country-us-session-0.87108139331:f3h6o6ru8beq@zproxy.lum-superproxy.io:22225'
         from w3lib.http import basic_auth_header
-        proxy = random.choice(['fl.east.usa.torguardvpnaccess.com', 'atl.east.usa.torguardvpnaccess.com', 'ny.east.usa.torguardvpnaccess.com', 'chi.central.usa.torguardvpnaccess.com', 'dal.central.usa.torguardvpnaccess.com', 'la.west.usa.torguardvpnaccess.com', 'lv.west.usa.torguardvpnaccess.com', 'sa.west.usa.torguardvpnaccess.com', 'nj.east.usa.torguardvpnaccess.com'])
+        proxy = random.choice(['atl.east.usa.torguardvpnaccess.com', 'ny.east.usa.torguardvpnaccess.com', 'chi.central.usa.torguardvpnaccess.com', 'lv.west.usa.torguardvpnaccess.com', 'sa.west.usa.torguardvpnaccess.com', 'nj.east.usa.torguardvpnaccess.com'])
         request.meta['proxy'] = 'http://'+ proxy+':6060'
         request.headers['Proxy-Authorization'] = basic_auth_header('vinuthna@headrun.com','Hotthdrn591!')
         request.headers['User-Agent'] = random.choice(ua_list)

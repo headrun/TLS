@@ -105,7 +105,7 @@ class BlackHat(scrapy.Spider):
 		authorurl = 'Null'
 		author_url = authorurl
             post_url = "https://www.blackhatworld.com/" + ''.join(node.xpath(xpaths.POSTURL).extract())
-	    ord_in_thread = ''.join(sel.xpath('.//div[@class="publicControls"]//a[@title="Permalink"]/text()').extract()).replace('#','') or 'Null'
+	    ord_in_thread = ''.join(node.xpath('.//div[@class="publicControls"]//a[@title="Permalink"]/text()').extract()).replace('#','') or 'Null'
             postid = ''.join(node.xpath(xpaths.POSTID).extract()) or 'Null'
             post_id =  re.findall('\d+',postid)
             publishtimes = ''.join(node.xpath(xpaths.PUBLISHTIME).extract()) or 'Null'

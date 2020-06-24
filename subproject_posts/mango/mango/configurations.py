@@ -16,7 +16,8 @@ tables = {
      	'author_crawl':'xakepok_authors_crawl'
     },
     'centerclub':{
-        'post_crawl':'centerclub_post_crawl'
+        'post_crawl':'centerclub_post_crawl',
+        'author_crawl':'centerclub_authors_crawl'
     },
     'bitshacking':{
         'post_crawl' : 'bitshacking_post_crawl'

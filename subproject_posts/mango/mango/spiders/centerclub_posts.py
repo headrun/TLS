@@ -4,7 +4,8 @@ class Centerclub(scrapy.Spider):
     name = "centerclub_posts"
 
     def __init__(self):
-        self.conn =MySQLdb.connect(db="posts",host="localhost",user="root",passwd="qwerty123" , use_unicode = True , charset = 'utf8')
+        self.conn = MySQLdb.connect(db='posts', user=DATABASE_USER, passwd=DATABASE_PASS, host='localhost', use_unicode = True , charset = 'utf8')
+        self.cursor = self.conn.cursor()
         self.crawl_query = generate_upsert_query_authors_crawl('centerclub')
         self.cursor= self.conn.cursor()
 
@@ -14,7 +15,7 @@ class Centerclub(scrapy.Spider):
 
 
     def start_requests(self):
-        url_que = "select distinct(post_url) from centerclub_status where crawl_status = 0"
+        url_que = "select distinct(post_url) from centerclub_post_crawl where crawl_status = 0"
         self.cursor.execute(url_que)
         data = self.cursor.fetchall()
         for url in data:
@@ -39,6 +40,7 @@ class Centerclub(scrapy.Spider):
             sub_categoryurl =  urljoin("https://center-club.ws", sub_categoryurl)
         thread_title = ''.join(response.xpath('//div[@class="p-title "]//h1[@class="p-title-value"]//text()').extract()).strip() or 'Null'
         reference_url = response.url
+        count = 0 
         nodes = sel.xpath('//article[contains(@id,"js-post-")]')
         thread_url = response.url
         if '/page' in reference_url:
@@ -60,8 +62,12 @@ class Centerclub(scrapy.Spider):
             publishdate = datetime.datetime.strptime(publish_date ,'%Y-%m-%d')
             publish_epoch = time.mktime(publishdate.timetuple())*1000
             if publish_epoch:
-                month_year = time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
-            count = ''.join(node.xpath('.//ul[@class="message-attribution-opposite message-attribution-opposite--list"]//li/a[contains(text(),"#")]//text()').extract()).replace('#','')
+                year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
+                if year > '2011':
+                    month_year =  time.strftime("%m_%Y", time.localtime(int(publish_epoch/1000)))
+                else:
+                    continue
+            count = count+1
             FetchTime = int(datetime.datetime.now().strftime("%s")) * 1000
             Author = ''.join(node.xpath('.//h4[@class="message-name"]//a[@class="username "]//text()').extract()) or 'Null'
             text = ' '.join(node.xpath('.//article[@class="message-body js-selectToQuote"]//div[@class="bbWrapper"]//text() | .//div[@class="attachment-icon attachment-icon--img"]//img//@alt | .//article[@class="message-body js-selectToQuote"]//section[@class="message-attachments"]//h4[@class="block-textHeader"]//text() | .//article[@class="message-body js-selectToQuote"]//div[@class="bbWrapper"]//blockquote//div[@class="bbCodeBlock-title"]//a//text() | .//article[@class="message-body js-selectToQuote"]//div[@class="bbWrapper"]//blockquote//div[@class="bbCodeBlock-content"]//div[@class="bbCodeBlock-expandContent"]//text() | .//article[@class="message-body js-selectToQuote"]//div[@class="bbWrapper"]//blockquote//div[@class="bbCodeBlock-title"]//a[@data-xf-click="attribution"]//@class | .//article[@class="message-body js-selectToQuote"]//div[@class="bbWrapper"]//img//@alt | .//div[@class="blockMessage blockMessage--error blockMessage--iconic"]//text()').extract()).replace('bbCodeBlock-sourceJump','Quote:') or 'Null'
@@ -114,7 +120,7 @@ class Centerclub(scrapy.Spider):
                           'post':post_data
                         }
             sk = md5_val(post_id)
-            es.index(index="dark_posts", doc_type='post', id=sk, body=json_posts)
+            es.index(index="forum_posts_"+month_year, doc_type='post', id=sk, body=json_posts)
 
             meta = {'publish_epoch': publish_epoch}
             json_crawl = {}

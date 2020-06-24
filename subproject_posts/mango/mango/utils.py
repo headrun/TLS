@@ -7,7 +7,6 @@ import time
 import MySQLdb
 import logging
 from time import strftime
-from pprint import pprint
 import datetime
 import dateutil.relativedelta
 import os,sys

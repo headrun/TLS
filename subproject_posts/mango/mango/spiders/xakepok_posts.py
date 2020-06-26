@@ -25,6 +25,10 @@ class xakepok(scrapy.Spider):
         sub_category = response.xpath('//span[@class="navbar"]//a//text()').extract()[2] or 'Null'
         sub_category_url = "https://forum.xakepok.net/" + response.xpath('//span[@class="navbar"]//a//@href').extract()[1] or 'Null'
         thread_title = ''.join(response.xpath('//span[@class="smallfont"]//text() | //td[@class="alt1"]/strong/text()').extract()) or 'Null'
+        inner_nav = response.xpath('//td[@class="alt1"]//a[@rel="next"]//@href').extract_first()
+        if inner_nav:
+            inner_nav_ = urljoin("https://forum.xakepok.net/",inner_nav)
+            yield Request(inner_nav_,callback=self.parse_next)
         nodes = response.xpath('//div[@id="posts"]//div[contains(@class,"tborder_big_right")]')
         for node in nodes:
             author =''.join(node.xpath('.//a[@class="bigusername"]//text()').extract()) or 'Null'
@@ -46,7 +50,13 @@ class xakepok(scrapy.Spider):
                 publish_epoch = 'Null'
             text = ''.join(node.xpath('.//div[contains(@id,"post_message_")]//td//text() | .//div[contains(@id,"post_message_")]//text() | .//div[contains(@id,"post_message_")]//@alt | .//div[contains(@id,"post_message_")]//div[contains(@class,"smallfont")]//@class | .//div[contains(@id,"post_message_")]//img//@alt | .//div[contains(@id,"post_message_")]//img//@title').extract()).replace('\n','').replace('smallfont','Quote ') or 'Null'
             Links = ', '.join(node.xpath('.//div[contains(@id,"post_message_")]//a//@href | .//div[@class="smallfont"]/img[not(contains(@class,"inlineimg"))]/@src | .//div[contains(@id,"post_message_")]/img[not(contains(@class,"inlineimg"))]/@src').extract()) or 'Null'
-            thread_url = response.url
+            reference_url = response.url
+            if '&page=' in reference_url:
+                test = re.findall('&page=\d+',reference_url)
+                thread_url = reference_url.replace(''.join(test),"")
+            else:
+                thread_url = reference_url
+
             author_data = {
                     'name':author,
                     'url':author_url
@@ -70,7 +80,7 @@ class xakepok(scrapy.Spider):
             json_posts = {
                         'record_id' : re.sub(r"\/$", "", post_url.replace(r"https", "http").replace(r"www.", "")),
                         'hostname': 'forum.xakepok.net',
-                        'domain':"forum.xakepok.net",
+                        'domain':domain,
                         'sub_type':'openweb',
                         'type' : 'forum',
                         'author': json.dumps(author_data),

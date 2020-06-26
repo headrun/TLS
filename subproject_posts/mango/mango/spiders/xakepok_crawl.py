@@ -31,7 +31,7 @@ class xakepok(scrapy.Spider):
                           'reference_url':response.url
             }
             self.cursor.execute(self.query_status, json_posts)
-        inner_nav = response.xpath('//a[@class="smallfont"]//@href').extract_first()
+        inner_nav = response.xpath('//td[@class="alt1"]//a[@rel="next"]//@href').extract_first()
         if inner_nav:
             inner_nav_ = urljoin("https://forum.xakepok.net/",inner_nav)
             yield Request(inner_nav_,callback=self.parse_next)

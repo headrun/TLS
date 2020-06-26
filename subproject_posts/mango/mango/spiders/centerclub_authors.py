@@ -5,7 +5,7 @@ class Centerclub(scrapy.Spider):
 
 
     def __init__(self):
-         self.conn = MySQLdb.connect(host="localhost", user="root", passwd="qwerty123", db="posts", charset="utf8", use_unicode=True)
+         self.conn = MySQLdb.connect(db='posts', user=DATABASE_USER, passwd=DATABASE_PASS, host='localhost', use_unicode = True , charset = 'utf8')
          self.cursor = self.conn.cursor()
 
     def close_conn(self, spider):
@@ -77,9 +77,8 @@ class Centerclub(scrapy.Spider):
                      'credits': credits,
                      'awards': '',
                      'rank': '',
-                     'reference_url':response.url,
                      'activetimes': activetimes,
                      'contact_info':str(contact_info),
         }
-        sk = hashlib.md5(domain + json_posts['username']).hexdigest()
-        es.index(index="amazon",doc_type='agartha_posts',id= sk, body=json_posts)
+        sk = md5_val(json_posts['username'])
+        doc_to_es(id=sk, body=json_posts, doc_type='author')

@@ -16,8 +16,8 @@ class Centerclub(scrapy.Spider):
     def parse(self,response):
         urls = response.xpath('//div[@class="node-main js-nodeMain"]//h3[@class="node-title"]//a//@href').extract()
         for url in urls:
-                url = "https://center-club.ws" + url
-                yield Request(url,callback= self.parse_next)
+            url = "https://center-club.ws" + url
+            yield Request(url,callback= self.parse_next)
 
     def parse_next(self,response):
         links = response.xpath('//div[@class="structItem-title"]//a[@data-tp-primary="on"]//@href').extract()
@@ -31,7 +31,7 @@ class Centerclub(scrapy.Spider):
                            'reference_url':response.url
             }
             self.cursor.execute(query_status, json_posts)
-        page_navs = response.xpath('//div[@class="pageNav"]//a[@class="pageNav-jump pageNav-jump--next"]//@href').extract()
+        page_navs = response.xpath('//a[@class="pageNav-jump pageNav-jump--next"]//@href').extract_first()
         if page_navs:
             page_navs = "https://center-club.ws" + page_navs
             yield Request(page_navs, callback=self.parse_next)

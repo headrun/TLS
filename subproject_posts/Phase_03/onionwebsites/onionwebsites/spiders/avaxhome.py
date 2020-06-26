@@ -1,14 +1,4 @@
-import scrapy
-from scrapy.selector import Selector
-from scrapy.http import Request
 from onionwebsites.utils import *
-import time
-import datetime
-from elasticsearch import Elasticsearch
-from pprint import pprint
-es = Elasticsearch(['10.2.0.90:9342'])
-import hashlib
-import re
 
 def clean_text(input_text):
     text = re.compile(r'([\n,\t,\r]*\t)').sub('\n', input_text)
@@ -22,16 +12,16 @@ class Avax(scrapy.Spider):
 
     def parse(self, response):
         sel = Selector(response)
-        links = sel.xpath('//div[@class="col-lg-12"]//h1//a//@href').extract()
+        links = sel.xpath('//div[@class="col-lg-12 article"]//h1//a[@class="title-link"]//@href').extract()
         for link in links:
             if 'http' not in link:
                 link = "http://avaxhome5lcpcok5.onion/software/" + link
                 yield Request(link, callback=self.parse_next)
-        page_urls =  response.xpath('//div//li//a[@class="next"]//@href').extract()
-        for url in page_urls:
-            if 'http' not in url:
-                url = "http://avaxhome5lcpcok5.onion/" + url
-                yield Request(url,callback=self.parse)
+        page_urls =  response.xpath('//div//li//a[@class="next"]//@href').extract_first()
+        if page_urls:
+            page_url = "http://avaxhome5lcpcok5.onion" + page_urls
+            yield Request(page_url,callback=self.parse)
+               
 
     def parse_next(self,response):
         sel = Selector(response)
@@ -42,6 +32,7 @@ class Avax(scrapy.Spider):
             author = ''.join(node.xpath('.//div[@class="author visible-lg-inline-block visible-md-inline-block visible-sm-block visible-xs-block"]//a//text()').extract()) or 'Null'
             authorurl = ''.join(node.xpath('.//div[@class="author visible-lg-inline-block visible-md-inline-block visible-sm-block visible-xs-block"]//a//@href').extract())
 	    if authorurl:
+
 		author_url = 'http://avaxhome5lcpcok5.onion'+ authorurl
 	    if author_url == '':
 		author_url = 'Null'
@@ -121,12 +112,5 @@ class Avax(scrapy.Spider):
 		    'post':post
 		    }
 	    sk = hashlib.md5(post_url).hexdigest() 
-	    #query={"query":{"match":{"_id":sk}}}
-            #res = es.search(body=query)
-            #if res['hits']['hits'] == []:
             es.index(index=month_year, doc_type='post', id=sk, body=doc)
-	    '''else:
-		data_doc = res['hits']['hits'][0]
-                if (doc['links'] != data_doc['_source']['links']) or (doc['text'] != data_doc['_source']['text']):
-		    es.index(index="forum_posts", doc_type='post', id=sk, body=doc)'''
 

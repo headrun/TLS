@@ -76,19 +76,11 @@ class skyfraudSpider(scrapy.Spider):
 	if sub_categoryurl == '':
 	    sub_category_url = 'Null'
         thread_title = ''.join(response.xpath('//table[@class="tborder"]//tr[@valign="middle"]//td/text()').extract()).replace('>','').strip() or 'Null'
-	#''.join(re.findall('<title> (.*)</title>', response.body)).replace('- SKY-FRAUD.RU','') or 'Null'
         nodes = sel.xpath(xpaths.NODES)
         page = sel.xpath(xpaths.PAGENAV).extract_first()
         if page:
-            '''try:
-		test_case = ''.join(nodes[-1].xpath(xpaths.POSTURL).extract())
-		test_id = hashlib.md5(str(test_case)).hexdigest()
-		query = {'query_string': {'use_dis_max': 'true', 'query': '_id:{0}'.format(test_id)}}
-		res = es.search(index="forum_posts", body={"query": query})
-		if res['hits']['hits']==[]:'''
 	    page = "https://sky-fraud.ru/" + page
             yield Request(page, callback = self.parse_ann,meta = {'crawl_type':'catch_up'})
-	    #except:pass
         if page:
             pno = ''.join(re.findall('&page=\d+',page))
             if crawl_type == 'keep_up':
@@ -201,6 +193,3 @@ class skyfraudSpider(scrapy.Spider):
                     'links': author_url
             }
             self.cursor.execute(crawl_query, json_crawl)
-        '''if nodes and crawl_type == 'keepup':
-             up_que_to1 = 'update  skyfraud_status set crawl_status = 1 where post_url = %(url)s'
-             self.cursor.execute(up_que_to1,{'url':response.url})'''

@@ -2,7 +2,7 @@
 #Posts
 
 LINKS = '//td[@class="alt2Active"]/div/h3/a/@href'
-URLS = '//td[@class="alt1"]//div//a[contains(@id,"thread_title")]/@href'
+URLS = '//td[@class="alt1"]//div//a[contains(@id,"thread_title")]/@href | //td[@class="tfoot"]//div//a[contains(@id,"thread_title")]/@href'
 #NUM = '//table[@class="tborder"]//td[@class="alt1"]/a[@rel="next"]/@href'
 CATEGORY = '//span[@class="navbar"]/a/text()'
 SUBCATEGORY = '//span[@class="navbar"]/a/text() | //span[@style="color: #FF6600;"]//text()'

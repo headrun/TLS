@@ -32,14 +32,14 @@ class BlackHat(scrapy.Spider):
         sel = Selector(response)
         forums = sel.xpath(xpaths.FORUMS).extract()
         for forum in forums:
-            forum = "https://www.blackhatworld.com/" + forum
+            forum = "https://www.blackhatworld.com" + forum
             yield Request(forum,callback= self.parse_nxt)
 
     def parse_nxt(self, response):
         sel = Selector(response)
         urls = sel.xpath(xpaths.THREADURLS).extract()
         for url in urls:
-            post_url = "https://www.blackhatworld.com/" + url
+            post_url = "https://www.blackhatworld.com" + url
             sk = ''.join(url).split('.')[-1]
             json_posts = {'sk':sk,
                           'post_url':post_url,
@@ -48,8 +48,8 @@ class BlackHat(scrapy.Spider):
             }
             self.cursor.execute(self.query_status, json_posts)
 
-        for page in set(sel.xpath(xpaths.INNERPAGENAVIGATION).extract()):
-            if page:
-                page = "https://www.blackhatworld.com/" + page
-                yield Request(page, callback = self.parse_nxt)
+        page = sel.xpath(xpaths.INNERPAGENAVIGATION).extract_first()
+        if page:
+            page = "https://www.blackhatworld.com" + page
+            yield Request(page, callback = self.parse_nxt)
 

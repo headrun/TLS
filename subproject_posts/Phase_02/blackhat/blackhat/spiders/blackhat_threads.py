@@ -49,7 +49,6 @@ class BlackHat(scrapy.Spider):
             self.cursor.execute(que)
             data = self.cursor.fetchall()
             for url in data:
-		#url = ['https://www.blackhatworld.com/seo/link-redirection.353336/']
                 yield Request(url[0], callback = self.parse_thread)
 
     def parse_thread(self, response):
@@ -67,15 +66,15 @@ class BlackHat(scrapy.Spider):
             thread_url = reference_url
         thread_title = ''.join(sel.xpath(xpaths.THREADTITLE).extract()) or 'Null'
         try:
-	    category = ''.join(sel.xpath(xpaths.CATEGORY).extract()[1]) or 'Null'
+	    category = ''.join(sel.xpath(xpaths.CATEGORY).extract()[2]) or 'Null'
 	except: pass
         try:
-	    sub_category = ''.join(sel.xpath(xpaths.SUBCATEGORY).extract()[2]) or 'Null'
+	    sub_category = ''.join(sel.xpath(xpaths.SUBCATEGORY).extract()[-1]) or 'Null'
 	except: pass
-	sub_category_url = sel.xpath('//a[@itemprop="url"]/@href').extract()[2] or 'Null'
+	sub_categoryurl = sel.xpath('//a[@itemprop="item"]//@href').extract()[-1] or 'Null'
+        sub_category_url = "https://www.blackhatworld.com/"  + sub_categoryurl
         post_title = 'Null'
-        #nodes=sel.xpath(xpaths.NODES)
-	nodes = sel.xpath('//ol[@class="messageList"]/li[contains(@id,"post-")]')
+        nodes = sel.xpath('//article[contains(@id,"js-post-")]')
         if nodes:
             query = 'update blackhat_status set crawl_status = 1 where post_url = %(url)s'
             json_data={'url':response.url}
@@ -85,36 +84,23 @@ class BlackHat(scrapy.Spider):
             json_data={'url':response.url}
             self.cursor.execute(query,json_data)
 
-        '''page_nav = ''.join(set(sel.xpath(xpaths.PAGENAV).extract()))
-        if page_nav:
-            try:
-                text_case = ''.join(nodes[-1].xpath(xpaths.POSTID).extract()).replace('post_url_','')
-                test_id = hashlib.md5(str(text_case)).hexdigest()
-		query = {'query_string': {'use_dis_max': 'true', 'query': '_id:{0}'.format(test_id)}}
-		res = es.search(index="forum_posts", body={"query": query})
-		if res['hits']['hits']==[]:    
-	            yield Request(page_nav,callback = self.parse_thread)
-            except:pass'''
-
         for node in nodes:
             author = ''.join(node.xpath(xpaths.AUTHOR).extract()) or 'Null'
             authorurl =  ''.join(node.xpath(xpaths.AUTHORURL).extract())
             if authorurl:
-                author_url = "https://www.blackhatworld.com/"  + authorurl
+                author_url = "https://www.blackhatworld.com"  + authorurl
 	    if authorurl == '':
 		authorurl = 'Null'
 		author_url = authorurl
-            post_url = "https://www.blackhatworld.com/" + ''.join(node.xpath(xpaths.POSTURL).extract())
-	    ord_in_thread = ''.join(node.xpath('.//div[@class="publicControls"]//a[@title="Permalink"]/text()').extract()).replace('#','') or 'Null'
-            postid = ''.join(node.xpath(xpaths.POSTID).extract()) or 'Null'
-            post_id =  re.findall('\d+',postid)
+            post_url = "https://www.blackhatworld.com" + ''.join(node.xpath(xpaths.POSTURL).extract())
+	    ord_in_thread = ''.join(node.xpath(xpaths.ORD_IN_THREAD).extract()[-1]).strip().replace('#','')
+            post_id = re.findall('post-(.*)',post_url)
             publishtimes = ''.join(node.xpath(xpaths.PUBLISHTIME).extract()) or 'Null'
             publish_epoch = utils.time_to_epoch(publishtimes, '%b %d, %Y')
 	    if publish_epoch:
-	        publish_time = int(publish_epoch)
                 year = time.strftime("%Y", time.localtime(int(publish_epoch/1000)))
                 if year > '2011':
-	            month_year = time.strftime("%m_%Y", time.localtime(publish_time/1000))
+	            month_year = time.strftime("%m_%Y", time.localtime(publish_epoch/1000))
                 else :
                     continue
 	    else:
@@ -126,8 +112,8 @@ class BlackHat(scrapy.Spider):
             for mail in mails:
                 email = utils.decode_cloudflareEmail(mail)
                 post_text = post_texts.replace(mail,email)
-            if 'quoteContainer' in post_text:
-                post_text = post_text.replace('quoteContainer' ,'Quote ')
+            if 'said:' in post_text:
+                post_text = post_text.replace('said:' ,'said: Quote ')
             fetch_epoch = utils.fetch_time()
             author_signature = '\n'.join(node.xpath(xpaths.AUTHOR_SIGNATURE).extract())
             Links = node.xpath(xpaths.LINKS).extract()
@@ -160,7 +146,7 @@ class BlackHat(scrapy.Spider):
 		'sub_section_url':sub_category_url,
 		'post_id':''.join(post_id),
 		'post_title':post_title,
-		'ord_in_thread':int(ord_in_thread),
+		'ord_in_thread':ord_in_thread,
 		'post_url':post_url,
 		'post_text':utils.clean_text(post_text).replace('\n', ''),
 		'thread_title':thread_title,
@@ -184,10 +170,6 @@ class BlackHat(scrapy.Spider):
 			}
             
             self.es.index(index="forum_posts_" + month_year, doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts)
-	    #else:
-		#data_doc = res['hits']['hits'][0]
-                #if (json_posts['links'] != data_doc['_source']['links']) or (json_posts['text'] != data_doc['_source']['text']):
-		    #self.es.index(index="forum_posts", doc_type='post', id=hashlib.md5(str(post_url)).hexdigest(), body=json_posts)
 	    if author_url == 'Null':
 		continue
             meta = {'publish_epoch': publish_epoch, 'author_signature':utils.clean_text(author_signature)}
@@ -199,11 +181,10 @@ class BlackHat(scrapy.Spider):
             }
             self.cursor.execute(crawl_query, json_crawl)
 	    self.conn.commit()
-        pagenav = set(sel.xpath(xpaths.PAGENAV).extract())
-        for page in pagenav:
-            if page:
-                page = "https://www.blackhatworld.com/" + page
-                yield Request(page, callback = self.parse_thread)
+        page = sel.xpath(xpaths.PAGENAV).extract_first()
+        if page:
+            page = "https://www.blackhatworld.com" + page
+            yield Request(page, callback = self.parse_thread)
 
 
 

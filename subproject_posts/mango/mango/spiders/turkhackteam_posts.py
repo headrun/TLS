@@ -19,7 +19,7 @@ class Turkhackteam(scrapy.Spider):
 
 
     def parse(self,response):
-        url_que = "select distinct(post_url) from turkhackteam_post_crawl where crawl_status = 0 "
+        url_que = "select distinct(post_url) from turkhackteam_post_crawl;"
         self.cursor.execute(url_que)
         data = self.cursor.fetchall()
         for url in data:
@@ -30,21 +30,21 @@ class Turkhackteam(scrapy.Spider):
         crawl_type = response.meta.get('crawl_type')
         sel = Selector(response)
         try:
-            category = response.xpath('//div[@class="pagenavit"]//div[@class="container"]//a//text()').extract()[1]
+            category = response.xpath('//ul[@class="pagenavit"]//div[@class="container"]//a//text()').extract()[1]
         except:
             category = "Null"
 
         try:
-            sub_category = ' , '.join(response.xpath('//div[@class="pagenavit"]/div[@class="container"]//a/text()').extract()[2::]) or 'Null'
+            sub_category = ' , '.join(response.xpath('//ul[@class="pagenavit"]/div[@class="container"]//a//span//text()').extract()[2::]) or 'Null'
         except:
             sub_category = 'Null'
         
-        sub_categoryurl = response.xpath('//div[@class="pagenavit"]//div[@class="container"]//a//@href').extract()
+        sub_categoryurl = response.xpath('//ul[@class="pagenavit"]//div[@class="container"]//a//@href').extract()
         try:
-            if len(sub_categoryurl) == 4:
-                subcategoryurl_ = sub_categoryurl[-1]
             if len(sub_categoryurl) == 5:
-                subcategoryurl_ = sub_categoryurl[-2] +', '+ sub_categoryurl[-1] 
+                subcategoryurl_ = sub_categoryurl[-2] +', '+ sub_categoryurl[-1]
+            if len(sub_categoryurl) == 6:
+                subcategoryurl_ = sub_categoryurl[-3] +', '+ sub_categoryurl[-2] +', '+ sub_categoryurl[-1] 
         except:
             subcategoryurl_ = 'Null'
         thread_title = ''.join(response.xpath('//div[@class="container"]//h1[@class="spe-posth1"]//text() ').extract()).strip() or 'Null'
@@ -70,7 +70,7 @@ class Turkhackteam(scrapy.Spider):
                 post_url = 'Null'
             ord_in_thread = count
             post_id = ''.join(node.xpath('.//div[@class="postbit-message"]/@id').extract()).replace('post_message_','').strip() or 'Null'
-            publish= ''.join(node.xpath('.//div[@class="pnt-col"]//text() | .//div[@class="pnt-row d-flex mob-d-flex"]//text()').extract()).strip()
+            publish= ''.join(node.xpath('.//div[@class="pnt-col"]//span//text() | .//div[@class="pnt-row d-flex mob-d-flex"]//text()').extract()).strip()
             try:
                 if 'den' in publish:
                     publish_date = ''.join(re.findall('(.*)den',publish))
@@ -89,7 +89,7 @@ class Turkhackteam(scrapy.Spider):
                     publishdate = datetime.datetime.now() - timedelta(hours=int(publish_date))
                     publish_epoch = time.mktime(publishdate.timetuple())*1000
                 elif 'Hafta' in publish:
-                    publish_date = ''.join(re.findall('\d+', last_active))
+                    publish_date = ''.join(re.findall('\d+', publish))
                     publishdate = datetime.datetime.now() - timedelta(weeks=int(publish_date))
                     publish_epoch = time.mktime(publishdate.timetuple())*1000
                 elif u'g\xfcn' in publish:
